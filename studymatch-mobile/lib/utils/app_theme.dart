@@ -11,9 +11,9 @@ class AppTheme {
   static const Color error = Color(0xFFEF4444);
 
   // Light (mobile dashboard — matches studymatch-web)
-  static const Color bgLight = Color(0xFFF3F4F6);
+  static const Color bgLight = Color(0xFFFFFFFF);
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color borderLight = Color(0xFFF0F0F4);
+  static const Color borderLight = Color(0xFFE8E8EF);
   static const Color textDark = Color(0xFF1E1B4B);
   static const Color textBody = Color(0xFF6B7280);
   static const Color textMuted = Color(0xFF9CA3AF);
@@ -53,6 +53,9 @@ class AppTheme {
         unselectedItemColor: textMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
+        selectedLabelStyle: TextStyle(
+          fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontFamily: 'Poppins', fontSize: 11),
       ),
       cardTheme: CardThemeData(
         color: surfaceLight,

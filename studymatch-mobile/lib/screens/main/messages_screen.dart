@@ -9,7 +9,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
-import '../../widgets/shell_scope.dart';
 import '../../services/app_state.dart';
 import '../../services/message_service.dart';
 import '../../models/models.dart';
@@ -75,30 +74,36 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final matched = state.matchedUsers;
 
     return Scaffold(
+      backgroundColor: AppTheme.bgLight,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-                    onPressed: () => ShellScope.of(context).openDrawer(),
-                  ),
+                  const SizedBox(width: 8),
                   const Expanded(
                     child: Text('Messages',
                         style: TextStyle(
-                            color: AppTheme.textPrimary,
+                            color: AppTheme.textDark,
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
                             fontFamily: 'Poppins')),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined,
-                        color: AppTheme.textSecondary),
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F0F4),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.edit_outlined,
+                          color: AppTheme.textDark, size: 18),
+                    ),
                     tooltip: 'New Message',
                     onPressed: () => _showNewMessageSheet(context, state),
                   ),
@@ -109,11 +114,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
             // Search bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
                 controller: _searchCtrl,
                 style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textDark,
                     fontFamily: 'Poppins',
                     fontSize: 14),
                 decoration: InputDecoration(
@@ -123,13 +128,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   prefixIcon: const Icon(Icons.search,
                       color: AppTheme.textMuted, size: 20),
                   filled: true,
-                  fillColor: AppTheme.inputBg,
+                  fillColor: Colors.white,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.divider)),
+                      borderSide: const BorderSide(color: AppTheme.borderLight)),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.divider)),
+                      borderSide: const BorderSide(color: AppTheme.borderLight)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
@@ -150,7 +155,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   children: [
                     const Text('Matches',
                         style: TextStyle(
-                            color: AppTheme.textPrimary,
+                            color: AppTheme.textDark,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
                             fontFamily: 'Poppins')),
@@ -233,10 +238,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ),
               const SizedBox(height: 12),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text('Messages',
                     style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: AppTheme.textDark,
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                         fontFamily: 'Poppins')),
@@ -273,7 +278,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             const SizedBox(height: 20),
             const Text('No messages yet',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textDark,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Poppins')),
@@ -293,7 +298,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: filteredInbox.length,
         separatorBuilder: (_, __) =>
-            const Divider(color: AppTheme.divider, height: 1),
+            const Divider(color: AppTheme.borderLight, height: 1),
         itemBuilder: (ctx, i) {
           final c        = filteredInbox[i];
           final isUnread = (c['unreadCount'] as int? ?? 0) > 0;
@@ -315,7 +320,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
             title: Text(participant.fullName,
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textDark,
                     fontWeight:
                         isUnread ? FontWeight.bold : FontWeight.w500,
                     fontFamily: 'Poppins',

@@ -33,8 +33,8 @@ extension StudentNavX on StudentNav {
       };
 
   IconData get icon => switch (this) {
-        StudentNav.dashboard => Icons.dashboard_outlined,
-        StudentNav.findTutors => Icons.people_outline_rounded,
+        StudentNav.dashboard => Icons.home_outlined,
+        StudentNav.findTutors => Icons.search,
         StudentNav.myMatches => Icons.handshake_outlined,
         StudentNav.studySessions => Icons.calendar_month_outlined,
         StudentNav.mySubjects => Icons.bookmark_outline_rounded,
@@ -48,8 +48,8 @@ extension StudentNavX on StudentNav {
       };
 
   IconData get activeIcon => switch (this) {
-        StudentNav.dashboard => Icons.dashboard_rounded,
-        StudentNav.findTutors => Icons.people_rounded,
+        StudentNav.dashboard => Icons.home_rounded,
+        StudentNav.findTutors => Icons.search,
         StudentNav.myMatches => Icons.handshake_rounded,
         StudentNav.studySessions => Icons.calendar_month_rounded,
         StudentNav.mySubjects => Icons.bookmark_rounded,

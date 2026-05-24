@@ -4,7 +4,9 @@ import '../../utils/app_theme.dart';
 import '../../services/app_state.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/shell_scope.dart';
+import '../../navigation/student_nav.dart';
 import 'edit_profile_screen.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,840 +14,511 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user  = state.currentUser;
+    final user = state.currentUser;
     if (user == null) return const SizedBox.shrink();
 
-    final isTutor   = user.role == 'tutor';
-    final roleColor = isTutor ? AppTheme.success : const Color(0xFF3B82F6);
-    final roleLabel = isTutor ? '🏫 Tutor' : '🎓 Student';
+    final isTutor = user.role == 'tutor';
+    final unread = state.unreadMessageCount;
 
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
-      body: Stack(
-        children: [
-          Container(
-            height: 260,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF2D1F5E), Color(0xFF1A0A3A)],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                // ── App bar
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-                          onPressed: () => ShellScope.of(context).openDrawer(),
-                        ),
-                        const Expanded(
-                          child: Text('My Profile',
-                            style: TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                                fontFamily: 'Poppins')),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.settings_outlined,
-                              color: AppTheme.textSecondary),
-                          onPressed: () => _showSettingsSheet(context, state),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ── Hero section
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-
-                      // ✅ Avatar using ProfileAvatar widget
-                      GestureDetector(
-                        onTap: () => Navigator.push(context,
-                            MaterialPageRoute(
-                                builder: (_) => const EditProfileScreen())),
-                        child: Stack(
-                          children: [
-                            ProfileAvatar(
-                              photoUrl:    user.profilePhotoUrl,
-                              displayName: user.fullName,
-                              size:        90,
-                              borderColor: Colors.white,
-                              borderWidth: 3,
-                            ),
-                            Positioned(
-                              bottom: 2,
-                              right:  2,
-                              child: Container(
-                                width:  26,
-                                height: 26,
-                                decoration: const BoxDecoration(
-                                    color: AppTheme.primary,
-                                    shape: BoxShape.circle),
-                                child: const Icon(Icons.edit,
-                                    color: Colors.white, size: 14),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Name
-                      Text(user.fullName,
-                          style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 22,
-                              fontFamily: 'Poppins')),
-                      const SizedBox(height: 4),
-
-                      // Email
-                      Text(user.email,
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontFamily: 'Poppins',
-                              fontSize: 13)),
-                      const SizedBox(height: 10),
-
-                      // Role badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: roleColor.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border:
-                              Border.all(color: roleColor.withOpacity(0.5)),
-                        ),
-                        child: Text(roleLabel,
-                            style: TextStyle(
-                                color: roleColor,
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // School
-                      if (user.school != null &&
-                          user.school!.isNotEmpty) ...[
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.school_outlined,
-                                  color: AppTheme.textMuted, size: 14),
-                              const SizedBox(width: 4),
-                              Text(user.school!,
-                                  style: const TextStyle(
-                                      color: AppTheme.textMuted,
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13)),
-                            ]),
-                        const SizedBox(height: 4),
-                      ],
-
-                      // Department / Degree
-                      if (user.department != null &&
-                          user.department!.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: AppTheme.primary.withOpacity(0.3)),
-                          ),
-                          child: Text(user.department!,
-                              style: const TextStyle(
-                                  color: AppTheme.primaryLight,
-                                  fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500)),
-                        ),
-                        const SizedBox(height: 6),
-                      ],
-
-                      // Bio
-                      if (user.bio != null && user.bio!.isNotEmpty) ...[
-                        Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 32),
-                          child: Text(user.bio!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  height: 1.5)),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-
-                      const SizedBox(height: 16),
-
-                      // Stats bar
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 20),
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                              color: AppTheme.bgCard,
-                              borderRadius: BorderRadius.circular(16),
-                              border:
-                                  Border.all(color: AppTheme.divider)),
-                          child: Row(
-                            children: [
-                              _ProfileStat(
-                                value: '${state.matchUsers.length}',
-                                label: isTutor ? 'Students' : 'Tutors',
-                                icon: Icons.people_alt_rounded,
-                                color: AppTheme.primary,
-                              ),
-                              _VerticalDivider(),
-                              _ProfileStat(
-                                value: '${state.unreadMessageCount}',
-                                label: 'Messages',
-                                icon: Icons.chat_bubble_rounded,
-                                color: AppTheme.accent,
-                              ),
-                              _VerticalDivider(),
-                              _ProfileStat(
-                                value: '${state.dbResources.length}',
-                                label: 'Resources',
-                                icon: Icons.library_books_rounded,
-                                color: AppTheme.success,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-
-                // ── Attribute sections
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-
-                      // Personal Info
-                      _ProfileSection(
-                        title: '👤 Personal Info',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _InfoRow(
-                              icon: Icons.badge_outlined,
-                              label: 'Role',
-                              value: isTutor ? 'Tutor' : 'Student',
-                              valueColor: roleColor,
-                            ),
-                            if (user.gender != null &&
-                                user.gender!.isNotEmpty)
-                              _InfoRow(
-                                  icon: Icons.person_outline,
-                                  label: 'Gender',
-                                  value: user.gender!),
-                            if (user.dateOfBirth != null)
-                              _InfoRow(
-                                icon: Icons.cake_outlined,
-                                label: 'Birthday',
-                                value:
-                                    '${user.dateOfBirth!.month}/${user.dateOfBirth!.day}/${user.dateOfBirth!.year}',
-                              ),
-                            if (user.school != null &&
-                                user.school!.isNotEmpty)
-                              _InfoRow(
-                                  icon: Icons.school_outlined,
-                                  label: 'School',
-                                  value: user.school!),
-                            if (user.department != null &&
-                                user.department!.isNotEmpty)
-                              _InfoRow(
-                                icon: isTutor
-                                    ? Icons.workspace_premium_outlined
-                                    : Icons.apartment_outlined,
-                                label: isTutor ? 'Degree' : 'Department',
-                                value: user.department!,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (user.subjects.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: '📚 Subjects',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.subjects
-                                .map((s) => _tag(s, AppTheme.primary))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.strengths.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: isTutor
-                              ? '💪 Can Tutor (Expert Subjects)'
-                              : '💪 Strong Subjects',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.strengths
-                                .map((s) => _tag(s, AppTheme.success))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.weaknesses.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: isTutor
-                              ? '📖 Still Learning'
-                              : '😅 Needs Help With',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.weaknesses
-                                .map((s) => _tag(s, AppTheme.error))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.learningStyles.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: '🧠 Learning Style',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.learningStyles
-                                .map((s) => _tag(s, AppTheme.accent))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.studyStyles.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: '👥 Study Format',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: user.studyStyles
-                                .map((s) => _tag(s, AppTheme.warning))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.availability.isNotEmpty) ...[
-                        _ProfileSection(
-                          title: '📅 Availability',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: user.availability.entries.map((e) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: 10),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(e.key,
-                                        style: const TextStyle(
-                                            color: AppTheme.textSecondary,
-                                            fontFamily: 'Poppins',
-                                            fontSize: 12,
-                                            fontWeight:
-                                                FontWeight.w600)),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: e.value
-                                          .map((t) => _tag(t,
-                                              const Color(0xFF3B82F6)))
-                                          .toList(),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      if (user.subjects.isEmpty &&
-                          user.strengths.isEmpty &&
-                          user.weaknesses.isEmpty &&
-                          user.learningStyles.isEmpty &&
-                          user.studyStyles.isEmpty &&
-                          user.availability.isEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppTheme.bgCard,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color:
-                                    AppTheme.primary.withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text('📋',
-                                  style: TextStyle(fontSize: 40)),
-                              const SizedBox(height: 12),
-                              const Text('No profile details yet',
-                                  style: TextStyle(
-                                      color: AppTheme.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Poppins',
-                                      fontSize: 15)),
-                              const SizedBox(height: 6),
-                              const Text(
-                                  'Edit your profile to add your subjects,\nlearning style, and availability.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                      color: AppTheme.textMuted,
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      height: 1.5)),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const EditProfileScreen())),
-                                icon: const Icon(Icons.edit, size: 16),
-                                label: const Text('Edit Profile',
-                                    style:
-                                        TextStyle(fontFamily: 'Poppins')),
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      // Account section
-                      _ProfileSection(
-                        title: '⚙️ Account',
-                        child: Column(
-                          children: [
-                            _SettingsRow(
-                              icon: Icons.person_outline,
-                              label: 'Edit Profile',
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const EditProfileScreen())),
-                            ),
-                            _SettingsRow(
-                              icon: Icons.settings_outlined,
-                              label: 'Settings',
-                              onTap: () =>
-                                  _showSettingsSheet(context, state),
-                            ),
-                            _SettingsRow(
-                              icon: Icons.notifications_outlined,
-                              label: 'Notifications',
-                              onTap: () {},
-                            ),
-                            _SettingsRow(
-                              icon: Icons.privacy_tip_outlined,
-                              label: 'Privacy Settings',
-                              onTap: () {},
-                            ),
-                            _SettingsRow(
-                              icon: Icons.help_outline,
-                              label: 'Help & Support',
-                              onTap: () {},
-                            ),
-                            _SettingsRow(
-                              icon: Icons.logout,
-                              label: 'Sign Out',
-                              color: AppTheme.error,
-                              onTap: () =>
-                                  _confirmSignOut(context, state),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ]),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Settings bottom sheet ─────────────────────────────────────────────────
-  void _showSettingsSheet(BuildContext context, AppState state) {
-    final user = state.currentUser;
-    if (user == null) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.bgCard,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppTheme.divider,
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Settings',
-                style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    fontFamily: 'Poppins')),
-            const SizedBox(height: 20),
-
-            // ✅ Account info card using ProfileAvatar
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.bgDark,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.divider),
-              ),
-              child: Row(
-                children: [
-                  ProfileAvatar(
-                    photoUrl:    user.profilePhotoUrl,
-                    displayName: user.fullName,
-                    size:        48,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user.fullName,
-                            style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Poppins',
-                                fontSize: 15)),
-                        Text(user.email,
-                            style: const TextStyle(
-                                color: AppTheme.textMuted,
-                                fontFamily: 'Poppins',
-                                fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (user.isTutor
-                              ? AppTheme.success
-                              : const Color(0xFF3B82F6))
-                          .withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      user.isTutor ? '🏫 Tutor' : '🎓 Student',
-                      style: TextStyle(
-                          color: user.isTutor
-                              ? AppTheme.success
-                              : const Color(0xFF3B82F6),
+      backgroundColor: const Color(0xFFF3F4F6),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // ── Header ──────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'My Profile',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
                           fontFamily: 'Poppins',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    IconButton(
+                      icon: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0F0F4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.settings_outlined,
+                            color: AppTheme.textDark, size: 20),
+                      ),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen()),
+                      ),
+                    ),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          icon: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F0F4),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.notifications_outlined,
+                                color: AppTheme.textDark, size: 20),
+                          ),
+                          onPressed: () {},
+                        ),
+                        if (unread > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                  color: AppTheme.primary,
+                                  shape: BoxShape.circle),
+                              child: Center(
+                                child: Text(
+                                  unread > 9 ? '9+' : '$unread',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 20),
 
-            _SheetOption(
-              icon: Icons.person_outline,
-              title: 'Edit Profile',
-              subtitle: 'Update your name, bio, subjects',
-              color: AppTheme.primary,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const EditProfileScreen()));
-              },
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // ── Profile info card ────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _ProfileInfoCard(user: user, isTutor: isTutor),
             ),
-            _SheetOption(
-              icon: Icons.notifications_outlined,
-              title: 'Notifications',
-              subtitle: 'Manage your notification preferences',
-              color: AppTheme.accent,
-              onTap: () => Navigator.pop(context),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ── Stats card ───────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _StatsCard(state: state, isTutor: isTutor),
             ),
-            _SheetOption(
-              icon: Icons.lock_outline,
-              title: 'Privacy & Security',
-              subtitle: 'Control your data and visibility',
-              color: const Color(0xFF3B82F6),
-              onTap: () => Navigator.pop(context),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ── My Sessions section ──────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _MySessions(state: state),
             ),
-            _SheetOption(
-              icon: Icons.help_outline,
-              title: 'Help & Support',
-              subtitle: 'FAQs and contact us',
-              color: AppTheme.warning,
-              onTap: () => Navigator.pop(context),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ── Navigation links ─────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _NavLinks(unread: unread),
             ),
-            _SheetOption(
-              icon: Icons.info_outline,
-              title: 'About StudyMatch',
-              subtitle: 'Version 1.0.0',
-              color: AppTheme.textMuted,
-              onTap: () => Navigator.pop(context),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ── Profile attribute sections ───────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  _buildAttributeSections(context, user, isTutor),
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            const Divider(color: AppTheme.divider),
-            const SizedBox(height: 8),
-            _SheetOption(
-              icon: Icons.logout,
-              title: 'Sign Out',
-              subtitle: 'Log out of your account',
-              color: AppTheme.error,
-              onTap: () {
-                Navigator.pop(context);
-                _confirmSignOut(context, state);
-              },
-            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
     );
   }
 
-  void _confirmSignOut(BuildContext context, AppState state) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.bgCard,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Sign Out',
-            style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to sign out?',
-            style: TextStyle(
-                color: AppTheme.textSecondary, fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel',
-                  style:
-                      TextStyle(color: AppTheme.textSecondary))),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              state.signOut();
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.error),
-            child: const Text('Sign Out',
-                style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
-    );
-  }
+  List<Widget> _buildAttributeSections(
+      BuildContext context, dynamic user, bool isTutor) {
+    final widgets = <Widget>[];
 
-  Widget _tag(String label, Color color) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
+    if (user.subjects.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: 'Subjects',
+          child: _TagWrap(user.subjects, AppTheme.primary),
         ),
-        child: Text(label,
-            style: TextStyle(
-                color: color,
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (user.strengths.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: isTutor ? 'Can Tutor' : 'Strong Subjects',
+          child: _TagWrap(user.strengths, AppTheme.success),
+        ),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (user.weaknesses.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: isTutor ? 'Still Learning' : 'Needs Help With',
+          child: _TagWrap(user.weaknesses, AppTheme.error),
+        ),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (user.learningStyles.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: 'Learning Style',
+          child: _TagWrap(user.learningStyles, AppTheme.accent),
+        ),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (user.studyStyles.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: 'Study Format',
+          child: _TagWrap(user.studyStyles, AppTheme.warning),
+        ),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (user.availability.isNotEmpty) {
+      widgets.addAll([
+        _LightSection(
+          title: 'Availability',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: user.availability.entries.map<Widget>((e) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.key,
+                        style: const TextStyle(
+                            color: AppTheme.textBody,
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    _TagWrap(e.value, const Color(0xFF3B82F6)),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ]);
+    }
+
+    if (widgets.isEmpty) {
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.borderLight),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.person_add_outlined,
+                  size: 36, color: AppTheme.primary),
+              const SizedBox(height: 10),
+              const Text('No profile details yet',
+                  style: TextStyle(
+                      color: AppTheme.textDark,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
+                      fontSize: 14)),
+              const SizedBox(height: 6),
+              const Text(
+                  'Edit your profile to add your subjects,\nlearning style, and availability.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      height: 1.5)),
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen())),
+                icon: const Icon(Icons.edit, size: 16),
+                label: const Text('Edit Profile',
+                    style: TextStyle(fontFamily: 'Poppins')),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+              ),
+            ],
+          ),
+        ),
       );
-}
+    }
 
-// ═══════════════════════════════════════════════════════════════
-class _SheetOption extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _SheetOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(title,
-          style: TextStyle(
-              color: color == AppTheme.error
-                  ? AppTheme.error
-                  : AppTheme.textPrimary,
-              fontFamily: 'Poppins',
-              fontSize: 14,
-              fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle,
-          style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontFamily: 'Poppins',
-              fontSize: 12)),
-      trailing: color == AppTheme.error
-          ? null
-          : const Icon(Icons.chevron_right,
-              color: AppTheme.textMuted, size: 18),
-      onTap: onTap,
-    );
+    return widgets;
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _InfoRow(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      this.valueColor});
+// ── Profile info card ─────────────────────────────────────────────────────────
+class _ProfileInfoCard extends StatelessWidget {
+  final dynamic user;
+  final bool isTutor;
+  const _ProfileInfoCard({required this.user, required this.isTutor});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: AppTheme.textMuted, size: 16),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 80,
-            child: Text(label,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar with edit button
+                Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const EditProfileScreen())),
+                      child: ProfileAvatar(
+                        photoUrl: user.profilePhotoUrl,
+                        displayName: user.fullName,
+                        size: 78,
+                        borderColor: AppTheme.borderLight,
+                        borderWidth: 2,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                            color: AppTheme.primary, shape: BoxShape.circle),
+                        child: const Icon(Icons.edit,
+                            color: Colors.white, size: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                // Name + role + location
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              user.fullName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textDark,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check,
+                                color: Colors.white, size: 10),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        user.department ?? (isTutor ? 'Tutor' : 'Student'),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textBody,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      if (user.school != null && user.school!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined,
+                                size: 13, color: AppTheme.textMuted),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                user.school!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen())),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppTheme.primary),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text(
+                    'Edit Profile',
+                    style: TextStyle(
+                        color: AppTheme.primary,
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            if (user.bio != null && user.bio!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Divider(color: AppTheme.borderLight, height: 1),
+              const SizedBox(height: 12),
+              Text(
+                user.bio!,
                 style: const TextStyle(
-                    color: AppTheme.textMuted,
-                    fontFamily: 'Poppins',
-                    fontSize: 12)),
-          ),
-          Expanded(
-            child: Text(value,
-                style: TextStyle(
-                    color: valueColor ?? AppTheme.textPrimary,
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500)),
-          ),
-        ],
+                  fontSize: 13,
+                  color: AppTheme.textBody,
+                  fontFamily: 'Poppins',
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-class _ProfileStat extends StatelessWidget {
-  final String value, label;
-  final IconData icon;
-  final Color color;
-
-  const _ProfileStat(
-      {required this.value,
-      required this.label,
-      required this.icon,
-      required this.color});
+// ── Stats card ────────────────────────────────────────────────────────────────
+class _StatsCard extends StatelessWidget {
+  final AppState state;
+  final bool isTutor;
+  const _StatsCard({required this.state, required this.isTutor});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderLight),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatItem(
+                icon: Icons.calendar_month_rounded,
+                iconColor: AppTheme.primary,
+                value: '${state.matchedUsers.length}',
+                label: 'Sessions',
+              ),
+            ),
+            Container(width: 1, height: 48, color: AppTheme.borderLight),
+            Expanded(
+              child: const _StatItem(
+                icon: Icons.star_rounded,
+                iconColor: AppTheme.warning,
+                value: '0.0',
+                label: 'Rating',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+  const _StatItem(
+      {required this.icon,
+      required this.iconColor,
+      required this.value,
+      required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
+          Icon(icon, color: iconColor, size: 26),
           const SizedBox(height: 6),
           Text(value,
-              style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
+              style: const TextStyle(
                   fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
                   fontFamily: 'Poppins')),
           const SizedBox(height: 2),
           Text(label,
               style: const TextStyle(
+                  fontSize: 12,
                   color: AppTheme.textMuted,
-                  fontSize: 11,
                   fontFamily: 'Poppins')),
         ],
       ),
@@ -853,19 +526,254 @@ class _ProfileStat extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-class _VerticalDivider extends StatelessWidget {
+// ── My Sessions ───────────────────────────────────────────────────────────────
+class _MySessions extends StatelessWidget {
+  final AppState state;
+  const _MySessions({required this.state});
+
   @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 40, color: AppTheme.divider);
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('My Sessions',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                      fontFamily: 'Poppins')),
+              TextButton(
+                onPressed: () =>
+                    ShellScope.of(context).navigate(StudentNav.studySessions),
+                child: const Text('View all',
+                    style: TextStyle(
+                        color: AppTheme.primary,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.borderLight),
+            ),
+            child: state.matchedUsers.isEmpty
+                ? Column(
+                    children: [
+                      Icon(Icons.calendar_today_outlined,
+                          size: 32, color: AppTheme.primary.withValues(alpha: 0.6)),
+                      const SizedBox(height: 10),
+                      const Text('No sessions yet',
+                          style: TextStyle(
+                              color: AppTheme.textDark,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                              fontSize: 13)),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: () => ShellScope.of(context)
+                            .navigate(StudentNav.findTutors),
+                        child: const Text('Find a tutor to get started',
+                            style: TextStyle(
+                                color: AppTheme.primary,
+                                fontFamily: 'Poppins',
+                                fontSize: 12)),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: state.matchedUsers.take(3).map((u) {
+                      return _SessionRow(
+                        name: u.fullName,
+                        subject: u.department ?? 'Study Session',
+                        icon: Icons.menu_book_rounded,
+                        iconColor: AppTheme.primary,
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════
-class _ProfileSection extends StatelessWidget {
+class _SessionRow extends StatelessWidget {
+  final String name;
+  final String subject;
+  final IconData icon;
+  final Color iconColor;
+  const _SessionRow(
+      {required this.name,
+      required this.subject,
+      required this.icon,
+      required this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins')),
+                Text('with $name',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                        fontFamily: 'Poppins')),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppTheme.textMuted, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Navigation links card ─────────────────────────────────────────────────────
+class _NavLinks extends StatelessWidget {
+  final int unread;
+  const _NavLinks({required this.unread});
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = ShellScope.of(context);
+    final links = [
+      _NavLinkData(Icons.calendar_month_outlined, 'My Schedule',
+          () => shell.navigate(StudentNav.schedule)),
+      _NavLinkData(Icons.chat_bubble_outline_rounded, 'Messages',
+          () => shell.navigate(StudentNav.messages),
+          badge: unread > 0 ? (unread > 9 ? '9+' : '$unread') : null),
+      _NavLinkData(Icons.folder_outlined, 'Resources',
+          () => shell.navigate(StudentNav.resources)),
+      _NavLinkData(Icons.show_chart_rounded, 'Activity', () {}),
+      _NavLinkData(Icons.settings_outlined, 'Settings',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderLight),
+        ),
+        child: Column(
+          children: [
+            for (int i = 0; i < links.length; i++) ...[
+              _NavLinkTile(link: links[i]),
+              if (i < links.length - 1)
+                const Divider(
+                    height: 1,
+                    indent: 56,
+                    endIndent: 16,
+                    color: Color(0xFFEEEEF4)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavLinkData {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final String? badge;
+  _NavLinkData(this.icon, this.label, this.onTap, {this.badge});
+}
+
+class _NavLinkTile extends StatelessWidget {
+  final _NavLinkData link;
+  const _NavLinkTile({required this.link});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(link.icon, color: AppTheme.primary, size: 20),
+      ),
+      title: Text(link.label,
+          style: const TextStyle(
+              color: AppTheme.textDark,
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w500)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (link.badge != null) ...[
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(link.badge!,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(width: 6),
+          ],
+          const Icon(Icons.chevron_right_rounded,
+              color: AppTheme.textMuted, size: 20),
+        ],
+      ),
+      onTap: link.onTap,
+    );
+  }
+}
+
+// ── Light section card ────────────────────────────────────────────────────────
+class _LightSection extends StatelessWidget {
   final String title;
   final Widget child;
-
-  const _ProfileSection({required this.title, required this.child});
+  const _LightSection({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -873,19 +781,20 @@ class _ProfileSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: AppTheme.bgCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.divider)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
               style: const TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: AppTheme.textDark,
                   fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontSize: 14,
                   fontFamily: 'Poppins')),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           child,
         ],
       ),
@@ -893,33 +802,34 @@ class _ProfileSection extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-class _SettingsRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color? color;
-  final VoidCallback onTap;
-
-  const _SettingsRow(
-      {required this.icon,
-      required this.label,
-      this.color,
-      required this.onTap});
+// ── Tag wrap ──────────────────────────────────────────────────────────────────
+class _TagWrap extends StatelessWidget {
+  final List<String> tags;
+  final Color color;
+  const _TagWrap(this.tags, this.color);
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppTheme.textSecondary;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: c, size: 20),
-      title: Text(label,
-          style: TextStyle(
-              color: c, fontFamily: 'Poppins', fontSize: 14)),
-      trailing: color == null
-          ? const Icon(Icons.chevron_right,
-              color: AppTheme.textMuted, size: 20)
-          : null,
-      onTap: onTap,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: tags
+          .map((t) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Text(t,
+                    style: TextStyle(
+                        color: color,
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500)),
+              ))
+          .toList(),
     );
   }
 }

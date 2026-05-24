@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../navigation/student_nav.dart';
+import '../../services/app_state.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/shell_scope.dart';
 import '../../widgets/student_drawer.dart';
@@ -11,6 +13,7 @@ import 'resources_screen.dart';
 import 'profile_screen.dart';
 import 'my_matches_screen.dart';
 import 'placeholder_screen.dart';
+import 'settings_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -23,6 +26,19 @@ class _MainShellState extends State<MainShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   StudentNav _current = StudentNav.dashboard;
 
+  static const List<StudentNav> _bottomNavItems = [
+    StudentNav.dashboard,
+    StudentNav.findTutors,
+    StudentNav.studySessions,
+    StudentNav.messages,
+    StudentNav.profile,
+  ];
+
+  int get _bottomIndex {
+    final i = _bottomNavItems.indexOf(_current);
+    return i >= 0 ? i : 0;
+  }
+
   void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
 
   void _navigate(StudentNav dest) {
@@ -30,6 +46,10 @@ class _MainShellState extends State<MainShell> {
     if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
       Navigator.of(context).pop();
     }
+  }
+
+  void _onBottomNavTap(int index) {
+    _navigate(_bottomNavItems[index]);
   }
 
   Widget _screenFor(StudentNav nav) {
@@ -54,11 +74,7 @@ class _MainShellState extends State<MainShell> {
         ),
       StudentNav.resources => const ResourcesScreen(),
       StudentNav.profile => const ProfileScreen(),
-      StudentNav.settings => const PlaceholderScreen(
-          title: 'Settings',
-          message: 'Account, notifications, and privacy settings.',
-          icon: Icons.settings_rounded,
-        ),
+      StudentNav.settings => const SettingsScreen(),
       StudentNav.help => const PlaceholderScreen(
           title: 'Help Center',
           message: 'Get support and browse help articles.',
@@ -69,6 +85,8 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final unread = context.watch<AppState>().unreadMessageCount;
+
     return ShellScope(
       current: _current,
       navigate: _navigate,
@@ -78,7 +96,96 @@ class _MainShellState extends State<MainShell> {
         backgroundColor: AppTheme.bgLight,
         drawer: const StudentDrawer(),
         body: _screenFor(_current),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _bottomIndex,
+            onTap: _onBottomNavTap,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            selectedItemColor: AppTheme.primary,
+            unselectedItemColor: AppTheme.textMuted,
+            type: BottomNavigationBarType.fixed,
+            selectedLabelStyle: const TextStyle(
+                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+            unselectedLabelStyle:
+                const TextStyle(fontFamily: 'Poppins', fontSize: 11),
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home_rounded),
+                label: 'Dashboard',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.search),
+                activeIcon: Icon(Icons.search),
+                label: 'Find Tutors',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.calendar_today_outlined),
+                activeIcon: Icon(Icons.calendar_today_rounded),
+                label: 'Sessions',
+              ),
+              BottomNavigationBarItem(
+                icon: _MessageIcon(count: unread, active: false),
+                activeIcon: _MessageIcon(count: unread, active: true),
+                label: 'Messages',
+              ),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline_rounded),
+                activeIcon: Icon(Icons.person_rounded),
+                label: 'Profile',
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _MessageIcon extends StatelessWidget {
+  final int count;
+  final bool active;
+  const _MessageIcon({required this.count, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(active
+            ? Icons.chat_bubble_rounded
+            : Icons.chat_bubble_outline_rounded),
+        if (count > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                count > 9 ? '9+' : '$count',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

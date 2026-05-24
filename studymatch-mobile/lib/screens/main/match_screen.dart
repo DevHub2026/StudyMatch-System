@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/app_state.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/shell_scope.dart';
 import '../../models/models.dart';
 import 'user_profile_screen.dart';
 
@@ -25,9 +24,18 @@ class _MatchScreenState extends State<MatchScreen>
   bool _showSearch = false;
 
   final List<String> _subjects = [
-    'All', 'Mathematics', 'Physics', 'Chemistry', 'Biology',
-    'Computer Science', 'English', 'History', 'Statistics',
-    'Calculus', 'Algebra', 'Programming',
+    'All',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'English',
+    'History',
+    'Statistics',
+    'Calculus',
+    'Algebra',
+    'Programming',
   ];
 
   @override
@@ -52,9 +60,10 @@ class _MatchScreenState extends State<MatchScreen>
 
   void _search() {
     context.read<AppState>().loadMatchUsers(
-      subject: _selectedSubject == 'All' ? null : _selectedSubject,
-      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-    );
+          subject: _selectedSubject == 'All' ? null : _selectedSubject,
+          search:
+              _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+        );
   }
 
   // ── Swipe ─────────────────────────────────────────────────────────────────
@@ -77,7 +86,10 @@ class _MatchScreenState extends State<MatchScreen>
       _ctrl.forward().then((_) {
         state.passUser(candidate.id);
         _ctrl.reset();
-        setState(() { _liking = null; _dragOffset = Offset.zero; });
+        setState(() {
+          _liking = null;
+          _dragOffset = Offset.zero;
+        });
       });
       return;
     }
@@ -87,8 +99,7 @@ class _MatchScreenState extends State<MatchScreen>
       begin: Offset.zero,
       end: Offset(like ? 2 : -2, 0),
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _rotate =
-        Tween<double>(begin: 0, end: like ? 0.15 : -0.15).animate(_ctrl);
+    _rotate = Tween<double>(begin: 0, end: like ? 0.15 : -0.15).animate(_ctrl);
 
     _ctrl.forward().then((_) async {
       final userId = state.matchUsers.first.id;
@@ -112,9 +123,11 @@ class _MatchScreenState extends State<MatchScreen>
     // Determine the reason
     final String reason;
     if (!state.currentUserHasAttributes) {
-      reason = 'Complete your profile first — add your subjects or weaknesses to start matching.';
+      reason =
+          'Complete your profile first — add your subjects or weaknesses to start matching.';
     } else {
-      reason = '${user.fullName.split(' ').first} has no profile attributes — no match possible.';
+      reason =
+          '${user.fullName.split(' ').first} has no profile attributes — no match possible.';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -134,8 +147,7 @@ class _MatchScreenState extends State<MatchScreen>
         backgroundColor: AppTheme.error,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -158,8 +170,7 @@ class _MatchScreenState extends State<MatchScreen>
         backgroundColor: AppTheme.success,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -171,8 +182,8 @@ class _MatchScreenState extends State<MatchScreen>
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: AppTheme.bgCard,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Rate ${user.fullName}',
               style: const TextStyle(
                   color: AppTheme.textPrimary,
@@ -194,8 +205,7 @@ class _MatchScreenState extends State<MatchScreen>
                     (i) => GestureDetector(
                           onTap: () => setS(() => selectedScore = i + 1),
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             child: Icon(
                               i < selectedScore
                                   ? Icons.star_rounded
@@ -224,15 +234,15 @@ class _MatchScreenState extends State<MatchScreen>
                           .rateUser(ratedId: user.id, score: selectedScore);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Rating submitted!'),
-                              backgroundColor: AppTheme.success));
+                            const SnackBar(
+                                content: Text('Rating submitted!'),
+                                backgroundColor: AppTheme.success));
                       }
                     },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary),
-              child: const Text('Submit',
-                  style: TextStyle(fontFamily: 'Poppins')),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+              child:
+                  const Text('Submit', style: TextStyle(fontFamily: 'Poppins')),
             ),
           ],
         ),
@@ -248,51 +258,41 @@ class _MatchScreenState extends State<MatchScreen>
     final showNoProfileBanner = !state.currentUserHasAttributes;
 
     return Scaffold(
+      backgroundColor: AppTheme.bgLight,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu_rounded, color: AppTheme.textPrimary),
-                        onPressed: () => ShellScope.of(context).openDrawer(),
+                      const Expanded(
+                        child: Text(
+                          'Find Tutors',
+                          style: TextStyle(
+                              color: AppTheme.textDark,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              fontFamily: 'Poppins'),
+                        ),
                       ),
-                      Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                      color: AppTheme.success,
-                                      shape: BoxShape.circle)),
-                              const SizedBox(width: 6),
-                              const Text('StudyMatch',
-                                  style: TextStyle(
-                                      color: AppTheme.textPrimary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      fontFamily: 'Poppins')),
-                            ]),
-                            const Text('Find your study partner',
-                                style: TextStyle(
-                                    color: AppTheme.textMuted,
-                                    fontSize: 12,
-                                    fontFamily: 'Poppins')),
-                          ]),
                       IconButton(
-                        icon: Icon(
-                            _showSearch
-                                ? Icons.search_off
-                                : Icons.search,
-                            color: AppTheme.textSecondary),
+                        icon: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F0F4),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            _showSearch ? Icons.search_off : Icons.search,
+                            color: AppTheme.textDark,
+                            size: 18,
+                          ),
+                        ),
                         onPressed: () =>
                             setState(() => _showSearch = !_showSearch),
                       ),
@@ -339,9 +339,9 @@ class _MatchScreenState extends State<MatchScreen>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.divider),
+                        border: Border.all(color: AppTheme.borderLight),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +349,7 @@ class _MatchScreenState extends State<MatchScreen>
                           TextField(
                             controller: _searchCtrl,
                             style: const TextStyle(
-                                color: AppTheme.textPrimary,
+                                color: AppTheme.textDark,
                                 fontFamily: 'Poppins'),
                             decoration: InputDecoration(
                               hintText: 'Search by name...',
@@ -359,7 +359,7 @@ class _MatchScreenState extends State<MatchScreen>
                               prefixIcon: const Icon(Icons.search,
                                   color: AppTheme.textMuted, size: 20),
                               filled: true,
-                              fillColor: AppTheme.inputBg,
+                              fillColor: const Color(0xFFF5F5F8),
                               border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                   borderSide: BorderSide.none),
@@ -371,7 +371,7 @@ class _MatchScreenState extends State<MatchScreen>
                           const SizedBox(height: 12),
                           const Text('Filter by Subject',
                               style: TextStyle(
-                                  color: AppTheme.textMuted,
+                                  color: AppTheme.textBody,
                                   fontSize: 12,
                                   fontFamily: 'Poppins',
                                   letterSpacing: 0.5)),
@@ -390,26 +390,24 @@ class _MatchScreenState extends State<MatchScreen>
                                   onTap: () =>
                                       setState(() => _selectedSubject = s),
                                   child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 150),
+                                    duration: const Duration(milliseconds: 150),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: sel
                                           ? AppTheme.primary
-                                          : AppTheme.inputBg,
-                                      borderRadius:
-                                          BorderRadius.circular(20),
+                                          : const Color(0xFFF5F5F8),
+                                      borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
                                           color: sel
                                               ? AppTheme.primary
-                                              : AppTheme.divider),
+                                              : AppTheme.borderLight),
                                     ),
                                     child: Text(s,
                                         style: TextStyle(
                                           color: sel
                                               ? Colors.white
-                                              : AppTheme.textSecondary,
+                                              : AppTheme.textBody,
                                           fontFamily: 'Poppins',
                                           fontSize: 12,
                                           fontWeight: sel
@@ -434,8 +432,7 @@ class _MatchScreenState extends State<MatchScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primary,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(10)),
+                                    borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
                           ),
@@ -453,11 +450,9 @@ class _MatchScreenState extends State<MatchScreen>
             Expanded(
               child: state.loadingUsers
                   ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppTheme.primary))
+                      child: CircularProgressIndicator(color: AppTheme.primary))
                   : state.matchUsers.isEmpty
-                      ? _EmptyState(
-                          onRefresh: () => state.loadMatchUsers())
+                      ? _EmptyState(onRefresh: () => state.loadMatchUsers())
                       : Stack(
                           alignment: Alignment.center,
                           children: [
@@ -470,8 +465,8 @@ class _MatchScreenState extends State<MatchScreen>
                                   child: _MatchCard(
                                     user: state.matchUsers[1],
                                     overlay: null,
-                                    isIncompatible: !state.isCompatible(
-                                        state.matchUsers[1]),
+                                    isIncompatible: !state
+                                        .isCompatible(state.matchUsers[1]),
                                     currentUserHasNoProfile:
                                         !state.currentUserHasAttributes,
                                     onRate: () {},
@@ -506,8 +501,8 @@ class _MatchScreenState extends State<MatchScreen>
                                     child: _MatchCard(
                                       user: state.matchUsers.first,
                                       overlay: _liking,
-                                      isIncompatible: !state.isCompatible(
-                                          state.matchUsers.first),
+                                      isIncompatible: !state
+                                          .isCompatible(state.matchUsers.first),
                                       currentUserHasNoProfile:
                                           !state.currentUserHasAttributes,
                                       onRate: () => _showRatingDialog(
@@ -545,8 +540,8 @@ class _MatchScreenState extends State<MatchScreen>
                     icon: Icons.star_rounded,
                     color: AppTheme.warning,
                     onTap: state.matchUsers.isNotEmpty
-                        ? () => _showRatingDialog(
-                            context, state.matchUsers.first)
+                        ? () =>
+                            _showRatingDialog(context, state.matchUsers.first)
                         : null,
                   ),
                   // ✅ Heart button dims when incompatible (either side)
@@ -607,22 +602,25 @@ class _MatchCard extends StatelessWidget {
         width: MediaQuery.of(context).size.width - 48,
         margin: const EdgeInsets.symmetric(horizontal: 24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF2D1F5E), Color(0xFF1A1730)],
-          ),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: overlay == true
-                ? AppTheme.success.withOpacity(0.5)
+                ? AppTheme.success.withValues(alpha: 0.5)
                 : overlay == false
-                    ? AppTheme.error.withOpacity(0.5)
+                    ? AppTheme.error.withValues(alpha: 0.5)
                     : isIncompatible
-                        ? AppTheme.error.withOpacity(0.3)
-                        : AppTheme.divider,
+                        ? AppTheme.error.withValues(alpha: 0.3)
+                        : AppTheme.borderLight,
             width: overlay != null ? 2 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
@@ -639,15 +637,17 @@ class _MatchCard extends StatelessWidget {
                           width: 72,
                           height: 72,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: isIncompatible
-                                ? [AppTheme.textMuted, AppTheme.divider]
-                                : [AppTheme.primary, AppTheme.accent]),
+                            color: isIncompatible
+                                ? AppTheme.textMuted.withValues(alpha: 0.15)
+                                : AppTheme.primary.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                               child: Text(user.initials,
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: isIncompatible
+                                          ? AppTheme.textMuted
+                                          : AppTheme.primary,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 28,
                                       fontFamily: 'Poppins'))),
@@ -662,7 +662,7 @@ class _MatchCard extends StatelessWidget {
                                   Expanded(
                                     child: Text(user.fullName,
                                         style: const TextStyle(
-                                            color: AppTheme.textPrimary,
+                                            color: AppTheme.textDark,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 18,
                                             fontFamily: 'Poppins')),
@@ -672,16 +672,13 @@ class _MatchCard extends StatelessWidget {
                                         horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: roleColor.withOpacity(0.2),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                          color:
-                                              roleColor.withOpacity(0.5)),
+                                          color: roleColor.withOpacity(0.5)),
                                     ),
                                     child: Text(
                                       isTutor ? '🏫' : '🎓',
-                                      style:
-                                          const TextStyle(fontSize: 12),
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                   ),
                                 ],
@@ -690,7 +687,7 @@ class _MatchCard extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(user.department!,
                                     style: const TextStyle(
-                                        color: AppTheme.textSecondary,
+                                        color: AppTheme.textBody,
                                         fontFamily: 'Poppins',
                                         fontSize: 13)),
                               ],
@@ -712,8 +709,7 @@ class _MatchCard extends StatelessWidget {
                                         (i) => Icon(
                                               i < user.rating.round()
                                                   ? Icons.star_rounded
-                                                  : Icons
-                                                      .star_border_rounded,
+                                                  : Icons.star_border_rounded,
                                               color: AppTheme.warning,
                                               size: 16,
                                             )),
@@ -733,7 +729,7 @@ class _MatchCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    const Divider(color: AppTheme.divider),
+                    const Divider(color: AppTheme.borderLight),
                     const SizedBox(height: 12),
 
                     // ✅ Incompatible warning banner (context-aware message)
@@ -770,8 +766,7 @@ class _MatchCard extends StatelessWidget {
                     ],
 
                     if (user.subjects.isNotEmpty) ...[
-                      _CardSection(
-                          title: '📚 Subjects', chips: user.subjects),
+                      _CardSection(title: '📚 Subjects', chips: user.subjects),
                       const SizedBox(height: 12),
                     ],
                     if (user.strengths.isNotEmpty) ...[
@@ -784,9 +779,7 @@ class _MatchCard extends StatelessWidget {
                     ],
                     if (user.weaknesses.isNotEmpty) ...[
                       _CardSection(
-                        title: isTutor
-                            ? '📖 Still Learning'
-                            : '😅 Needs Help',
+                        title: isTutor ? '📖 Still Learning' : '😅 Needs Help',
                         chips: user.weaknesses,
                         color: AppTheme.error,
                       ),
@@ -876,8 +869,7 @@ class _CardSection extends StatelessWidget {
   final String title;
   final List<String> chips;
   final Color? color;
-  const _CardSection(
-      {required this.title, required this.chips, this.color});
+  const _CardSection({required this.title, required this.chips, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -886,7 +878,7 @@ class _CardSection extends StatelessWidget {
       children: [
         Text(title,
             style: const TextStyle(
-                color: AppTheme.textSecondary,
+                color: AppTheme.textBody,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Poppins')),
@@ -896,19 +888,19 @@ class _CardSection extends StatelessWidget {
           runSpacing: 6,
           children: chips
               .map((ch) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                         color: color != null
-                            ? color!.withOpacity(0.15)
-                            : AppTheme.chipBg,
+                            ? color!.withValues(alpha: 0.12)
+                            : AppTheme.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(20),
                         border: color != null
-                            ? Border.all(color: color!.withOpacity(0.3))
+                            ? Border.all(color: color!.withValues(alpha: 0.3))
                             : null),
                     child: Text(ch,
                         style: TextStyle(
-                            color: color ?? AppTheme.textPrimary,
+                            color: color ?? AppTheme.primary,
                             fontSize: 11,
                             fontFamily: 'Poppins')),
                   ))
@@ -925,10 +917,7 @@ class _SwipeButton extends StatelessWidget {
   final VoidCallback? onTap;
   final double size;
   const _SwipeButton(
-      {required this.icon,
-      required this.color,
-      this.onTap,
-      this.size = 52});
+      {required this.icon, required this.color, this.onTap, this.size = 52});
 
   @override
   Widget build(BuildContext context) {
@@ -962,31 +951,30 @@ class _EmptyState extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-                color: AppTheme.bgCard,
+                color: AppTheme.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.divider)),
+                border: Border.all(color: AppTheme.borderLight)),
             child: const Icon(Icons.people_alt_outlined,
-                color: AppTheme.textMuted, size: 38),
+                color: AppTheme.primary, size: 38),
           ),
           const SizedBox(height: 20),
           const Text('No more users',
               style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: AppTheme.textDark,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins')),
           const SizedBox(height: 8),
           const Text("You've seen everyone for now!",
-              style: TextStyle(
-                  color: AppTheme.textSecondary, fontFamily: 'Poppins')),
+              style:
+                  TextStyle(color: AppTheme.textBody, fontFamily: 'Poppins')),
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh),
-            label: const Text('Refresh',
-                style: TextStyle(fontFamily: 'Poppins')),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary),
+            label:
+                const Text('Refresh', style: TextStyle(fontFamily: 'Poppins')),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
           ),
         ],
       ),

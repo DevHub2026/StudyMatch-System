@@ -1,0 +1,12 @@
+Most buttons in the Settings screen are static, except for “Edit Profile” and “Log Out”.
+
+There is also an error occurring:
+browser_client.dart:83 POST http://127.0.0.1:8000/api/register 500 (Internal Server Error)
+
+However, the data is still being saved to the database after a delay of less than one minute.
+
+In addition, users are not appearing in the matching results even though there are student users whose weaknesses match the tutor’s strengths.
+
+The following screens still have not been updated to a white background:
+Edit Profile screen
+Resources screen

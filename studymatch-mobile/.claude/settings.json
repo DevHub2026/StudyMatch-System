@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub *)",
+      "Bash(flutter --version)",
+      "Bash(flutter devices *)",
+      "Bash(flutter emulators *)",
+      "Bash(New-Item -ItemType Directory -Force \"c:\\\\Project\\\\StudyMatch-System\\\\studymatch-mobile\\\\studymatch-mobile\\\\assets\\\\images\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Created\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Project\\\\StudyMatch-System\\\\studymatch-mobile\\\\studymatch-mobile\\\\assets\\\\images\")",
+      "Bash(flutter build *)",
+      "Bash(flutter analyze *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Project\\\\StudyMatch-System\" -Directory)",
+      "Bash(grep -E \"\\(^[^/]*$|/app|/config|/database\\)\")",
+      "Bash(cd \"/c/Project/StudyMatch-System\" && ls -la)",
+      "Read(//c/c/Project/**)",
+      "Read(//c/Users/salva/AppData/Local/Temp/claude/c--Project-StudyMatch-System/29d1b294-75ac-4632-bb0e-b6958fe1ae83/tasks/**)",
+      "Bash(xargs grep -l \"baseUrl\\\\|dio\\\\|http\\\\|127.0.0\\\\|10.0.2.2\")",
+      "Bash(xargs grep -l \"ApiConstants\\\\|constants\")",
+      "Bash(Get-ChildItem -Recurse -Filter \"*.php\" \"c:\\\\Project\\\\StudyMatch-System\\\\studymatch-api\\\\app\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
+    ]
+  }
+}

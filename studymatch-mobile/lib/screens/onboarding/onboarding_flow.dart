@@ -14,12 +14,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   String? _role;
 
   // Step 1 — Basic Info
-  final _schoolCtrl = TextEditingController();
   final _bioCtrl    = TextEditingController();
-  final _degreeCtrl = TextEditingController(); // ✅ NEW: tutor degree input
+  final _degreeCtrl = TextEditingController();
   String? _gender;
   DateTime? _dob;
-  String? _department; // used only for students
+  String? _department;
 
   // Step 2 — Subjects
   final Set<String> _subjects   = {};
@@ -59,12 +58,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   bool get _isTutor => _role == 'tutor';
 
-  // ✅ FIX: total steps is 5 (0–4), so this must be 5
   static const int _totalSteps = 5;
 
   @override
   void dispose() {
-    _schoolCtrl.dispose();
     _bioCtrl.dispose();
     _degreeCtrl.dispose();
     super.dispose();
@@ -87,10 +84,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
     } else if (step == 1) {
       state.updateUserProfile({
-        'school':      _schoolCtrl.text.trim(),
         'gender':      _gender,
         'dateOfBirth': _dob?.toIso8601String(),
-        // ✅ tutors save their degree as department; students save chip selection
         'department':  _isTutor ? _degreeCtrl.text.trim() : _department,
         'bio':         _bioCtrl.text.trim(),
       });
@@ -129,13 +124,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     final step  = state.onboardingStep;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0B1E),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 32),
 
-            // Icon
+            // Step icon
             Text(
               ['🎭', '🎓', '📖', '📅', '✨'][step],
               style: const TextStyle(fontSize: 48),
@@ -147,8 +142,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               ['Who are you?', 'Basic Information', 'Your Subjects',
                'Study Schedule', 'Study Style'][step],
               style: const TextStyle(
-                color: Colors.white, fontSize: 24,
-                fontWeight: FontWeight.bold, fontFamily: 'Poppins',
+                color: Color(0xFF1A1A2E),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
               ),
             ),
             const SizedBox(height: 6),
@@ -156,13 +153,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             // Subtitle
             Text(
               _stepSubtitle(step),
+              textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13, fontFamily: 'Poppins',
+                color: Color(0xFF6B7280),
+                fontSize: 13,
+                fontFamily: 'Poppins',
               ),
             ),
             const SizedBox(height: 20),
 
-            // Progress bar — ✅ uses _totalSteps = 5
+            // Progress bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Row(
@@ -171,7 +171,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     height: 4,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     decoration: BoxDecoration(
-                      color: i <= step ? AppTheme.primary : AppTheme.divider,
+                      color: i <= step
+                          ? AppTheme.primary
+                          : const Color(0xFFE8E8EF),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -187,9 +189,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1535),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.divider),
+                    border: Border.all(color: const Color(0xFFE8E8EF)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: _buildStep(step),
                 ),
@@ -207,14 +216,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       child: OutlinedButton(
                         onPressed: _back,
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppTheme.divider),
+                          side: const BorderSide(color: Color(0xFFE8E8EF)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         child: const Text('← Back',
                             style: TextStyle(
-                                color: AppTheme.textSecondary,
+                                color: Color(0xFF6B7280),
                                 fontFamily: 'Poppins')),
                       ),
                     ),
@@ -223,24 +232,26 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
-                      // ✅ FIX: onPressed is always active (not null) unless saving
                       onPressed: _saving ? null : _next,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
-                        disabledBackgroundColor: AppTheme.primary.withOpacity(0.5),
+                        disabledBackgroundColor:
+                            AppTheme.primary.withValues(alpha: 0.5),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _saving
                           ? const SizedBox(
-                              width: 20, height: 20,
+                              width: 20,
+                              height: 20,
                               child: CircularProgressIndicator(
                                   color: Colors.white, strokeWidth: 2),
                             )
                           : Text(
-                              // ✅ FIX: last step is index 4 (_totalSteps - 1)
-                              step == _totalSteps - 1 ? '✨ Finish Setup' : 'Next →',
+                              step == _totalSteps - 1
+                                  ? '✨ Finish Setup'
+                                  : 'Next →',
                               style: const TextStyle(
                                   fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w600,
@@ -264,7 +275,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _isTutor
           ? 'Select subjects you can teach and your expertise'
           : 'Select subjects you study and where you need help',
-      _isTutor ? 'When are you available to tutor?' : 'When are you available to study?',
+      _isTutor
+          ? 'When are you available to tutor?'
+          : 'When are you available to study?',
       'How do you prefer to learn?',
     ][step];
   }
@@ -289,12 +302,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         const SizedBox(height: 8),
         const Text(
           'Your role determines how you are matched with others. You can always update this later from your profile.',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontFamily: 'Poppins', height: 1.5),
+          style: TextStyle(
+              color: Color(0xFF9CA3AF),
+              fontSize: 12,
+              fontFamily: 'Poppins',
+              height: 1.5),
         ),
         const SizedBox(height: 20),
         _RoleCard(
-          emoji: '🎓', title: 'Student', subtitle: 'I want to find study partners and tutors to help me with difficult subjects.',
-          badge: 'Learner', badgeColor: const Color(0xFF3B82F6),
+          emoji: '🎓',
+          title: 'Student',
+          subtitle: 'I want to find study partners and tutors to help me with difficult subjects.',
+          badge: 'Learner',
+          badgeColor: const Color(0xFF3B82F6),
           features: const [
             '📚 Get matched with tutors in your weak subjects',
             '👥 Find study partners at your level',
@@ -305,8 +325,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         ),
         const SizedBox(height: 16),
         _RoleCard(
-          emoji: '🏫', title: 'Tutor', subtitle: 'I want to help other students by sharing my knowledge in my strong subjects.',
-          badge: 'Educator', badgeColor: AppTheme.success,
+          emoji: '🏫',
+          title: 'Tutor',
+          subtitle: 'I want to help other students by sharing my knowledge in my strong subjects.',
+          badge: 'Educator',
+          badgeColor: AppTheme.success,
           features: const [
             '💪 Get matched with students who need your expertise',
             '⭐ Build your reputation with ratings',
@@ -319,9 +342,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.08),
+            color: AppTheme.primary.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
           ),
           child: const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +354,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               Expanded(
                 child: Text(
                   'Students are matched with tutors whose strong subjects overlap with the student\'s weak subjects — so everyone finds the right partner.',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontFamily: 'Poppins', height: 1.5),
+                  style: TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 12,
+                      fontFamily: 'Poppins',
+                      height: 1.5),
                 ),
               ),
             ],
@@ -349,11 +376,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _roleBadge(),
         const SizedBox(height: 20),
 
-        _label('School / University'),
-        const SizedBox(height: 8),
-        _textField(_schoolCtrl, 'e.g. University of Santo Tomas', icon: Icons.school_outlined),
-        const SizedBox(height: 16),
-
         Row(
           children: [
             Expanded(
@@ -365,7 +387,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   _dropdown(
                     value: _gender,
                     hint: 'Select gender',
-                    items: const ['Male', 'Female', 'Non-Binary', 'Prefer not to say'],
+                    items: const [
+                      'Male', 'Female', 'Non-Binary', 'Prefer not to say'
+                    ],
                     onChanged: (v) => setState(() => _gender = v),
                   ),
                 ],
@@ -386,10 +410,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         firstDate: DateTime(1950),
                         lastDate: DateTime.now(),
                         builder: (ctx, child) => Theme(
-                          data: ThemeData.dark().copyWith(
-                            colorScheme: const ColorScheme.dark(
+                          data: ThemeData.light().copyWith(
+                            colorScheme: ColorScheme.light(
                               primary: AppTheme.primary,
-                              surface: AppTheme.bgCard,
+                              surface: Colors.white,
                             ),
                           ),
                           child: child!,
@@ -398,20 +422,27 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       if (d != null) setState(() => _dob = d);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
                       decoration: BoxDecoration(
-                        color: AppTheme.inputBg,
+                        color: const Color(0xFFF5F5F8),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.divider),
+                        border: Border.all(color: const Color(0xFFE8E8EF)),
                       ),
                       child: Row(children: [
-                        const Icon(Icons.calendar_today_outlined, color: AppTheme.textMuted, size: 16),
+                        const Icon(Icons.calendar_today_outlined,
+                            color: Color(0xFF9CA3AF), size: 16),
                         const SizedBox(width: 8),
                         Text(
-                          _dob != null ? '${_dob!.month}/${_dob!.day}/${_dob!.year}' : 'mm/dd/yyyy',
+                          _dob != null
+                              ? '${_dob!.month}/${_dob!.day}/${_dob!.year}'
+                              : 'mm/dd/yyyy',
                           style: TextStyle(
-                            color: _dob != null ? AppTheme.textPrimary : AppTheme.textMuted,
-                            fontFamily: 'Poppins', fontSize: 13,
+                            color: _dob != null
+                                ? const Color(0xFF1A1A2E)
+                                : const Color(0xFF9CA3AF),
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
                           ),
                         ),
                       ]),
@@ -424,7 +455,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         ),
         const SizedBox(height: 16),
 
-        // ✅ TUTORS get a free-text degree field; STUDENTS get department chips
         if (_isTutor) ...[
           _label('College Degree'),
           const SizedBox(height: 8),
@@ -437,11 +467,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           _label('College Department'),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 8, runSpacing: 8,
-            children: _deptList.map((d) => _chip(
-              d, _department == d,
-              () => setState(() => _department = _department == d ? null : d),
-            )).toList(),
+            spacing: 8,
+            runSpacing: 8,
+            children: _deptList
+                .map((d) => _chip(
+                      d,
+                      _department == d,
+                      () => setState(
+                          () => _department = _department == d ? null : d),
+                    ))
+                .toList(),
           ),
         ],
 
@@ -451,17 +486,28 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         TextField(
           controller: _bioCtrl,
           maxLines: 3,
-          style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins', fontSize: 13),
+          style: const TextStyle(
+              color: Color(0xFF1A1A2E),
+              fontFamily: 'Poppins',
+              fontSize: 13),
           decoration: InputDecoration(
             hintText: _isTutor
                 ? 'Tell students about your teaching approach...'
                 : 'Tell others about yourself...',
-            hintStyle: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins'),
+            hintStyle: const TextStyle(
+                color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
             filled: true,
-            fillColor: AppTheme.inputBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.divider)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.divider)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primary)),
+            fillColor: const Color(0xFFF5F5F8),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppTheme.primary)),
           ),
         ),
       ],
@@ -478,25 +524,41 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _label('Subjects you study'),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _chip(
-            s, _subjects.contains(s),
-            () => setState(() => _subjects.contains(s) ? _subjects.remove(s) : _subjects.add(s)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _chip(
+                    s,
+                    _subjects.contains(s),
+                    () => setState(() => _subjects.contains(s)
+                        ? _subjects.remove(s)
+                        : _subjects.add(s)),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 24),
         _label('😅 Subjects you need help with'),
         const SizedBox(height: 6),
-        const Text('Tutors strong in these subjects will be prioritised in your matches',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontFamily: 'Poppins')),
+        const Text(
+            'Tutors strong in these subjects will be prioritised in your matches',
+            style: TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 11,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _chip(
-            s, _weaknesses.contains(s),
-            () => setState(() => _weaknesses.contains(s) ? _weaknesses.remove(s) : _weaknesses.add(s)),
-            selectedColor: AppTheme.error,
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _chip(
+                    s,
+                    _weaknesses.contains(s),
+                    () => setState(() => _weaknesses.contains(s)
+                        ? _weaknesses.remove(s)
+                        : _weaknesses.add(s)),
+                    selectedColor: AppTheme.error,
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -512,39 +574,64 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _label('Subjects you teach / know well'),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _chip(
-            s, _subjects.contains(s),
-            () => setState(() => _subjects.contains(s) ? _subjects.remove(s) : _subjects.add(s)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _chip(
+                    s,
+                    _subjects.contains(s),
+                    () => setState(() => _subjects.contains(s)
+                        ? _subjects.remove(s)
+                        : _subjects.add(s)),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 24),
         _label('💪 Subjects you can tutor (your expertise)'),
         const SizedBox(height: 6),
-        const Text('Students who are weak in these subjects will be matched with you',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontFamily: 'Poppins')),
+        const Text(
+            'Students who are weak in these subjects will be matched with you',
+            style: TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 11,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _chip(
-            s, _strengths.contains(s),
-            () => setState(() => _strengths.contains(s) ? _strengths.remove(s) : _strengths.add(s)),
-            selectedColor: AppTheme.success,
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _chip(
+                    s,
+                    _strengths.contains(s),
+                    () => setState(() => _strengths.contains(s)
+                        ? _strengths.remove(s)
+                        : _strengths.add(s)),
+                    selectedColor: AppTheme.success,
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 24),
         _label('📖 Subjects you\'re still learning (Optional)'),
         const SizedBox(height: 6),
         const Text('Helps find peer study partners for these subjects',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 11, fontFamily: 'Poppins')),
+            style: TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 11,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _chip(
-            s, _weaknesses.contains(s),
-            () => setState(() => _weaknesses.contains(s) ? _weaknesses.remove(s) : _weaknesses.add(s)),
-            selectedColor: const Color(0xFF8B5CF6),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _chip(
+                    s,
+                    _weaknesses.contains(s),
+                    () => setState(() => _weaknesses.contains(s)
+                        ? _weaknesses.remove(s)
+                        : _weaknesses.add(s)),
+                    selectedColor: const Color(0xFF8B5CF6),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -557,24 +644,37 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       children: [
         _roleBadge(),
         const SizedBox(height: 20),
-        _label(_isTutor ? 'Days you\'re available to tutor' : 'Study Days'),
+        _label(_isTutor
+            ? 'Days you\'re available to tutor'
+            : 'Study Days'),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _dayList.map((d) => _chip(
-            d, _days.contains(d),
-            () => setState(() => _days.contains(d) ? _days.remove(d) : _days.add(d)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _dayList
+              .map((d) => _chip(
+                    d,
+                    _days.contains(d),
+                    () => setState(() =>
+                        _days.contains(d) ? _days.remove(d) : _days.add(d)),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 20),
         _label('Time Blocks'),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _timeList.map((t) => _chip(
-            t, _timeBlocks.contains(t),
-            () => setState(() => _timeBlocks.contains(t) ? _timeBlocks.remove(t) : _timeBlocks.add(t)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _timeList
+              .map((t) => _chip(
+                    t,
+                    _timeBlocks.contains(t),
+                    () => setState(() => _timeBlocks.contains(t)
+                        ? _timeBlocks.remove(t)
+                        : _timeBlocks.add(t)),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -587,7 +687,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       children: [
         _roleBadge(),
         const SizedBox(height: 20),
-        _label(_isTutor ? 'Your teaching & learning style' : 'Pick your study style'),
+        _label(_isTutor
+            ? 'Your teaching & learning style'
+            : 'Pick your study style'),
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -598,19 +700,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           childAspectRatio: 1.2,
           children: [
             ..._learnStyles.map((s) => _styleCard(
-              s.$1, s.$2, s.$3,
-              _learningStyles.contains(s.$2),
-              () => setState(() => _learningStyles.contains(s.$2)
-                  ? _learningStyles.remove(s.$2)
-                  : _learningStyles.add(s.$2)),
-            )),
+                  s.$1, s.$2, s.$3,
+                  _learningStyles.contains(s.$2),
+                  () => setState(() => _learningStyles.contains(s.$2)
+                      ? _learningStyles.remove(s.$2)
+                      : _learningStyles.add(s.$2)),
+                )),
             ..._studyFmts.map((s) => _styleCard(
-              s.$1, s.$2, s.$3,
-              _studyStyles.contains(s.$2),
-              () => setState(() => _studyStyles.contains(s.$2)
-                  ? _studyStyles.remove(s.$2)
-                  : _studyStyles.add(s.$2)),
-            )),
+                  s.$1, s.$2, s.$3,
+                  _studyStyles.contains(s.$2),
+                  () => setState(() => _studyStyles.contains(s.$2)
+                      ? _studyStyles.remove(s.$2)
+                      : _studyStyles.add(s.$2)),
+                )),
           ],
         ),
       ],
@@ -623,20 +725,27 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_isTutor ? '🏫' : '🎓', style: const TextStyle(fontSize: 16)),
+          Text(_isTutor ? '🏫' : '🎓',
+              style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           Text(
-            _isTutor ? 'Tutor — setting up your teaching profile' : 'Student — setting up your learning profile',
+            _isTutor
+                ? 'Tutor — setting up your teaching profile'
+                : 'Student — setting up your learning profile',
             style: TextStyle(
-              color: _isTutor ? AppTheme.success : const Color(0xFF60A5FA),
-              fontSize: 12, fontFamily: 'Poppins', fontWeight: FontWeight.w500,
+              color: _isTutor
+                  ? AppTheme.success
+                  : const Color(0xFF3B82F6),
+              fontSize: 12,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -645,29 +754,43 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   // ── Style card ────────────────────────────────────────────────────────────
-  Widget _styleCard(String emoji, String label, String sub, bool selected, VoidCallback onTap) {
+  Widget _styleCard(String emoji, String label, String sub, bool selected,
+      VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primary.withOpacity(0.2) : const Color(0xFF0F0B1E),
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.08)
+              : const Color(0xFFF8F8FA),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? AppTheme.primary : AppTheme.divider, width: selected ? 2 : 1),
+          border: Border.all(
+              color: selected ? AppTheme.primary : const Color(0xFFE8E8EF),
+              width: selected ? 2 : 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(emoji, style: const TextStyle(fontSize: 32)),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(
-                color: selected ? Colors.white : AppTheme.textPrimary,
-                fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 13)),
+            Text(label,
+                style: TextStyle(
+                    color: selected
+                        ? AppTheme.primary
+                        : const Color(0xFF1A1A2E),
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Poppins',
+                    fontSize: 13)),
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(sub, textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 10, fontFamily: 'Poppins')),
+              child: Text(sub,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      fontSize: 10,
+                      fontFamily: 'Poppins')),
             ),
           ],
         ),
@@ -677,65 +800,99 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   // ── Shared helpers ────────────────────────────────────────────────────────
   Widget _label(String text) => Text(text,
-      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w500, fontFamily: 'Poppins'));
+      style: const TextStyle(
+          color: Color(0xFF374151),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'Poppins'));
 
-  Widget _textField(TextEditingController ctrl, String hint, {IconData? icon}) =>
+  Widget _textField(TextEditingController ctrl, String hint,
+          {IconData? icon}) =>
       TextField(
         controller: ctrl,
-        style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins', fontSize: 14),
+        style: const TextStyle(
+            color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins'),
-          prefixIcon: icon != null ? Icon(icon, color: AppTheme.textMuted, size: 20) : null,
+          hintStyle: const TextStyle(
+              color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+          prefixIcon: icon != null
+              ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
+              : null,
           filled: true,
-          fillColor: AppTheme.inputBg,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.divider)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.divider)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primary)),
+          fillColor: const Color(0xFFF5F5F8),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: AppTheme.primary)),
         ),
       );
 
-  Widget _dropdown({required String? value, required String hint, required List<String> items, required ValueChanged<String?> onChanged}) =>
+  Widget _dropdown(
+          {required String? value,
+          required String hint,
+          required List<String> items,
+          required ValueChanged<String?> onChanged}) =>
       Container(
         decoration: BoxDecoration(
-          color: AppTheme.inputBg,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppTheme.divider),
+          border: Border.all(color: const Color(0xFFE8E8EF)),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: value,
             hint: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(hint, style: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins')),
+              child: Text(hint,
+                  style: const TextStyle(
+                      color: Color(0xFF9CA3AF), fontFamily: 'Poppins')),
             ),
             isExpanded: true,
-            dropdownColor: AppTheme.bgCard,
-            style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins'),
+            dropdownColor: Colors.white,
+            style: const TextStyle(
+                color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             borderRadius: BorderRadius.circular(10),
-            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            items: items
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: onChanged,
           ),
         ),
       );
 
-  Widget _chip(String label, bool selected, VoidCallback onTap, {Color? selectedColor}) =>
+  Widget _chip(String label, bool selected, VoidCallback onTap,
+          {Color? selectedColor}) =>
       GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? (selectedColor ?? AppTheme.primary).withOpacity(0.15) : Colors.transparent,
+            color: selected
+                ? (selectedColor ?? AppTheme.primary).withValues(alpha: 0.1)
+                : const Color(0xFFF8F8FA),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? (selectedColor ?? AppTheme.primary) : AppTheme.divider),
+            border: Border.all(
+                color: selected
+                    ? (selectedColor ?? AppTheme.primary)
+                    : const Color(0xFFE8E8EF)),
           ),
           child: Text(label,
               style: TextStyle(
-                color: selected ? (selectedColor ?? AppTheme.primaryLight) : AppTheme.textSecondary,
-                fontFamily: 'Poppins', fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                color: selected
+                    ? (selectedColor ?? AppTheme.primaryLight)
+                    : const Color(0xFF6B7280),
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.normal,
               )),
         ),
       );
@@ -755,9 +912,14 @@ class _RoleCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _RoleCard({
-    required this.emoji, required this.title, required this.subtitle,
-    required this.badge, required this.badgeColor, required this.features,
-    required this.selected, required this.onTap,
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+    required this.badgeColor,
+    required this.features,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
@@ -768,9 +930,13 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primary.withOpacity(0.12) : const Color(0xFF0F0B1E),
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.06)
+              : const Color(0xFFF8F8FA),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? AppTheme.primary : AppTheme.divider, width: selected ? 2 : 1),
+          border: Border.all(
+              color: selected ? AppTheme.primary : const Color(0xFFE8E8EF),
+              width: selected ? 2 : 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -786,51 +952,77 @@ class _RoleCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(title, style: TextStyle(
-                              color: selected ? Colors.white : AppTheme.textPrimary,
-                              fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Poppins')),
+                          Text(title,
+                              style: TextStyle(
+                                  color: selected
+                                      ? AppTheme.primary
+                                      : const Color(0xFF1A1A2E),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  fontFamily: 'Poppins')),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: badgeColor.withOpacity(0.15),
+                              color: badgeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: badgeColor.withOpacity(0.4)),
+                              border: Border.all(
+                                  color: badgeColor.withValues(alpha: 0.3)),
                             ),
-                            child: Text(badge, style: TextStyle(
-                                color: badgeColor, fontSize: 10,
-                                fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                            child: Text(badge,
+                                style: TextStyle(
+                                    color: badgeColor,
+                                    fontSize: 10,
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(subtitle, style: const TextStyle(
-                          color: AppTheme.textMuted, fontSize: 12, fontFamily: 'Poppins', height: 1.4)),
+                      Text(subtitle,
+                          style: const TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 12,
+                              fontFamily: 'Poppins',
+                              height: 1.4)),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 22, height: 22,
+                  width: 22,
+                  height: 22,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: selected ? AppTheme.primary : Colors.transparent,
-                    border: Border.all(color: selected ? AppTheme.primary : AppTheme.divider, width: 2),
+                    border: Border.all(
+                        color: selected
+                            ? AppTheme.primary
+                            : const Color(0xFFD1D5DB),
+                        width: 2),
                   ),
-                  child: selected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
+                  child: selected
+                      ? const Icon(Icons.check,
+                          color: Colors.white, size: 14)
+                      : null,
                 ),
               ],
             ),
             if (selected) ...[
               const SizedBox(height: 14),
-              const Divider(color: AppTheme.divider, height: 1),
+              const Divider(color: Color(0xFFE8E8EF), height: 1),
               const SizedBox(height: 12),
               ...features.map((f) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(f, style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12, fontFamily: 'Poppins', height: 1.4)),
-              )),
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(f,
+                        style: const TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 12,
+                            fontFamily: 'Poppins',
+                            height: 1.4)),
+                  )),
             ],
           ],
         ),
