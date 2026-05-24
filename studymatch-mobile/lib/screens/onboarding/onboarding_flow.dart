@@ -101,7 +101,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
     } else if (step == 3) {
       final avail = <String, List<String>>{};
-      for (final d in _days) avail[d] = _timeBlocks.toList();
+      for (final d in _days) { avail[d] = _timeBlocks.toList(); }
       state.updateUserProfile({'availability': avail});
       state.nextOnboardingStep();
 
@@ -411,7 +411,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         lastDate: DateTime.now(),
                         builder: (ctx, child) => Theme(
                           data: ThemeData.light().copyWith(
-                            colorScheme: ColorScheme.light(
+                            colorScheme: const ColorScheme.light(
                               primary: AppTheme.primary,
                               surface: Colors.white,
                             ),

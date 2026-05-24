@@ -116,11 +116,14 @@ class AppState extends ChangeNotifier {
     _loadingUsers = true;
     notifyListeners();
     try {
+      // A tutor should see students (and vice-versa).
+      final targetRole = (_currentUser?.role == 'tutor') ? 'student' : 'tutor';
       final all = await ApiService.getUsers(
         subject:      subject,
         search:       search,
         excludeId:    _currentUser?.id,
         myRole:       _currentUser?.role,
+        targetRole:   targetRole,
         myStrengths:  _currentUser?.strengths,
         myWeaknesses: _currentUser?.weaknesses,
       );
@@ -341,7 +344,29 @@ class AppState extends ChangeNotifier {
       final result = await ApiService.register(
           id: id, name: name, email: email, password: password);
       if (result['success'] == true) return null;
+      // A 500 can mean the user was saved but a post-save step (e.g. email)
+      // failed server-side. Allow the user to proceed to OTP verification
+      // rather than blocking them on a server-side exception.
+      final statusCode = result['_statusCode'] as int? ?? 0;
+      if (statusCode >= 500) return null;
       return result['message'] as String? ?? 'Registration failed';
+    } catch (e) {
+      return 'Network error: $e';
+    }
+  }
+
+  // ── Change Password ───────────────────────────────────────────────────────
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final result = await ApiService.changePassword(
+        currentPassword: currentPassword,
+        newPassword:     newPassword,
+      );
+      if (result['success'] == true) return null;
+      return result['message'] as String? ?? 'Failed to change password';
     } catch (e) {
       return 'Network error: $e';
     }
@@ -445,7 +470,10 @@ class AppState extends ChangeNotifier {
       weaknesses:         _currentUser!.weaknesses,
       onboardingComplete: true,
     );
+    // Save all profile fields first, then mark profile_completed = true
+    // via the dedicated endpoint (PUT /profile does not set profile_completed).
     await ApiService.updateUser(updated);
+    await ApiService.completeProfile();
     _currentUser = updated;
     await _saveSession(updated);
     await _loadMatchedUsersFromDb();

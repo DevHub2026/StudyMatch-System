@@ -19,21 +19,41 @@ class ProfileController extends Controller
     }
 
     /**
-     * PUT /profile — general profile update (name, bio, avatar, etc.)
+     * PUT /profile — general profile update (name, bio, role, avatar, etc.)
+     * Accepts both snake_case (server) and camelCase (mobile) field names.
      */
     public function update(Request $request)
     {
         $user = $request->user();
 
         $request->validate([
-            'name' => 'sometimes|string|max:255',
+            'name'     => 'sometimes|string|max:255',
+            'fullName' => 'sometimes|string|max:255',
+            'role'     => 'sometimes|in:student,tutor',
         ]);
 
-        if ($request->has('name')) {
-            $user->update(['name' => $request->name]);
+        // Accept fullName as alias for name (mobile client sends fullName)
+        $name = $request->input('name') ?? $request->input('fullName');
+        if ($name) {
+            $user->update(['name' => $name]);
         }
 
-        // Delegate sub-profile fields based on role
+        // Handle role changes — mobile selects role during onboarding setup
+        if ($request->has('role') && $request->role !== $user->role) {
+            $user->update(['role' => $request->role]);
+            $user->refresh();
+
+            // Ensure the sub-profile record exists for the new role
+            if ($request->role === 'tutor' && !$user->tutor) {
+                \App\Models\Tutor::create(['user_id' => $user->id]);
+            } elseif ($request->role === 'student' && !$user->student) {
+                \App\Models\Student::create(['user_id' => $user->id]);
+            }
+
+            $user->refresh();
+        }
+
+        // Delegate sub-profile fields based on current role
         if ($user->student && $request->hasAny(['student_id', 'program', 'year_level', 'bio'])) {
             $user->student->update($request->only(['student_id', 'program', 'year_level', 'bio']));
         }
@@ -43,6 +63,7 @@ class ProfileController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'message' => 'Profile updated successfully.',
             'user'    => $user->fresh()->load(['student', 'tutor']),
         ]);

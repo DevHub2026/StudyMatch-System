@@ -71,10 +71,14 @@ class ApiService {
       headers: _jsonHeaders,
       body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
-    final token = body['token'] as String? ?? body['data']?['token'] as String?;
-    if (token != null) setToken(token);
-    return body;
+    try {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final token = body['token'] as String? ?? body['data']?['token'] as String?;
+      if (token != null) setToken(token);
+      return {'_statusCode': res.statusCode, ...body};
+    } catch (_) {
+      return {'_statusCode': res.statusCode, 'success': false, 'message': 'Server error (${res.statusCode})'};
+    }
   }
 
   static Future<Map<String, dynamic>> login({
@@ -89,6 +93,26 @@ class ApiService {
     final token = body['token'] as String?;
     if (token != null) setToken(token);
     return body;
+  }
+
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$_base/auth/change-password'),
+      headers: _jsonHeaders,
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'new_password':     newPassword,
+        'new_password_confirmation': newPassword,
+      }),
+    );
+    try {
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {'success': false, 'message': 'Server error (${res.statusCode})'};
+    }
   }
 
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
@@ -132,20 +156,37 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// POST /profile/complete — sets profile_completed = true in the database.
+  static Future<Map<String, dynamic>> completeProfile() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_base/profile/complete'),
+        headers: _jsonHeaders,
+      );
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {'success': false, 'message': 'Network error'};
+    }
+  }
+
   // ── Users / Matching ──────────────────────────────────────────────────────
   static Future<List<RealUser>> getUsers({
     String? subject, String? search, String? excludeId,
-    String? myRole, List<String>? myStrengths, List<String>? myWeaknesses,
+    String? myRole, String? targetRole,
+    List<String>? myStrengths, List<String>? myWeaknesses,
   }) async {
     final params = <String, String>{};
-    if (subject   != null && subject.isNotEmpty)   params['subject']      = subject;
-    if (search    != null && search.isNotEmpty)    params['search']       = search;
-    if (excludeId != null)                         params['exclude_id']   = excludeId;
-    if (myRole    != null && myRole.isNotEmpty)    params['my_role']      = myRole;
-    if (myStrengths  != null && myStrengths.isNotEmpty)
-      params['my_strengths']  = jsonEncode(myStrengths);
-    if (myWeaknesses != null && myWeaknesses.isNotEmpty)
+    if (subject    != null && subject.isNotEmpty)    params['subject']      = subject;
+    if (search     != null && search.isNotEmpty)     params['search']       = search;
+    if (excludeId  != null)                          params['exclude_id']   = excludeId;
+    if (myRole     != null && myRole.isNotEmpty)     params['my_role']      = myRole;
+    if (targetRole != null && targetRole.isNotEmpty) params['target_role']  = targetRole;
+    if (myStrengths != null && myStrengths.isNotEmpty) {
+      params['my_strengths'] = jsonEncode(myStrengths);
+    }
+    if (myWeaknesses != null && myWeaknesses.isNotEmpty) {
       params['my_weaknesses'] = jsonEncode(myWeaknesses);
+    }
 
     try {
       final uri  = Uri.parse('$_base/tutors').replace(queryParameters: params.isEmpty ? null : params);

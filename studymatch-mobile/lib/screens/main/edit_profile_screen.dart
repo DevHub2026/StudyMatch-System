@@ -34,7 +34,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late Set<String> _selectedDays;
   bool _saving = false;
 
-  // ✅ Photo upload state
   Uint8List? _photoBytes;
   String?    _photoFileName;
   bool       _uploadingPhoto = false;
@@ -91,12 +90,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool get _isTutor =>
       context.read<AppState>().currentUser?.role == 'tutor';
 
-  // ✅ Pick photo from gallery or camera
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bgCard,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -107,16 +105,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: AppTheme.borderLight,
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined,
-                  color: AppTheme.primaryLight),
+                  color: AppTheme.primary),
               title: const Text('Take Photo',
                   style: TextStyle(
-                      color: AppTheme.textPrimary, fontFamily: 'Poppins')),
+                      color: Color(0xFF1A1A2E), fontFamily: 'Poppins')),
               onTap: () async {
                 Navigator.pop(context);
                 final img = await picker.pickImage(
@@ -132,10 +130,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined,
-                  color: AppTheme.primaryLight),
+                  color: AppTheme.primary),
               title: const Text('Choose from Gallery',
                   style: TextStyle(
-                      color: AppTheme.textPrimary, fontFamily: 'Poppins')),
+                      color: Color(0xFF1A1A2E), fontFamily: 'Poppins')),
               onTap: () async {
                 Navigator.pop(context);
                 final img = await picker.pickImage(
@@ -159,17 +157,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    final state = context.read<AppState>();
 
     final avail = <String, List<String>>{};
     for (final day in _selectedDays) {
       avail[day] = (_availability[day] ?? <String>{}).toList();
     }
 
-    // ✅ Upload photo first if one was picked
     String? photoUrl;
     if (_photoBytes != null && _photoFileName != null) {
       setState(() => _uploadingPhoto = true);
-      final uploadResult = await context.read<AppState>().uploadProfilePhoto(
+      final uploadResult = await state.uploadProfilePhoto(
         photoBytes: _photoBytes!,
         fileName:   _photoFileName!,
       );
@@ -197,12 +195,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'availability':  avail,
     };
 
-    // ✅ Include the new photo URL if upload succeeded
     if (photoUrl != null) {
       fields['profilePhotoUrl'] = photoUrl;
     }
 
-    final error = await context.read<AppState>().saveProfile(fields);
+    final error = await state.saveProfile(fields);
 
     if (!mounted) return;
     setState(() => _saving = false);
@@ -220,7 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
+      backgroundColor: Colors.white,
       body: Form(
         key: _formKey,
         child: CustomScrollView(
@@ -289,17 +286,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildAppBar() {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: const Color(0xFF120D2A),
+      backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: AppTheme.borderLight),
+      ),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded,
-            color: AppTheme.textSecondary, size: 18),
+            color: Color(0xFF1A1A2E), size: 18),
         onPressed: () => Navigator.of(context).pop(),
       ),
       title: const Text('Edit Profile',
           style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: Color(0xFF1A1A2E),
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w600,
               fontSize: 18)),
@@ -311,14 +313,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: SizedBox(
                     width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.primaryLight),
+                        strokeWidth: 2, color: AppTheme.primary),
                   ),
                 )
               : TextButton(
                   onPressed: _save,
                   child: const Text('Save',
                       style: TextStyle(
-                          color: AppTheme.primaryLight,
+                          color: AppTheme.primary,
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w600,
                           fontSize: 15)),
@@ -328,7 +330,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // ✅ Avatar header — now tappable and shows picked image preview
   Widget _buildAvatarHeader() {
     final name    = _nameCtrl.text;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
@@ -336,7 +337,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         context.read<AppState>().currentUser?.profilePhotoUrl;
 
     return GestureDetector(
-      onTap: _pickPhoto, // ✅ whole area tappable
+      onTap: _pickPhoto,
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -350,11 +351,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             Stack(
               children: [
-                // ✅ Show picked photo, existing photo URL, or initials
                 Container(
                   width: 88, height: 88,
                   decoration: BoxDecoration(
-                    gradient: (_photoBytes == null && (existingPhotoUrl == null || existingPhotoUrl.isEmpty))
+                    gradient: (_photoBytes == null &&
+                            (existingPhotoUrl == null || existingPhotoUrl.isEmpty))
                         ? const LinearGradient(
                             colors: [AppTheme.primary, AppTheme.accent])
                         : null,
@@ -397,7 +398,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ? AppTheme.success
                           : AppTheme.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.bgDark, width: 2),
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Icon(
                       _photoBytes != null
@@ -416,7 +417,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               style: TextStyle(
                   color: _photoBytes != null
                       ? AppTheme.success
-                      : AppTheme.textMuted,
+                      : Colors.white.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontFamily: 'Poppins'),
             ),
@@ -430,9 +431,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       decoration: BoxDecoration(
-        color: AppTheme.bgCard,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: AppTheme.borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,44 +452,75 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 Container(
                   width: 32, height: 32,
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.15),
+                    color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: AppTheme.primaryLight, size: 17),
+                  child: Icon(icon, color: AppTheme.primary, size: 17),
                 ),
                 const SizedBox(width: 10),
                 Text(title,
                     style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: Color(0xFF1A1A2E),
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                         fontFamily: 'Poppins')),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppTheme.divider),
+          const Divider(height: 1, color: AppTheme.borderLight),
           Padding(padding: const EdgeInsets.all(16), child: child),
         ],
       ),
     );
   }
 
+  static InputDecoration _lightDec({String? hint, IconData? icon}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+      prefixIcon: icon != null
+          ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
+          : null,
+      filled: true,
+      fillColor: const Color(0xFFF5F5F8),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.borderLight)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.borderLight)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.error)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.error, width: 1.5)),
+    );
+  }
+
+  static const _inputTextStyle = TextStyle(
+      color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14);
+
   Widget _buildPersonalInfo() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppTextField(
-          label: 'Full Name',
-          hint: 'Juan dela Cruz',
+        _fieldLabel('Full Name'),
+        const SizedBox(height: 6),
+        TextFormField(
           controller: _nameCtrl,
-          prefixIcon: Icons.person_outline,
-          validator: (v) => (v == null || v.trim().length < 2) ? 'Enter your full name' : null,
+          style: _inputTextStyle,
+          decoration: _lightDec(hint: 'Juan dela Cruz', icon: Icons.person_outline),
+          validator: (v) =>
+              (v == null || v.trim().length < 2) ? 'Enter your full name' : null,
         ),
         const SizedBox(height: 14),
-        AppTextField(
-          label: 'School / University',
-          hint: 'e.g. University of Mindanao',
+        _fieldLabel('School / University'),
+        const SizedBox(height: 6),
+        TextFormField(
           controller: _schoolCtrl,
-          prefixIcon: Icons.location_city_outlined,
+          style: _inputTextStyle,
+          decoration: _lightDec(
+              hint: 'e.g. University of Mindanao',
+              icon: Icons.location_city_outlined),
         ),
         const SizedBox(height: 14),
         _fieldLabel('Bio (Optional)'),
@@ -489,28 +528,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextField(
           controller: _bioCtrl,
           maxLines: 3,
-          style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins', fontSize: 14),
+          style: _inputTextStyle,
           decoration: InputDecoration(
             hintText: _isTutor
                 ? 'Tell students about your teaching approach...'
                 : 'Tell others about yourself...',
-            hintStyle: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins'),
+            hintStyle: const TextStyle(
+                color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
             filled: true,
-            fillColor: AppTheme.inputBg,
+            fillColor: const Color(0xFFF5F5F8),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.divider)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.divider)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.primary)),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppTheme.primary, width: 1.5)),
           ),
         ),
         const SizedBox(height: 14),
-        _DatePickerField(label: 'Date of Birth', value: _dob,
+        _DatePickerField(
+            label: 'Date of Birth',
+            value: _dob,
             onChanged: (v) => setState(() => _dob = v)),
         const SizedBox(height: 14),
         _DropdownField(
-          label: 'Gender', hint: 'Select gender', value: _selectedGender,
+          label: 'Gender',
+          hint: 'Select gender',
+          value: _selectedGender,
           items: const ['Male', 'Female', 'Non-Binary', 'Prefer not to say'],
           onChanged: (v) => setState(() => _selectedGender = v),
         ),
@@ -527,19 +574,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: _degreeCtrl,
-            style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins', fontSize: 14),
+            style: _inputTextStyle,
             decoration: InputDecoration(
               hintText: 'e.g. BS Computer Science',
-              hintStyle: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins'),
-              prefixIcon: const Icon(Icons.workspace_premium_outlined, color: AppTheme.textMuted, size: 20),
+              hintStyle: const TextStyle(
+                  color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+              prefixIcon: const Icon(Icons.workspace_premium_outlined,
+                  color: Color(0xFF9CA3AF), size: 20),
               filled: true,
-              fillColor: AppTheme.inputBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.divider)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.divider)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.primary)),
+              fillColor: const Color(0xFFF5F5F8),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.borderLight)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.borderLight)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primary, width: 1.5)),
             ),
           ),
         ] else ...[
@@ -547,7 +600,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const SizedBox(height: 10),
           Wrap(
             spacing: 8, runSpacing: 8,
-            children: _deptList.map((d) => SelectableChip(
+            children: _deptList.map((d) => _LightChip(
               label: d,
               selected: _selectedDepartment == d,
               onTap: () => setState(() =>
@@ -575,15 +628,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Text('${_selectedSubjects.length} selected',
-                style: const TextStyle(color: AppTheme.primaryLight, fontSize: 13, fontFamily: 'Poppins')),
+                style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 13,
+                    fontFamily: 'Poppins')),
           ),
         Wrap(
           spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => SelectableChip(
+          children: _subjectList.map((s) => _LightChip(
             label: s,
             selected: _selectedSubjects.contains(s),
             onTap: () => setState(() => _selectedSubjects.contains(s)
-                ? _selectedSubjects.remove(s) : _selectedSubjects.add(s)),
+                ? _selectedSubjects.remove(s)
+                : _selectedSubjects.add(s)),
           )).toList(),
         ),
       ],
@@ -594,17 +651,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Students weak in these subjects will be matched with you',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontFamily: 'Poppins')),
+        const Text(
+            'Students weak in these subjects will be matched with you',
+            style: TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => SelectableChip(
+          children: _subjectList.map((s) => _LightChip(
             label: s,
             selected: _selectedStrengths.contains(s),
             selectedColor: AppTheme.success,
             onTap: () => setState(() => _selectedStrengths.contains(s)
-                ? _selectedStrengths.remove(s) : _selectedStrengths.add(s)),
+                ? _selectedStrengths.remove(s)
+                : _selectedStrengths.add(s)),
           )).toList(),
         ),
       ],
@@ -615,17 +677,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Tutors strong in these subjects will be prioritised in your matches',
-            style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontFamily: 'Poppins')),
+        const Text(
+            'Tutors strong in these subjects will be prioritised in your matches',
+            style: TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => SelectableChip(
+          children: _subjectList.map((s) => _LightChip(
             label: s,
             selected: _selectedWeaknesses.contains(s),
             selectedColor: AppTheme.error,
             onTap: () => setState(() => _selectedWeaknesses.contains(s)
-                ? _selectedWeaknesses.remove(s) : _selectedWeaknesses.add(s)),
+                ? _selectedWeaknesses.remove(s)
+                : _selectedWeaknesses.add(s)),
           )).toList(),
         ),
       ],
@@ -644,11 +711,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ('Kinesthetic',     Icons.sports_handball_outlined),
           ('Reading/Writing', Icons.menu_book_outlined),
         ].map((pair) => _StyleOptionTile(
-          icon: pair.$2, label: pair.$1,
+          icon: pair.$2,
+          label: pair.$1,
           selected: _selectedLearningStyles.contains(pair.$1),
-          onTap: () => setState(() => _selectedLearningStyles.contains(pair.$1)
-              ? _selectedLearningStyles.remove(pair.$1)
-              : _selectedLearningStyles.add(pair.$1)),
+          onTap: () => setState(() =>
+              _selectedLearningStyles.contains(pair.$1)
+                  ? _selectedLearningStyles.remove(pair.$1)
+                  : _selectedLearningStyles.add(pair.$1)),
         )),
         const SizedBox(height: 20),
         _sectionLabel('STUDY FORMAT'),
@@ -657,7 +726,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: ['Group', 'Individual'].map((s) => Expanded(
             child: Padding(
               padding: EdgeInsets.only(right: s == 'Group' ? 8 : 0),
-              child: SelectableChip(
+              child: _LightChip(
                 label: s,
                 selected: _selectedStudyStyles.contains(s),
                 onTap: () => setState(() => _selectedStudyStyles.contains(s)
@@ -679,7 +748,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 10),
         Wrap(
           spacing: 8, runSpacing: 8,
-          children: _dayList.map((day) => SelectableChip(
+          children: _dayList.map((day) => _LightChip(
             label: day.substring(0, 3),
             selected: _selectedDays.contains(day),
             onTap: () => setState(() {
@@ -705,13 +774,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(day,
                       style: const TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Color(0xFF6B7280),
                           fontWeight: FontWeight.w500,
                           fontFamily: 'Poppins',
                           fontSize: 13)),
                 ),
                 ..._timeList.map((time) {
-                  final isSelected = _availability[day]?.contains(time) ?? false;
+                  final isSelected =
+                      _availability[day]?.contains(time) ?? false;
                   return GestureDetector(
                     onTap: () => setState(() {
                       _availability.putIfAbsent(day, () => {});
@@ -724,24 +794,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.chipSelected : AppTheme.bgDark,
+                        color: isSelected
+                            ? AppTheme.primary.withValues(alpha: 0.08)
+                            : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                            color: isSelected ? AppTheme.primary : AppTheme.divider),
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.borderLight),
                       ),
                       child: Row(
                         children: [
                           Icon(
-                            isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                            color: isSelected ? Colors.white : AppTheme.textMuted,
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.circle_outlined,
+                            color: isSelected
+                                ? AppTheme.primary
+                                : const Color(0xFF9CA3AF),
                             size: 18,
                           ),
                           const SizedBox(width: 12),
                           Text(time,
                               style: TextStyle(
-                                  color: isSelected ? Colors.white : AppTheme.textSecondary,
+                                  color: isSelected
+                                      ? AppTheme.primary
+                                      : const Color(0xFF6B7280),
                                   fontSize: 13,
                                   fontFamily: 'Poppins')),
                         ],
@@ -760,20 +841,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _fieldLabel(String text) => Text(text,
       style: const TextStyle(
-          color: AppTheme.textSecondary,
+          color: Color(0xFF6B7280),
           fontSize: 13,
           fontWeight: FontWeight.w500,
           fontFamily: 'Poppins'));
 
   Widget _sectionLabel(String text) => Text(text,
       style: const TextStyle(
-          color: AppTheme.textMuted,
+          color: Color(0xFF9CA3AF),
           fontSize: 11,
           fontWeight: FontWeight.w500,
           fontFamily: 'Poppins',
           letterSpacing: 0.8));
 }
 
+// ── Light-themed selectable chip ───────────────────────────────────────────────
+class _LightChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color? selectedColor;
+
+  const _LightChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.selectedColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selectedColor ?? AppTheme.primary;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: 0.1)
+              : const Color(0xFFF5F5F8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? color : AppTheme.borderLight,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? color : const Color(0xFF6B7280),
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dropdown field ─────────────────────────────────────────────────────────────
 class _DropdownField extends StatelessWidget {
   final String label, hint;
   final String? value;
@@ -781,8 +908,11 @@ class _DropdownField extends StatelessWidget {
   final ValueChanged<String?> onChanged;
 
   const _DropdownField({
-    required this.label, required this.hint, this.value,
-    required this.items, required this.onChanged,
+    required this.label,
+    required this.hint,
+    this.value,
+    required this.items,
+    required this.onChanged,
   });
 
   @override
@@ -792,14 +922,16 @@ class _DropdownField extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13,
-                fontWeight: FontWeight.w500, fontFamily: 'Poppins')),
+                color: Color(0xFF6B7280),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.inputBg,
+            color: const Color(0xFFF5F5F8),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.divider),
+            border: Border.all(color: AppTheme.borderLight),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -807,14 +939,18 @@ class _DropdownField extends StatelessWidget {
               hint: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(hint,
-                    style: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins')),
+                    style: const TextStyle(
+                        color: Color(0xFF9CA3AF), fontFamily: 'Poppins')),
               ),
               isExpanded: true,
-              dropdownColor: AppTheme.bgCard,
-              style: const TextStyle(color: AppTheme.textPrimary, fontFamily: 'Poppins'),
+              dropdownColor: Colors.white,
+              style: const TextStyle(
+                  color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               borderRadius: BorderRadius.circular(12),
-              items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+              items: items
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
               onChanged: onChanged,
             ),
           ),
@@ -824,12 +960,14 @@ class _DropdownField extends StatelessWidget {
   }
 }
 
+// ── Date picker field ──────────────────────────────────────────────────────────
 class _DatePickerField extends StatelessWidget {
   final String label;
   final DateTime? value;
   final ValueChanged<DateTime?> onChanged;
 
-  const _DatePickerField({required this.label, this.value, required this.onChanged});
+  const _DatePickerField(
+      {required this.label, this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -838,8 +976,10 @@ class _DatePickerField extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13,
-                fontWeight: FontWeight.w500, fontFamily: 'Poppins')),
+                color: Color(0xFF6B7280),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins')),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () async {
@@ -849,9 +989,9 @@ class _DatePickerField extends StatelessWidget {
               firstDate: DateTime(1950),
               lastDate: DateTime.now(),
               builder: (ctx, child) => Theme(
-                data: ThemeData.dark().copyWith(
-                    colorScheme: const ColorScheme.dark(
-                        primary: AppTheme.primary, surface: AppTheme.bgCard)),
+                data: ThemeData.light().copyWith(
+                    colorScheme: const ColorScheme.light(
+                        primary: AppTheme.primary, surface: Colors.white)),
                 child: child!,
               ),
             );
@@ -861,21 +1001,27 @@ class _DatePickerField extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: AppTheme.inputBg,
+              color: const Color(0xFFF5F5F8),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(color: AppTheme.borderLight),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, color: AppTheme.textMuted, size: 18),
+                const Icon(Icons.calendar_today_outlined,
+                    color: Color(0xFF9CA3AF), size: 18),
                 const SizedBox(width: 10),
                 Text(
                   value != null
-                      ? '${value!.month.toString().padLeft(2, '0')}/${value!.day.toString().padLeft(2, '0')}/${value!.year}'
+                      ? '${value!.month.toString().padLeft(2, '0')}/'
+                          '${value!.day.toString().padLeft(2, '0')}/'
+                          '${value!.year}'
                       : 'Select date',
                   style: TextStyle(
-                      color: value != null ? AppTheme.textPrimary : AppTheme.textMuted,
-                      fontFamily: 'Poppins', fontSize: 14),
+                      color: value != null
+                          ? const Color(0xFF1A1A2E)
+                          : const Color(0xFF9CA3AF),
+                      fontFamily: 'Poppins',
+                      fontSize: 14),
                 ),
               ],
             ),
@@ -886,14 +1032,19 @@ class _DatePickerField extends StatelessWidget {
   }
 }
 
+// ── Style option tile ──────────────────────────────────────────────────────────
 class _StyleOptionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _StyleOptionTile({required this.icon, required this.label,
-      required this.selected, required this.onTap});
+  const _StyleOptionTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -904,17 +1055,24 @@ class _StyleOptionTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.chipSelected : AppTheme.bgDark,
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.08)
+              : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? AppTheme.primary : AppTheme.divider),
+          border: Border.all(
+              color: selected ? AppTheme.primary : AppTheme.borderLight),
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? Colors.white : AppTheme.textMuted, size: 20),
+            Icon(icon,
+                color: selected ? AppTheme.primary : const Color(0xFF9CA3AF),
+                size: 20),
             const SizedBox(width: 14),
             Text(label,
                 style: TextStyle(
-                    color: selected ? Colors.white : AppTheme.textSecondary,
+                    color: selected
+                        ? AppTheme.primary
+                        : const Color(0xFF6B7280),
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Poppins',
                     fontSize: 14)),
@@ -922,7 +1080,8 @@ class _StyleOptionTile extends StatelessWidget {
             AnimatedOpacity(
               duration: const Duration(milliseconds: 180),
               opacity: selected ? 1 : 0,
-              child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              child: const Icon(Icons.check_circle_rounded,
+                  color: AppTheme.primary, size: 20),
             ),
           ],
         ),
