@@ -1,0 +1,5 @@
+# Each sub-project manages its own git repository
+studymatch-web/
+studymatch-api/
+studymatchadmin/
+studymatch-mobile/
