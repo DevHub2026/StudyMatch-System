@@ -3,12 +3,18 @@ import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../services/app_state.dart';
 import '../../widgets/app_shell_header.dart';
+import '../../widgets/shared_widgets.dart';
 import '../../navigation/student_nav.dart';
 import '../../widgets/shell_scope.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
   String _greeting() {
     final h = DateTime.now().hour;
     if (h < 12) return 'Good morning';
@@ -17,12 +23,26 @@ class DashboardScreen extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().loadConversations();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final user = state.currentUser;
     final firstName = user?.fullName.split(' ').first ?? 'Student';
     final initials = user?.fullName.isNotEmpty == true
-        ? user!.fullName.trim().split(' ').map((w) => w[0]).take(2).join().toUpperCase()
+        ? user!.fullName
+            .trim()
+            .split(' ')
+            .map((w) => w[0])
+            .take(2)
+            .join()
+            .toUpperCase()
         : 'S';
 
     final activeMatches = state.matchedUsers.length;
@@ -45,7 +65,8 @@ class DashboardScreen extends StatelessWidget {
                           clipBehavior: Clip.none,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.notifications_outlined, color: AppTheme.textDark),
+                              icon: const Icon(Icons.notifications_outlined,
+                                  color: AppTheme.textDark),
                               onPressed: () {},
                             ),
                             Positioned(
@@ -57,28 +78,21 @@ class DashboardScreen extends StatelessWidget {
                                   color: AppTheme.primary,
                                   shape: BoxShape.circle,
                                 ),
-                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                constraints: const BoxConstraints(
+                                    minWidth: 16, minHeight: 16),
                                 child: const Text(
                                   '3',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppTheme.primary.withOpacity(0.15),
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
+                        UserAvatar(user: user, radius: 18),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -158,11 +172,25 @@ class DashboardScreen extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                                      .map((d) => _StreakDot(label: d))
-                                      .toList(),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      'M',
+                                      'T',
+                                      'W',
+                                      'T',
+                                      'F',
+                                      'S',
+                                      'S'
+                                    ]
+                                        .map((d) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                  right: 6),
+                                              child: _StreakDot(label: d),
+                                            ))
+                                        .toList(),
+                                  ),
                                 ),
                               ],
                             ),
@@ -190,8 +218,7 @@ class DashboardScreen extends StatelessWidget {
                           ? _EmptyInline(
                               icon: Icons.chat_bubble_outline_rounded,
                               title: 'No messages yet',
-                              subtitle:
-                                  'Start a conversation and connect!',
+                              subtitle: 'Start a conversation and connect!',
                             )
                           : Column(
                               children: state.conversations
@@ -199,8 +226,8 @@ class DashboardScreen extends StatelessWidget {
                                   .map((c) => ListTile(
                                         contentPadding: EdgeInsets.zero,
                                         leading: CircleAvatar(
-                                          backgroundColor:
-                                              AppTheme.primary.withOpacity(0.15),
+                                          backgroundColor: AppTheme.primary
+                                              .withOpacity(0.15),
                                           child: Text(
                                             c.participant.initials,
                                             style: const TextStyle(
@@ -295,7 +322,8 @@ class _HeroBanner extends StatelessWidget {
             color: AppTheme.primary,
             borderRadius: BorderRadius.circular(10),
             child: InkWell(
-              onTap: () => ShellScope.of(context).navigate(StudentNav.findTutors),
+              onTap: () =>
+                  ShellScope.of(context).navigate(StudentNav.findTutors),
               borderRadius: BorderRadius.circular(10),
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 18, vertical: 11),
@@ -312,7 +340,8 @@ class _HeroBanner extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 6),
-                    Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                    Icon(Icons.arrow_forward_rounded,
+                        color: Colors.white, size: 16),
                   ],
                 ),
               ),
@@ -575,12 +604,14 @@ class _StreakDot extends StatelessWidget {
             color: Color(0xFFF3F4F6),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFFD1D5DB)),
+          child: const Icon(Icons.bolt_rounded,
+              size: 12, color: Color(0xFFD1D5DB)),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 9, color: AppTheme.textMuted, fontFamily: 'Poppins'),
+          style: const TextStyle(
+              fontSize: 9, color: AppTheme.textMuted, fontFamily: 'Poppins'),
         ),
       ],
     );

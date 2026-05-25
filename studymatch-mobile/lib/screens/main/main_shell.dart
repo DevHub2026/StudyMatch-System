@@ -60,7 +60,8 @@ class _MainShellState extends State<MainShell> {
       StudentNav.studySessions => const SessionsScreen(),
       StudentNav.mySubjects => const PlaceholderScreen(
           title: 'My Subjects',
-          message: 'Manage your subjects from the web app or complete profile setup.',
+          message:
+              'Manage your subjects from the web app or complete profile setup.',
           icon: Icons.bookmark_rounded,
         ),
       StudentNav.messages => const MessagesScreen(),
@@ -85,7 +86,9 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final unread = context.watch<AppState>().unreadMessageCount;
+    final state = context.watch<AppState>();
+    final unread = state.unreadMessageCount;
+    final isTutor = state.currentUser?.role == 'tutor';
 
     return ShellScope(
       current: _current,
@@ -110,13 +113,15 @@ class _MainShellState extends State<MainShell> {
           child: BottomNavigationBar(
             currentIndex: _bottomIndex,
             onTap: _onBottomNavTap,
-            backgroundColor: Colors.white,
+            backgroundColor: AppTheme.surfaceLight,
             elevation: 0,
             selectedItemColor: AppTheme.primary,
             unselectedItemColor: AppTheme.textMuted,
             type: BottomNavigationBarType.fixed,
             selectedLabelStyle: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600),
             unselectedLabelStyle:
                 const TextStyle(fontFamily: 'Poppins', fontSize: 11),
             items: [
@@ -125,10 +130,10 @@ class _MainShellState extends State<MainShell> {
                 activeIcon: Icon(Icons.home_rounded),
                 label: 'Dashboard',
               ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                activeIcon: Icon(Icons.search),
-                label: 'Find Tutors',
+              BottomNavigationBarItem(
+                icon: const Icon(Icons.search),
+                activeIcon: const Icon(Icons.search),
+                label: isTutor ? 'Find Student' : 'Find Tutor',
               ),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.calendar_today_outlined),

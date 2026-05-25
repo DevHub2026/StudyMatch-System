@@ -572,7 +572,8 @@ class _MySessions extends StatelessWidget {
                 ? Column(
                     children: [
                       Icon(Icons.calendar_today_outlined,
-                          size: 32, color: AppTheme.primary.withValues(alpha: 0.6)),
+                          size: 32,
+                          color: AppTheme.primary.withValues(alpha: 0.6)),
                       const SizedBox(height: 10),
                       const Text('No sessions yet',
                           style: TextStyle(
@@ -679,7 +680,9 @@ class _NavLinks extends StatelessWidget {
       _NavLinkData(Icons.folder_outlined, 'Resources',
           () => shell.navigate(StudentNav.resources)),
       _NavLinkData(Icons.show_chart_rounded, 'Activity', () {}),
-      _NavLinkData(Icons.settings_outlined, 'Settings',
+      _NavLinkData(
+          Icons.settings_outlined,
+          'Settings',
           () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()))),
     ];
@@ -746,8 +749,7 @@ class _NavLinkTile extends StatelessWidget {
         children: [
           if (link.badge != null) ...[
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: AppTheme.primary,
                 borderRadius: BorderRadius.circular(10),

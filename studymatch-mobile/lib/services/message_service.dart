@@ -1,62 +1,43 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'api_service.dart';
 
 class MessageService {
-  static const _base   = 'http://localhost/StudyMatch/studymatch-api/messages.php';
-  static const _apiKey = 'studymatch_api_key_2026';
+  static const _base = String.fromEnvironment(
+    'API_BASE',
+    defaultValue: 'http://127.0.0.1:8000/api',
+  );
 
-  // ── Send text message ────────────────────────────────────────────────────────
-  static Future<Map<String, dynamic>> sendMessage({
-    required String senderId,
-    required String receiverId,
-    required String content,
+  static Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (ApiService.token != null && ApiService.token!.isNotEmpty)
+          'Authorization': 'Bearer ${ApiService.token}',
+      };
+
+  static Map<String, String> get _authHeaders => {
+        'Accept': 'application/json',
+        if (ApiService.token != null && ApiService.token!.isNotEmpty)
+          'Authorization': 'Bearer ${ApiService.token}',
+      };
+
+  // ── Get inbox ────────────────────────────────────────────────────────────────
+  static Future<List<Map<String, dynamic>>> getInbox({
+    required String userId,
   }) async {
     try {
-      final res = await http.post(
-        Uri.parse('$_base?action=send&api_key=$_apiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'sender_id':   senderId,
-          'receiver_id': receiverId,
-          'content':     content,
-        }),
+      final res  = await http.get(
+        Uri.parse('$_base/chat/conversations'),
+        headers: _headers,
       );
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'message': 'Network error: $e'};
-    }
-  }
-
-  // ── Send file or image message ───────────────────────────────────────────────
-  /// [fileBytes]  — raw bytes of the file
-  /// [fileName]   — original file name (e.g. "photo.jpg", "notes.pdf")
-  /// [mimeType]   — MIME type (e.g. "image/jpeg", "application/pdf")
-  static Future<Map<String, dynamic>> sendFile({
-    required String    senderId,
-    required String    receiverId,
-    required Uint8List fileBytes,
-    required String    fileName,
-    required String    mimeType,
-  }) async {
-    try {
-      final uri = Uri.parse('$_base?action=send_file&api_key=$_apiKey');
-
-      final request = http.MultipartRequest('POST', uri)
-        ..fields['sender_id']   = senderId
-        ..fields['receiver_id'] = receiverId
-        ..files.add(http.MultipartFile.fromBytes(
-          'file',
-          fileBytes,
-          filename: fileName,
-          // http package will send this as Content-Type on the part
-        ));
-
-      final streamed = await request.send();
-      final body     = await streamed.stream.bytesToString();
-      return jsonDecode(body) as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'message': 'Upload error: $e'};
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (body['success'] == true && body['data'] != null) {
+        return List<Map<String, dynamic>>.from(body['data'] as List);
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 
@@ -68,18 +49,13 @@ class MessageService {
     int offset = 0,
   }) async {
     try {
-      final uri = Uri.parse(_base).replace(queryParameters: {
-        'action':   'get_messages',
-        'api_key':  _apiKey,
-        'user_id':  userId,
-        'other_id': otherId,
-        'limit':    limit.toString(),
-        'offset':   offset.toString(),
-      });
-      final res  = await http.get(uri);
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['success'] == true && data['data'] != null) {
-        return List<Map<String, dynamic>>.from(data['data'] as List);
+      final res  = await http.get(
+        Uri.parse('$_base/chat/$otherId/messages'),
+        headers: _headers,
+      );
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (body['success'] == true && body['data'] != null) {
+        return List<Map<String, dynamic>>.from(body['data'] as List);
       }
       return [];
     } catch (_) {
@@ -87,39 +63,64 @@ class MessageService {
     }
   }
 
-  // ── Get inbox ────────────────────────────────────────────────────────────────
-  static Future<List<Map<String, dynamic>>> getInbox({
-    required String userId,
+  // ── Send text message ────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> sendMessage({
+    required String senderId,
+    required String receiverId,
+    required String content,
   }) async {
     try {
-      final uri = Uri.parse(_base).replace(queryParameters: {
-        'action':  'get_inbox',
-        'api_key': _apiKey,
-        'user_id': userId,
-      });
-      final res  = await http.get(uri);
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['success'] == true && data['data'] != null) {
-        return List<Map<String, dynamic>>.from(data['data'] as List);
-      }
-      return [];
-    } catch (_) {
-      return [];
+      final res = await http.post(
+        Uri.parse('$_base/chat/send'),
+        headers: _headers,
+        body: jsonEncode({
+          'receiver_id': receiverId,
+          'content':     content,
+        }),
+      );
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  // ── Send file or image message ───────────────────────────────────────────────
+  static Future<Map<String, dynamic>> sendFile({
+    required String    senderId,
+    required String    receiverId,
+    required Uint8List fileBytes,
+    required String    fileName,
+    required String    mimeType,
+  }) async {
+    try {
+      final uri     = Uri.parse('$_base/chat/send-file');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers.addAll(_authHeaders)
+        ..fields['receiver_id'] = receiverId
+        ..files.add(http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+        ));
+
+      final streamed = await request.send();
+      final body     = await streamed.stream.bytesToString();
+      return jsonDecode(body) as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': 'Upload error: $e'};
     }
   }
 
   // ── Get unread count ─────────────────────────────────────────────────────────
   static Future<int> getUnreadCount({required String userId}) async {
     try {
-      final uri = Uri.parse(_base).replace(queryParameters: {
-        'action':  'get_unread',
-        'api_key': _apiKey,
-        'user_id': userId,
-      });
-      final res  = await http.get(uri);
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (data['success'] == true && data['data'] != null) {
-        return (data['data']['count'] as int?) ?? 0;
+      final res  = await http.get(
+        Uri.parse('$_base/chat/unread-count'),
+        headers: _headers,
+      );
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (body['success'] == true && body['data'] != null) {
+        return (body['data']['count'] as int?) ?? 0;
       }
       return 0;
     } catch (_) {
@@ -128,24 +129,21 @@ class MessageService {
   }
 
   // ── Mark read ────────────────────────────────────────────────────────────────
+  /// Messages are automatically marked read by the server when GET /chat/{id}/messages
+  /// is called, so this is a no-op kept for API compatibility.
   static Future<void> markRead({
     required String userId,
     required String otherId,
   }) async {
-    try {
-      await http.post(
-        Uri.parse('$_base?action=mark_read&api_key=$_apiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': userId, 'other_id': otherId}),
-      );
-    } catch (_) {}
+    // Trigger a messages fetch to mark them read on the server.
+    await getMessages(userId: userId, otherId: otherId, limit: 1);
   }
 
   // ── Helper: human-readable file size ─────────────────────────────────────────
   static String formatFileSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '';
-    if (bytes < 1024)       return '${bytes} B';
-    if (bytes < 1048576)    return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024)    return '$bytes B';
+    if (bytes < 1048576) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / 1048576).toStringAsFixed(1)} MB';
   }
 

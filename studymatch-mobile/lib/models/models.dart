@@ -3,7 +3,9 @@ class UserModel {
   String fullName;
   String email;
   String? password;
+  String? token;
   String? profilePhotoUrl;
+  String? phoneNumber;
   String? school;
   String? department;
   String? topic;
@@ -25,7 +27,9 @@ class UserModel {
     required this.fullName,
     required this.email,
     this.password,
+    this.token,
     this.profilePhotoUrl,
+    this.phoneNumber,
     this.school,
     this.department,
     this.topic,
@@ -48,7 +52,9 @@ class UserModel {
         fullName: json['fullName'] as String,
         email: json['email'] as String,
         password: json['password'] as String?,
+        token: json['token'] as String?,
         profilePhotoUrl: json['profilePhotoUrl'] as String?,
+        phoneNumber: json['phoneNumber'] as String?,
         school: json['school'] as String?,
         department: json['department'] as String?,
         topic: json['topic'] as String?,
@@ -81,7 +87,7 @@ class UserModel {
   static Map<String, List<String>> _toAvailabilityMap(dynamic val) {
     if (val == null || val is! Map) return {};
     try {
-      return (val as Map).map(
+      return val.map(
         (k, v) => MapEntry(
           k.toString(),
           v is List
@@ -99,7 +105,9 @@ class UserModel {
         'fullName': fullName,
         'email': email,
         'password': password,
+        'token': token,
         'profilePhotoUrl': profilePhotoUrl,
+        'phoneNumber': phoneNumber,
         'school': school,
         'department': department,
         'topic': topic,
@@ -224,6 +232,59 @@ class DBResource {
         fileType: json['fileType'] as String? ?? 'pdf',
         uploadedAt: json['uploadedAt'] as String,
       );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// StudySession
+// ═════════════════════════════════════════════════════════════════════════════
+class StudySession {
+  final String id;
+  final String tutorUserId;
+  final String tutorName;
+  final String studentUserId;
+  final String studentName;
+  final DateTime scheduledAt;
+  final int durationMinutes;
+  final String status; // 'pending', 'scheduled', 'completed', 'cancelled'
+  final String? notes;
+  final String createdAt;
+
+  const StudySession({
+    required this.id,
+    required this.tutorUserId,
+    required this.tutorName,
+    required this.studentUserId,
+    required this.studentName,
+    required this.scheduledAt,
+    required this.durationMinutes,
+    required this.status,
+    this.notes,
+    required this.createdAt,
+  });
+
+  factory StudySession.fromJson(Map<String, dynamic> json) => StudySession(
+        id: json['id'].toString(),
+        tutorUserId: json['tutorUserId'] as String? ?? '',
+        tutorName: json['tutorName'] as String? ?? 'Tutor',
+        studentUserId: json['studentUserId'] as String? ?? '',
+        studentName: json['studentName'] as String? ?? 'Student',
+        scheduledAt: DateTime.tryParse(json['scheduledAt'] as String? ?? '') ??
+            DateTime.now(),
+        durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 60,
+        status: json['status'] as String? ?? 'pending',
+        notes: json['notes'] as String?,
+        createdAt: json['createdAt'] as String? ?? '',
+      );
+
+  bool get isPending   => status == 'pending';
+  bool get isScheduled => status == 'scheduled';
+  bool get isCompleted => status == 'completed';
+  bool get isCancelled => status == 'cancelled';
+  bool get isUpcoming  => isPending || isScheduled;
+  bool get isPast      => isCompleted || isCancelled;
+
+  String otherName(String myUserId) =>
+      myUserId == tutorUserId ? studentName : tutorName;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

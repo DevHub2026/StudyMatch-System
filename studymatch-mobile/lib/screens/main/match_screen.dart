@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/app_state.dart';
+import '../../services/api_service.dart';
 import '../../utils/app_theme.dart';
 import '../../models/models.dart';
 import 'user_profile_screen.dart';
@@ -102,11 +103,16 @@ class _MatchScreenState extends State<MatchScreen>
     _rotate = Tween<double>(begin: 0, end: like ? 0.15 : -0.15).animate(_ctrl);
 
     _ctrl.forward().then((_) async {
-      final userId = state.matchUsers.first.id;
+      final userId = candidate.id;
       if (like) {
-        final matched = await state.likeUser(userId);
-        if (matched) {
-          _showMatchBanner(candidate);
+        final status = await state.likeUser(userId);
+        if (status != null) {
+          _showMatchBanner(candidate, status);
+          // Only reload matched users and sessions, not pending matches
+          // (to avoid overwriting the just-added pending match)
+          if (status == 'matched') {
+            await state.loadMatchUsers();
+          }
         }
       } else {
         state.passUser(userId);
@@ -152,25 +158,335 @@ class _MatchScreenState extends State<MatchScreen>
     );
   }
 
-  void _showMatchBanner(RealUser user) {
+  void _showMatchBanner(RealUser user, String status) {
+    final isMatch = status == 'matched';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Text('🎉 ', style: TextStyle(fontSize: 18)),
+            Text(isMatch ? '🎉 ' : '💌 ', style: const TextStyle(fontSize: 18)),
             Expanded(
               child: Text(
-                "You matched with ${user.fullName}! Check Messages.",
+                isMatch
+                    ? "It's a match with ${user.fullName}! Check Messages."
+                    : "Request sent to ${user.fullName}! Check Sessions.",
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
-        backgroundColor: AppTheme.success,
+        backgroundColor: isMatch ? AppTheme.success : AppTheme.primary,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showBookingDialog(BuildContext context, RealUser tutor) {
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
+    int selectedDuration = 60;
+    final notesCtrl = TextEditingController();
+    bool booking = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: AppTheme.borderLight,
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Book Session with ${tutor.fullName.split(' ').first}',
+                    style: const TextStyle(
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17)),
+                const SizedBox(height: 20),
+                // Date picker
+                const Text('Date',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: DateTime.now().add(const Duration(days: 1)),
+                      firstDate:
+                          DateTime.now().add(const Duration(minutes: 30)),
+                      lastDate: DateTime.now().add(const Duration(days: 90)),
+                      builder: (c, child) => Theme(
+                        data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                                primary: AppTheme.primary,
+                                surface: Colors.white)),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) setS(() => selectedDate = picked);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: selectedDate != null
+                              ? AppTheme.primary
+                              : AppTheme.borderLight),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          color: Color(0xFF9CA3AF), size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        selectedDate != null
+                            ? '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}'
+                            : 'Select date',
+                        style: TextStyle(
+                            color: selectedDate != null
+                                ? AppTheme.textDark
+                                : const Color(0xFF9CA3AF),
+                            fontFamily: 'Poppins',
+                            fontSize: 14),
+                      ),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Time picker
+                const Text('Time',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: ctx,
+                      initialTime: TimeOfDay.now(),
+                      builder: (c, child) => Theme(
+                        data: ThemeData.light().copyWith(
+                            colorScheme: const ColorScheme.light(
+                                primary: AppTheme.primary,
+                                surface: Colors.white)),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) setS(() => selectedTime = picked);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: selectedTime != null
+                              ? AppTheme.primary
+                              : AppTheme.borderLight),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.access_time_outlined,
+                          color: Color(0xFF9CA3AF), size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        selectedTime != null
+                            ? selectedTime!.format(ctx)
+                            : 'Select time',
+                        style: TextStyle(
+                            color: selectedTime != null
+                                ? AppTheme.textDark
+                                : const Color(0xFF9CA3AF),
+                            fontFamily: 'Poppins',
+                            fontSize: 14),
+                      ),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Duration
+                const Text('Duration',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.borderLight)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: selectedDuration,
+                      isExpanded: true,
+                      dropdownColor: AppTheme.surfaceLight,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      borderRadius: BorderRadius.circular(12),
+                      style: const TextStyle(
+                          color: AppTheme.textDark,
+                          fontFamily: 'Poppins',
+                          fontSize: 14),
+                      items: const [
+                        DropdownMenuItem(value: 30, child: Text('30 minutes')),
+                        DropdownMenuItem(value: 60, child: Text('1 hour')),
+                        DropdownMenuItem(value: 90, child: Text('1.5 hours')),
+                        DropdownMenuItem(value: 120, child: Text('2 hours')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setS(() => selectedDuration = v);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Notes
+                const Text('Notes (Optional)',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: notesCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(
+                      color: AppTheme.textDark,
+                      fontFamily: 'Poppins',
+                      fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Topics to cover, preferred platform, etc.',
+                    hintStyle: const TextStyle(
+                        color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F8),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderLight)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppTheme.borderLight)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: AppTheme.primary, width: 1.5)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: booking ||
+                            selectedDate == null ||
+                            selectedTime == null
+                        ? null
+                        : () async {
+                            setS(() => booking = true);
+                            final dt = DateTime(
+                              selectedDate!.year,
+                              selectedDate!.month,
+                              selectedDate!.day,
+                              selectedTime!.hour,
+                              selectedTime!.minute,
+                            );
+                            final result = await ApiService.bookSession(
+                              tutorUserId: tutor.id,
+                              studentUserId:
+                                  context.read<AppState>().currentUser!.id,
+                              scheduledAt: dt,
+                              durationMinutes: selectedDuration,
+                              notes: notesCtrl.text.trim().isEmpty
+                                  ? null
+                                  : notesCtrl.text.trim(),
+                            );
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            if (mounted) {
+                              if (result['success'] == true) {
+                                // Reload sessions to display the newly booked session
+                                await context.read<AppState>().loadSessions();
+                                // Also ensure this user is in pending matches if not already
+                                await context
+                                    .read<AppState>()
+                                    .loadPendingMatches();
+                              }
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(
+                                content: Text(
+                                  result['success'] == true
+                                      ? 'Session booked with ${tutor.fullName.split(' ').first}!'
+                                      : (result['message'] as String? ??
+                                          'Booking failed'),
+                                  style: const TextStyle(fontFamily: 'Poppins'),
+                                ),
+                                backgroundColor: result['success'] == true
+                                    ? AppTheme.success
+                                    : AppTheme.error,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ));
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      disabledBackgroundColor: AppTheme.borderLight,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: booking
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text('Confirm Booking',
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -269,11 +585,13 @@ class _MatchScreenState extends State<MatchScreen>
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Find Tutors',
-                          style: TextStyle(
-                              color: AppTheme.textDark,
+                          state.currentUser?.role == 'tutor'
+                              ? 'Find Student'
+                              : 'Find Tutor',
+                          style: const TextStyle(
+                              color: Color.fromARGB(255, 139, 139, 139),
                               fontWeight: FontWeight.bold,
                               fontSize: 20,
                               fontFamily: 'Poppins'),
@@ -339,7 +657,7 @@ class _MatchScreenState extends State<MatchScreen>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.surfaceLight,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppTheme.borderLight),
                       ),
@@ -525,7 +843,7 @@ class _MatchScreenState extends State<MatchScreen>
 
             // Action buttons
             Padding(
-              padding: const EdgeInsets.fromLTRB(40, 8, 40, 24),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -544,7 +862,17 @@ class _MatchScreenState extends State<MatchScreen>
                             _showRatingDialog(context, state.matchUsers.first)
                         : null,
                   ),
-                  // ✅ Heart button dims when incompatible (either side)
+                  // Book button — only for students viewing tutor cards
+                  if (state.currentUser?.role == 'student' &&
+                      state.matchUsers.isNotEmpty &&
+                      state.matchUsers.first.role == 'tutor')
+                    _SwipeButton(
+                      icon: Icons.calendar_month_outlined,
+                      color: AppTheme.primary,
+                      onTap: () =>
+                          _showBookingDialog(context, state.matchUsers.first),
+                    ),
+                  // Heart button dims when incompatible
                   _SwipeButton(
                     icon: Icons.favorite,
                     color: state.matchUsers.isNotEmpty &&
@@ -974,7 +1302,8 @@ class _EmptyState extends StatelessWidget {
             icon: const Icon(Icons.refresh),
             label:
                 const Text('Refresh', style: TextStyle(fontFamily: 'Poppins')),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 255, 255, 255)),
           ),
         ],
       ),

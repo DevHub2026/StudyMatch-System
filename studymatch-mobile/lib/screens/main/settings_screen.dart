@@ -10,11 +10,11 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user  = state.currentUser;
+    final user = state.currentUser;
     final unread = state.unreadMessageCount;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
+      backgroundColor: AppTheme.bgLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -185,8 +185,8 @@ class SettingsScreen extends StatelessWidget {
                       border: Border.all(color: AppTheme.borderLight),
                     ),
                     child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       leading: Container(
                         width: 40,
                         height: 40,
@@ -206,8 +206,8 @@ class SettingsScreen extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      onTap: () => _confirmSignOut(context,
-                          context.read<AppState>()),
+                      onTap: () =>
+                          _confirmSignOut(context, context.read<AppState>()),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -225,7 +225,7 @@ class SettingsScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceLight,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => const _ChangePasswordSheet(),
@@ -237,7 +237,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surfaceLight,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Registered Email',
             style: TextStyle(
@@ -293,8 +293,7 @@ class SettingsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('Got it',
-                style: TextStyle(
-                    color: Colors.white, fontFamily: 'Poppins')),
+                style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -305,7 +304,7 @@ class SettingsScreen extends StatelessWidget {
   void _showNotificationsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceLight,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => const _NotificationsSheet(),
@@ -435,8 +434,7 @@ class SettingsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10)),
               ),
               child: const Text('Close',
-                  style: TextStyle(
-                      color: Colors.white, fontFamily: 'Poppins')),
+                  style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
             ),
           ),
         ],
@@ -457,8 +455,7 @@ class SettingsScreen extends StatelessWidget {
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold)),
         content: const Text('Are you sure you want to sign out?',
-            style: TextStyle(
-                color: AppTheme.textBody, fontFamily: 'Poppins')),
+            style: TextStyle(color: AppTheme.textBody, fontFamily: 'Poppins')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -467,13 +464,13 @@ class SettingsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.of(context).pop();
+              Navigator.of(context).popUntil((route) => route.isFirst);
               state.signOut();
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
             child: const Text('Sign Out',
-                style:
-                    TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -544,8 +541,7 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Container(
         width: 40,
         height: 40,
@@ -588,10 +584,10 @@ class _ChangePasswordSheet extends StatefulWidget {
 
 class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   final _currentCtrl = TextEditingController();
-  final _newCtrl     = TextEditingController();
+  final _newCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _obscureCurrent = true;
-  bool _obscureNew     = true;
+  bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _saving = false;
   String? _error;
@@ -606,8 +602,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
 
   Future<void> _save() async {
     final current = _currentCtrl.text.trim();
-    final newPass  = _newCtrl.text;
-    final confirm  = _confirmCtrl.text;
+    final newPass = _newCtrl.text;
+    final confirm = _confirmCtrl.text;
 
     if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
       setState(() => _error = 'All fields are required.');
@@ -622,11 +618,14 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
       return;
     }
 
-    setState(() { _saving = true; _error = null; });
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final err = await context.read<AppState>().changePassword(
-      currentPassword: current,
-      newPassword:     newPass,
-    );
+          currentPassword: current,
+          newPassword: newPass,
+        );
     if (!mounted) return;
     setState(() => _saving = false);
 
@@ -647,7 +646,9 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
@@ -669,12 +670,10 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   fontFamily: 'Poppins',
                   fontSize: 13)),
           const SizedBox(height: 20),
-
           if (_error != null) ...[
             _errorBanner(_error!),
             const SizedBox(height: 12),
           ],
-
           _pwField('Current Password', _currentCtrl, _obscureCurrent,
               () => setState(() => _obscureCurrent = !_obscureCurrent)),
           const SizedBox(height: 12),
@@ -684,7 +683,6 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
           _pwField('Confirm New Password', _confirmCtrl, _obscureConfirm,
               () => setState(() => _obscureConfirm = !_obscureConfirm)),
           const SizedBox(height: 24),
-
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -699,7 +697,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               ),
               child: _saving
                   ? const SizedBox(
-                      width: 20, height: 20,
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
                   : const Text('Update Password',
@@ -729,16 +728,15 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
         TextField(
           controller: ctrl,
           obscureText: obscure,
-          style: const TextStyle(
-              color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
+          style:
+              const TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF5F5F8),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             suffixIcon: IconButton(
-              icon: Icon(
-                  obscure ? Icons.visibility_off : Icons.visibility,
+              icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
                   color: const Color(0xFF9CA3AF), size: 20),
               onPressed: toggle,
             ),
@@ -750,8 +748,8 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                 borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                    color: AppTheme.primary, width: 1.5)),
+                borderSide:
+                    const BorderSide(color: AppTheme.primary, width: 1.5)),
           ),
         ),
       ],
@@ -767,10 +765,10 @@ class _NotificationsSheet extends StatefulWidget {
 }
 
 class _NotificationsSheetState extends State<_NotificationsSheet> {
-  bool _matchNotifs    = true;
-  bool _messageNotifs  = true;
-  bool _sessionNotifs  = true;
-  bool _emailNotifs    = false;
+  bool _matchNotifs = true;
+  bool _messageNotifs = true;
+  bool _sessionNotifs = true;
+  bool _emailNotifs = false;
 
   @override
   Widget build(BuildContext context) {
@@ -796,20 +794,16 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
                   fontSize: 13)),
           const SizedBox(height: 20),
           _notifToggle('New Matches', 'When someone likes your profile back',
-              _matchNotifs,
-              (v) => setState(() => _matchNotifs = v)),
+              _matchNotifs, (v) => setState(() => _matchNotifs = v)),
           const Divider(color: Color(0xFFE8E8EF)),
           _notifToggle('Messages', 'When you receive a new message',
-              _messageNotifs,
-              (v) => setState(() => _messageNotifs = v)),
+              _messageNotifs, (v) => setState(() => _messageNotifs = v)),
           const Divider(color: Color(0xFFE8E8EF)),
           _notifToggle('Study Sessions', 'Reminders for upcoming sessions',
-              _sessionNotifs,
-              (v) => setState(() => _sessionNotifs = v)),
+              _sessionNotifs, (v) => setState(() => _sessionNotifs = v)),
           const Divider(color: Color(0xFFE8E8EF)),
           _notifToggle('Email Notifications', 'Receive updates via email',
-              _emailNotifs,
-              (v) => setState(() => _emailNotifs = v)),
+              _emailNotifs, (v) => setState(() => _emailNotifs = v)),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -841,8 +835,8 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
     );
   }
 
-  Widget _notifToggle(String title, String subtitle, bool value,
-      ValueChanged<bool> onChanged) {
+  Widget _notifToggle(
+      String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title,
@@ -853,9 +847,7 @@ class _NotificationsSheetState extends State<_NotificationsSheet> {
               fontSize: 14)),
       subtitle: Text(subtitle,
           style: const TextStyle(
-              color: Color(0xFF9CA3AF),
-              fontFamily: 'Poppins',
-              fontSize: 12)),
+              color: Color(0xFF9CA3AF), fontFamily: 'Poppins', fontSize: 12)),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
@@ -873,14 +865,22 @@ class _PrivacySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      ('Profile Visibility',
-       'Your profile is visible to potential study partners based on subject compatibility.'),
-      ('Data Usage',
-       'Your academic preferences and availability are used solely for matching purposes.'),
-      ('Message Privacy',
-       'Messages are only visible to you and the person you are chatting with.'),
-      ('Account Deletion',
-       'You may request full account deletion by contacting our support team.'),
+      (
+        'Profile Visibility',
+        'Your profile is visible to potential study partners based on subject compatibility.'
+      ),
+      (
+        'Data Usage',
+        'Your academic preferences and availability are used solely for matching purposes.'
+      ),
+      (
+        'Message Privacy',
+        'Messages are only visible to you and the person you are chatting with.'
+      ),
+      (
+        'Account Deletion',
+        'You may request full account deletion by contacting our support team.'
+      ),
     ];
 
     return DraggableScrollableSheet(
@@ -1026,8 +1026,11 @@ class _AppearanceOption extends StatelessWidget {
   final VoidCallback onTap;
 
   const _AppearanceOption({
-    required this.icon, required this.label, required this.subtitle,
-    required this.selected, required this.onTap,
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
@@ -1087,16 +1090,26 @@ class _HelpSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const faqs = [
-      ('How does matching work?',
-       'StudyMatch pairs students with tutors whose strong subjects overlap with your weak subjects — and vice versa.'),
-      ('Can I change my role?',
-       'Yes. Go to Edit Profile and update your role. Your match deck will refresh to reflect the change.'),
-      ('How do I start a session?',
-       'Once you are matched, open the chat with your match and agree on a time. Sessions can be scheduled from the Sessions tab.'),
-      ('Why am I not seeing any matches?',
-       'Make sure your profile is complete with subjects, strengths, and weaknesses. Matches are based on academic compatibility.'),
-      ('How do I report a user?',
-       'Open the user\'s profile and tap the three-dot menu in the top-right corner. Select "Report User" and follow the prompts.'),
+      (
+        'How does matching work?',
+        'StudyMatch pairs students with tutors whose strong subjects overlap with your weak subjects — and vice versa.'
+      ),
+      (
+        'Can I change my role?',
+        'Yes. Go to Edit Profile and update your role. Your match deck will refresh to reflect the change.'
+      ),
+      (
+        'How do I start a session?',
+        'Once you are matched, open the chat with your match and agree on a time. Sessions can be scheduled from the Sessions tab.'
+      ),
+      (
+        'Why am I not seeing any matches?',
+        'Make sure your profile is complete with subjects, strengths, and weaknesses. Matches are based on academic compatibility.'
+      ),
+      (
+        'How do I report a user?',
+        'Open the user\'s profile and tap the three-dot menu in the top-right corner. Select "Report User" and follow the prompts.'
+      ),
     ];
 
     return DraggableScrollableSheet(
@@ -1211,9 +1224,8 @@ class _FaqItemState extends State<_FaqItem> {
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: _expanded
-                        ? AppTheme.primary
-                        : const Color(0xFF9CA3AF),
+                    color:
+                        _expanded ? AppTheme.primary : const Color(0xFF9CA3AF),
                     size: 20),
               ],
             ),
@@ -1245,16 +1257,27 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
   String _category = 'General';
   bool _sent = false;
 
-  static const _categories = ['General', 'Bug Report', 'Feature Request', 'Matching', 'Messaging'];
+  static const _categories = [
+    'General',
+    'Bug Report',
+    'Feature Request',
+    'Matching',
+    'Messaging'
+  ];
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
@@ -1276,15 +1299,14 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                   fontFamily: 'Poppins',
                   fontSize: 13)),
           const SizedBox(height: 20),
-
           if (_sent) ...[
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppTheme.success.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppTheme.success.withValues(alpha: 0.25)),
+                border:
+                    Border.all(color: AppTheme.success.withValues(alpha: 0.25)),
               ),
               child: const Column(
                 children: [
@@ -1349,9 +1371,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: sel
-                            ? AppTheme.primary
-                            : const Color(0xFFF8F8FA),
+                        color: sel ? AppTheme.primary : const Color(0xFFF8F8FA),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                             color: sel
@@ -1360,14 +1380,12 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                       ),
                       child: Text(_categories[i],
                           style: TextStyle(
-                              color: sel
-                                  ? Colors.white
-                                  : const Color(0xFF6B7280),
+                              color:
+                                  sel ? Colors.white : const Color(0xFF6B7280),
                               fontFamily: 'Poppins',
                               fontSize: 12,
-                              fontWeight: sel
-                                  ? FontWeight.w600
-                                  : FontWeight.normal)),
+                              fontWeight:
+                                  sel ? FontWeight.w600 : FontWeight.normal)),
                     ),
                   );
                 },
@@ -1400,8 +1418,8 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                     borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
                 focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: AppTheme.primary, width: 1.5)),
+                    borderSide:
+                        const BorderSide(color: AppTheme.primary, width: 1.5)),
               ),
             ),
             const SizedBox(height: 20),
