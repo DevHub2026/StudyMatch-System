@@ -23,16 +23,16 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final _searchCtrl = TextEditingController();
-  List<Map<String, dynamic>> _inbox     = [];
-  bool   _loadingInbox = true;
+  List<Map<String, dynamic>> _inbox = [];
+  bool _loadingInbox = true;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadInbox();
-    _refreshTimer = Timer.periodic(
-        const Duration(seconds: 5), (_) => _loadInbox());
+    _refreshTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _loadInbox());
   }
 
   @override
@@ -43,11 +43,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _loadInbox() async {
-    final me = context.read<AppState>().currentUser;
+    final appState = context.read<AppState>();
+    final me = appState.currentUser;
     if (me == null) return;
     try {
       final data = await MessageService.getInbox(userId: me.id);
-      if (mounted) setState(() { _inbox = data; _loadingInbox = false; });
+      appState.updateConversationsFromInbox(data);
+      if (mounted)
+        setState(() {
+          _inbox = data;
+          _loadingInbox = false;
+        });
     } catch (_) {
       if (mounted) setState(() => _loadingInbox = false);
     }
@@ -69,8 +75,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state   = context.watch<AppState>();
-    final me      = state.currentUser;
+    final state = context.watch<AppState>();
+    final me = state.currentUser;
     final matched = state.matchedUsers;
 
     return Scaffold(
@@ -131,16 +137,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderLight)),
+                      borderSide:
+                          const BorderSide(color: AppTheme.borderLight)),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.borderLight)),
+                      borderSide:
+                          const BorderSide(color: AppTheme.borderLight)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: AppTheme.primary, width: 2)),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
+                      borderSide:
+                          const BorderSide(color: AppTheme.primary, width: 2)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               ),
             ),
@@ -185,10 +193,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           Stack(
                             children: [
                               Container(
-                                width: 56, height: 56,
+                                width: 56,
+                                height: 56,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                      colors: [AppTheme.primary, AppTheme.accent]),
+                                  gradient: const LinearGradient(colors: [
+                                    AppTheme.primary,
+                                    AppTheme.accent
+                                  ]),
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                       color: AppTheme.success, width: 2),
@@ -203,9 +214,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 ),
                               ),
                               Positioned(
-                                bottom: 0, right: 0,
+                                bottom: 0,
+                                right: 0,
                                 child: Container(
-                                  width: 16, height: 16,
+                                  width: 16,
+                                  height: 16,
                                   decoration: BoxDecoration(
                                     color: AppTheme.success,
                                     shape: BoxShape.circle,
@@ -263,10 +276,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           child: CircularProgressIndicator(color: AppTheme.primary));
     }
 
-    final matchedIds    = state.matchedUsers.map((u) => u.id).toSet();
-    final filteredInbox = _inbox
-        .where((c) => matchedIds.contains(c['participantId'] as String?))
-        .toList();
+    final filteredInbox = _inbox;
 
     if (filteredInbox.isEmpty) {
       return Center(
@@ -300,12 +310,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
         separatorBuilder: (_, __) =>
             const Divider(color: AppTheme.borderLight, height: 1),
         itemBuilder: (ctx, i) {
-          final c        = filteredInbox[i];
+          final c = filteredInbox[i];
           final isUnread = (c['unreadCount'] as int? ?? 0) > 0;
-          final isMe     = c['lastMessageSenderId'] == myId;
-          final lastMsg  = c['lastMessage']     as String? ?? '';
+          final isMe = c['lastMessageSenderId'] == myId;
+          final lastMsg = c['lastMessage'] as String? ?? '';
           final lastType = c['lastMessageType'] as String? ?? 'text';
-          final time     = c['lastMessageTime'] as String? ?? '';
+          final time = c['lastMessageTime'] as String? ?? '';
 
           // Build a readable preview for file messages
           final preview = _buildInboxPreview(isMe, lastMsg, lastType);
@@ -321,8 +331,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             title: Text(participant.fullName,
                 style: TextStyle(
                     color: AppTheme.textDark,
-                    fontWeight:
-                        isUnread ? FontWeight.bold : FontWeight.w500,
+                    fontWeight: isUnread ? FontWeight.bold : FontWeight.w500,
                     fontFamily: 'Poppins',
                     fontSize: 15)),
             subtitle: Row(
@@ -366,8 +375,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 if (isUnread) ...[
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                         color: AppTheme.primary,
                         borderRadius: BorderRadius.circular(10)),
@@ -394,28 +403,35 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String _buildInboxPreview(bool isMe, String lastMsg, String lastType) {
     final prefix = isMe ? 'You: ' : '';
     switch (lastType) {
-      case 'image': return '${prefix}📷 Image';
-      case 'file':  return '${prefix}📎 File';
-      default:      return '$prefix$lastMsg';
+      case 'image':
+        return '${prefix}📷 Image';
+      case 'file':
+        return '${prefix}📎 File';
+      default:
+        return '$prefix$lastMsg';
     }
   }
 
   RealUser _buildRealUser(Map<String, dynamic> c) => RealUser(
-    id:         c['participantId']    as String,
-    fullName:   c['participantName']  as String,
-    email:      c['participantEmail'] as String? ?? '',
-    role:       c['participantRole']  as String? ?? 'student',
-    department: c['participantDept']   as String?,
-    school:     c['participantSchool'] as String?,
-    bio:        c['participantBio']    as String?,
-    rating: (c['participantRating'] as num?)?.toDouble() ?? 0,
-    ratingCount: c['participantRatingCount'] as int? ?? 0,
-    subjects: List<String>.from((c['participantSubjects']       as List?) ?? []),
-    strengths: List<String>.from((c['participantStrengths']     as List?) ?? []),
-    weaknesses: List<String>.from((c['participantWeaknesses']   as List?) ?? []),
-    learningStyles: List<String>.from((c['participantLearningStyles'] as List?) ?? []),
-    studyStyles: List<String>.from((c['participantStudyStyles'] as List?) ?? []),
-  );
+        id: c['participantId'] as String,
+        fullName: c['participantName'] as String,
+        email: c['participantEmail'] as String? ?? '',
+        role: c['participantRole'] as String? ?? 'student',
+        department: c['participantDept'] as String?,
+        school: c['participantSchool'] as String?,
+        bio: c['participantBio'] as String?,
+        rating: (c['participantRating'] as num?)?.toDouble() ?? 0,
+        ratingCount: c['participantRatingCount'] as int? ?? 0,
+        subjects: List<String>.from((c['participantSubjects'] as List?) ?? []),
+        strengths:
+            List<String>.from((c['participantStrengths'] as List?) ?? []),
+        weaknesses:
+            List<String>.from((c['participantWeaknesses'] as List?) ?? []),
+        learningStyles:
+            List<String>.from((c['participantLearningStyles'] as List?) ?? []),
+        studyStyles:
+            List<String>.from((c['participantStudyStyles'] as List?) ?? []),
+      );
 
   void _showNewMessageSheet(BuildContext context, AppState state) {
     showModalBottomSheet(
@@ -434,7 +450,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             const SizedBox(height: 12),
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                     color: AppTheme.divider,
                     borderRadius: BorderRadius.circular(2)),
@@ -490,8 +507,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 child: Text('No matches yet. Swipe right to match!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontFamily: 'Poppins')),
+                        color: AppTheme.textMuted, fontFamily: 'Poppins')),
               ),
           ],
         ),
@@ -502,13 +518,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String _formatTime(String isoTime) {
     if (isoTime.isEmpty) return '';
     try {
-      final dt   = DateTime.parse(isoTime);
+      final dt = DateTime.parse(isoTime);
       final diff = DateTime.now().difference(dt);
-      if (diff.inSeconds < 60)  return 'now';
-      if (diff.inMinutes < 60)  return '${diff.inMinutes}m';
-      if (diff.inHours   < 24)  return '${diff.inHours}h';
+      if (diff.inSeconds < 60) return 'now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+      if (diff.inHours < 24) return '${diff.inHours}h';
       return '${diff.inDays}d';
-    } catch (_) { return ''; }
+    } catch (_) {
+      return '';
+    }
   }
 }
 
@@ -521,12 +539,12 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _msgCtrl    = TextEditingController();
+  final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<Map<String, dynamic>> _messages = [];
-  bool   _loading      = true;
-  bool   _sending      = false;
-  bool   _pausePolling = false;
+  bool _loading = true;
+  bool _sending = false;
+  bool _pausePolling = false;
   Timer? _pollTimer;
 
   @override
@@ -545,8 +563,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  String get _myId =>
-      context.read<AppState>().currentUser?.id ?? '';
+  String get _myId => context.read<AppState>().currentUser?.id ?? '';
 
   Future<void> _loadMessages({bool silent = false}) async {
     if (_pausePolling) return;
@@ -558,7 +575,10 @@ class _ChatScreenState extends State<ChatScreen> {
         final wasAtBottom = _scrollCtrl.hasClients &&
             _scrollCtrl.position.pixels >=
                 _scrollCtrl.position.maxScrollExtent - 100;
-        setState(() { _messages = msgs; _loading = false; });
+        setState(() {
+          _messages = msgs;
+          _loading = false;
+        });
         if (wasAtBottom || !silent) _scrollToBottom();
       }
     } catch (_) {
@@ -569,10 +589,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-            _scrollCtrl.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut);
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
@@ -585,18 +603,18 @@ class _ChatScreenState extends State<ChatScreen> {
     _pausePolling = true;
     setState(() => _sending = true);
 
-    final tempId  = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final tempMsg = {
-      'id':          tempId,
-      'senderId':    _myId,
-      'receiverId':  widget.participant.id,
-      'content':     txt,
+      'id': tempId,
+      'senderId': _myId,
+      'receiverId': widget.participant.id,
+      'content': txt,
       'messageType': 'text',
-      'fileUrl':     null,
-      'fileName':    null,
-      'fileSize':    null,
-      'isRead':      false,
-      'createdAt':   DateTime.now().toIso8601String(),
+      'fileUrl': null,
+      'fileName': null,
+      'fileSize': null,
+      'isRead': false,
+      'createdAt': DateTime.now().toIso8601String(),
     };
     setState(() => _messages.add(tempMsg));
     _scrollToBottom();
@@ -609,7 +627,10 @@ class _ChatScreenState extends State<ChatScreen> {
             userId: _myId, otherId: widget.participant.id);
         _pausePolling = false;
         if (mounted) {
-          setState(() { _messages = msgs; _sending = false; });
+          setState(() {
+            _messages = msgs;
+            _sending = false;
+          });
           _scrollToBottom();
         }
       } else {
@@ -645,7 +666,8 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             const SizedBox(height: 8),
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                   color: AppTheme.divider,
                   borderRadius: BorderRadius.circular(2)),
@@ -654,7 +676,8 @@ class _ChatScreenState extends State<ChatScreen> {
             // Camera
             ListTile(
               leading: Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -678,7 +701,8 @@ class _ChatScreenState extends State<ChatScreen> {
             // Gallery
             ListTile(
               leading: Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.accent.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -702,7 +726,8 @@ class _ChatScreenState extends State<ChatScreen> {
             // File
             ListTile(
               leading: Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.success.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -737,10 +762,10 @@ class _ChatScreenState extends State<ChatScreen> {
       final img = await picker.pickImage(source: source, imageQuality: 80);
       if (img == null) return;
 
-      final bytes    = await img.readAsBytes();
+      final bytes = await img.readAsBytes();
       final fileName = img.name;
-      final ext      = fileName.split('.').last.toLowerCase();
-      final mime     = ext == 'png' ? 'image/png' : 'image/jpeg';
+      final ext = fileName.split('.').last.toLowerCase();
+      final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
 
       await _uploadAndInsert(
           fileBytes: bytes, fileName: fileName, mimeType: mime);
@@ -761,10 +786,10 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      final bytes    = file.bytes!;
+      final bytes = file.bytes!;
       final fileName = file.name;
       // Guess MIME from extension; server will verify with mime_content_type()
-      final mime     = _mimeFromFileName(fileName);
+      final mime = _mimeFromFileName(fileName);
 
       await _uploadAndInsert(
           fileBytes: bytes, fileName: fileName, mimeType: mime);
@@ -776,15 +801,21 @@ class _ChatScreenState extends State<ChatScreen> {
   String _mimeFromFileName(String name) {
     final ext = name.split('.').last.toLowerCase();
     const map = {
-      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-      'gif': 'image/gif',  'webp': 'image/webp',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
       'pdf': 'application/pdf',
       'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'docx':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'xls': 'application/vnd.ms-excel',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xlsx':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'ppt': 'application/vnd.ms-powerpoint',
-      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'pptx':
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'txt': 'text/plain',
       'zip': 'application/zip',
     };
@@ -794,8 +825,8 @@ class _ChatScreenState extends State<ChatScreen> {
   // ── Core: upload file and inject optimistic bubble ────────────────────────
   Future<void> _uploadAndInsert({
     required Uint8List fileBytes,
-    required String    fileName,
-    required String    mimeType,
+    required String fileName,
+    required String mimeType,
   }) async {
     final isImage = mimeType.startsWith('image/');
 
@@ -803,30 +834,30 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _sending = true);
 
     // Optimistic bubble
-    final tempId  = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final tempMsg = {
-      'id':          tempId,
-      'senderId':    _myId,
-      'receiverId':  widget.participant.id,
-      'content':     isImage ? '📷 Image' : '📎 $fileName',
+      'id': tempId,
+      'senderId': _myId,
+      'receiverId': widget.participant.id,
+      'content': isImage ? '📷 Image' : '📎 $fileName',
       'messageType': isImage ? 'image' : 'file',
-      'fileUrl':     null,             // no URL yet — shows a progress indicator
-      'fileName':    fileName,
-      'fileSize':    fileBytes.length,
-      'isRead':      false,
-      'createdAt':   DateTime.now().toIso8601String(),
-      '_uploading':  true,             // custom flag for UI
+      'fileUrl': null, // no URL yet — shows a progress indicator
+      'fileName': fileName,
+      'fileSize': fileBytes.length,
+      'isRead': false,
+      'createdAt': DateTime.now().toIso8601String(),
+      '_uploading': true, // custom flag for UI
     };
     setState(() => _messages.add(tempMsg));
     _scrollToBottom();
 
     try {
       final result = await MessageService.sendFile(
-        senderId:   _myId,
+        senderId: _myId,
         receiverId: widget.participant.id,
-        fileBytes:  fileBytes,
-        fileName:   fileName,
-        mimeType:   mimeType,
+        fileBytes: fileBytes,
+        fileName: fileName,
+        mimeType: mimeType,
       );
 
       if (result['success'] == true) {
@@ -835,7 +866,10 @@ class _ChatScreenState extends State<ChatScreen> {
             userId: _myId, otherId: widget.participant.id);
         _pausePolling = false;
         if (mounted) {
-          setState(() { _messages = msgs; _sending = false; });
+          setState(() {
+            _messages = msgs;
+            _sending = false;
+          });
           _scrollToBottom();
         }
       } else {
@@ -872,12 +906,14 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgDark,
+      backgroundColor: AppTheme.surfaceLight,
       appBar: AppBar(
-        backgroundColor: AppTheme.bgCard,
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: AppTheme.textDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: GestureDetector(
@@ -900,7 +936,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             fontSize: 15,
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary)),
+                            color: AppTheme.textDark)),
                     Text(
                       widget.participant.isTutor ? '🏫 Tutor' : '🎓 Student',
                       style: TextStyle(
@@ -919,7 +955,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline,
-                color: AppTheme.textSecondary, size: 20),
+                color: AppTheme.textBody, size: 20),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -927,23 +963,30 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppTheme.borderLight, height: 1),
+        ),
       ),
       body: Column(
         children: [
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(
-                    color: AppTheme.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary))
                 : _messages.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              width: 72, height: 72,
+                              width: 72,
+                              height: 72,
                               decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                    colors: [AppTheme.primary, AppTheme.accent]),
+                                gradient: LinearGradient(colors: [
+                                  AppTheme.primary,
+                                  AppTheme.accent
+                                ]),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -957,7 +1000,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             const SizedBox(height: 16),
                             Text(widget.participant.fullName,
                                 style: const TextStyle(
-                                    color: AppTheme.textPrimary,
+                                    color: AppTheme.textDark,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
                                     fontFamily: 'Poppins')),
@@ -975,7 +1018,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             horizontal: 16, vertical: 12),
                         itemCount: _messages.length,
                         itemBuilder: (ctx, i) {
-                          final msg  = _messages[i];
+                          final msg = _messages[i];
                           final isMe = msg['senderId'] == _myId;
                           return _Bubble(msg: msg, isMe: isMe);
                         },
@@ -986,8 +1029,8 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
             decoration: const BoxDecoration(
-                color: AppTheme.bgCard,
-                border: Border(top: BorderSide(color: AppTheme.divider))),
+                color: Colors.white,
+                border: Border(top: BorderSide(color: AppTheme.borderLight))),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -996,7 +1039,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   onTap: _sending ? null : _showAttachmentSheet,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    width: 40, height: 40,
+                    width: 40,
+                    height: 40,
                     margin: const EdgeInsets.only(right: 8, bottom: 2),
                     decoration: BoxDecoration(
                       color: _sending
@@ -1006,9 +1050,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: Icon(
                       Icons.add_rounded,
-                      color: _sending
-                          ? AppTheme.textMuted
-                          : AppTheme.primaryLight,
+                      color:
+                          _sending ? AppTheme.textMuted : AppTheme.primaryLight,
                       size: 22,
                     ),
                   ),
@@ -1020,20 +1063,19 @@ class _ChatScreenState extends State<ChatScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                        color: AppTheme.inputBg,
+                        color: const Color(0xFFF5F5F8),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: AppTheme.divider)),
+                        border: Border.all(color: AppTheme.borderLight)),
                     child: TextField(
                       controller: _msgCtrl,
                       style: const TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: AppTheme.textDark,
                           fontFamily: 'Poppins',
                           fontSize: 14),
                       decoration: const InputDecoration.collapsed(
                         hintText: 'Type a message...',
                         hintStyle: TextStyle(
-                            color: AppTheme.textMuted,
-                            fontFamily: 'Poppins'),
+                            color: AppTheme.textMuted, fontFamily: 'Poppins'),
                       ),
                       maxLines: null,
                       textCapitalization: TextCapitalization.sentences,
@@ -1047,7 +1089,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: _send,
                   child: Container(
-                    width: 44, height: 44,
+                    width: 44,
+                    height: 44,
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                           colors: [AppTheme.primary, AppTheme.accent]),
@@ -1079,18 +1122,18 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final msgType   = msg['messageType'] as String? ?? 'text';
-    final fileUrl   = msg['fileUrl']    as String?;
-    final fileName  = msg['fileName']   as String?;
-    final fileSize  = msg['fileSize']   as int?;
+    final msgType = msg['messageType'] as String? ?? 'text';
+    final fileUrl = msg['fileUrl'] as String?;
+    final fileName = msg['fileName'] as String?;
+    final fileSize = msg['fileSize'] as int?;
     final uploading = msg['_uploading'] as bool? ?? false;
-    final time      = _fmt(msg['createdAt'] as String? ?? '');
+    final time = _fmt(msg['createdAt'] as String? ?? '');
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         margin: const EdgeInsets.only(bottom: 10),
         child: Column(
           crossAxisAlignment:
@@ -1098,8 +1141,7 @@ class _Bubble extends StatelessWidget {
           children: [
             // ── Image bubble ──────────────────────────────────────────────
             if (msgType == 'image')
-              _ImageBubble(
-                  fileUrl: fileUrl, uploading: uploading, isMe: isMe)
+              _ImageBubble(fileUrl: fileUrl, uploading: uploading, isMe: isMe)
 
             // ── File bubble ───────────────────────────────────────────────
             else if (msgType == 'file')
@@ -1113,29 +1155,25 @@ class _Bubble extends StatelessWidget {
             // ── Text bubble ───────────────────────────────────────────────
             else
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   gradient: isMe
                       ? const LinearGradient(
                           colors: [AppTheme.primary, AppTheme.accent])
                       : null,
-                  color: isMe ? null : AppTheme.bgCard,
+                  color: isMe ? null : const Color(0xFFF0F0F5),
                   borderRadius: BorderRadius.only(
-                    topLeft:     const Radius.circular(16),
-                    topRight:    const Radius.circular(16),
-                    bottomLeft:  Radius.circular(isMe ? 16 : 4),
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(isMe ? 16 : 4),
                     bottomRight: Radius.circular(isMe ? 4 : 16),
                   ),
-                  border: isMe
-                      ? null
-                      : Border.all(color: AppTheme.divider),
+                  border: isMe ? null : Border.all(color: AppTheme.borderLight),
                 ),
                 child: Text(msg['content'] as String? ?? '',
                     style: TextStyle(
-                        color: isMe
-                            ? Colors.white
-                            : AppTheme.textPrimary,
+                        color: isMe ? Colors.white : AppTheme.textDark,
                         fontSize: 14,
                         fontFamily: 'Poppins',
                         height: 1.4)),
@@ -1178,15 +1216,17 @@ class _Bubble extends StatelessWidget {
     try {
       final dt = DateTime.parse(iso);
       return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) { return ''; }
+    } catch (_) {
+      return '';
+    }
   }
 }
 
 // ── Image Bubble ──────────────────────────────────────────────────────────────
 class _ImageBubble extends StatelessWidget {
   final String? fileUrl;
-  final bool    uploading;
-  final bool    isMe;
+  final bool uploading;
+  final bool isMe;
 
   const _ImageBubble({
     required this.fileUrl,
@@ -1200,9 +1240,9 @@ class _ImageBubble extends StatelessWidget {
       onTap: fileUrl != null ? () => _openUrl(fileUrl!) : null,
       child: ClipRRect(
         borderRadius: BorderRadius.only(
-          topLeft:     const Radius.circular(16),
-          topRight:    const Radius.circular(16),
-          bottomLeft:  Radius.circular(isMe ? 16 : 4),
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isMe ? 16 : 4),
           bottomRight: Radius.circular(isMe ? 4 : 16),
         ),
         child: Stack(
@@ -1217,8 +1257,9 @@ class _ImageBubble extends StatelessWidget {
                 loadingBuilder: (ctx, child, progress) {
                   if (progress == null) return child;
                   return Container(
-                    width: 220, height: 200,
-                    color: AppTheme.bgCard,
+                    width: 220,
+                    height: 200,
+                    color: const Color(0xFFF0F0F5),
                     child: const Center(
                       child: CircularProgressIndicator(
                           color: AppTheme.primary, strokeWidth: 2),
@@ -1226,8 +1267,9 @@ class _ImageBubble extends StatelessWidget {
                   );
                 },
                 errorBuilder: (_, __, ___) => Container(
-                  width: 220, height: 200,
-                  color: AppTheme.bgCard,
+                  width: 220,
+                  height: 200,
+                  color: const Color(0xFFF0F0F5),
                   child: const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1247,7 +1289,8 @@ class _ImageBubble extends StatelessWidget {
               )
             else
               Container(
-                width: 220, height: 200,
+                width: 220,
+                height: 200,
                 color: AppTheme.bgCard,
                 child: const Center(
                   child: Column(
@@ -1269,10 +1312,11 @@ class _ImageBubble extends StatelessWidget {
             // Tap-to-expand overlay hint
             if (fileUrl != null && !uploading)
               Positioned(
-                bottom: 6, right: 8,
+                bottom: 6,
+                right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.black45,
                     borderRadius: BorderRadius.circular(6),
@@ -1297,9 +1341,9 @@ class _ImageBubble extends StatelessWidget {
 class _FileBubble extends StatelessWidget {
   final String? fileUrl;
   final String? fileName;
-  final int?    fileSize;
-  final bool    uploading;
-  final bool    isMe;
+  final int? fileSize;
+  final bool uploading;
+  final bool isMe;
 
   const _FileBubble({
     required this.fileUrl,
@@ -1311,9 +1355,9 @@ class _FileBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ext      = (fileName ?? '').split('.').last.toUpperCase();
-    final sizeStr  = MessageService.formatFileSize(fileSize);
-    final canOpen  = fileUrl != null && !uploading;
+    final ext = (fileName ?? '').split('.').last.toUpperCase();
+    final sizeStr = MessageService.formatFileSize(fileSize);
+    final canOpen = fileUrl != null && !uploading;
 
     return GestureDetector(
       onTap: canOpen ? () => _openUrl(fileUrl!) : null,
@@ -1324,21 +1368,22 @@ class _FileBubble extends StatelessWidget {
               ? const LinearGradient(
                   colors: [AppTheme.primary, AppTheme.accent])
               : null,
-          color: isMe ? null : AppTheme.bgCard,
+          color: isMe ? null : const Color(0xFFF0F0F5),
           borderRadius: BorderRadius.only(
-            topLeft:     const Radius.circular(16),
-            topRight:    const Radius.circular(16),
-            bottomLeft:  Radius.circular(isMe ? 16 : 4),
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
-          border: isMe ? null : Border.all(color: AppTheme.divider),
+          border: isMe ? null : Border.all(color: AppTheme.borderLight),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             // File icon
             Container(
-              width: 44, height: 44,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isMe
                     ? Colors.white.withOpacity(0.15)
@@ -1348,7 +1393,8 @@ class _FileBubble extends StatelessWidget {
               child: uploading
                   ? const Center(
                       child: SizedBox(
-                        width: 20, height: 20,
+                        width: 20,
+                        height: 20,
                         child: CircularProgressIndicator(
                             color: AppTheme.primaryLight, strokeWidth: 2),
                       ),
@@ -1370,7 +1416,7 @@ class _FileBubble extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: isMe ? Colors.white : AppTheme.textPrimary,
+                        color: isMe ? Colors.white : AppTheme.textDark,
                         fontFamily: 'Poppins',
                         fontSize: 13,
                         fontWeight: FontWeight.w500),
@@ -1409,13 +1455,25 @@ class _FileBubble extends StatelessWidget {
 
   IconData _iconForExt(String ext) {
     switch (ext) {
-      case 'PDF':                          return Icons.picture_as_pdf_outlined;
-      case 'DOC': case 'DOCX':            return Icons.description_outlined;
-      case 'XLS': case 'XLSX':            return Icons.table_chart_outlined;
-      case 'PPT': case 'PPTX':            return Icons.slideshow_outlined;
-      case 'TXT':                          return Icons.text_snippet_outlined;
-      case 'ZIP': case 'RAR': case '7Z':  return Icons.folder_zip_outlined;
-      default:                             return Icons.insert_drive_file_outlined;
+      case 'PDF':
+        return Icons.picture_as_pdf_outlined;
+      case 'DOC':
+      case 'DOCX':
+        return Icons.description_outlined;
+      case 'XLS':
+      case 'XLSX':
+        return Icons.table_chart_outlined;
+      case 'PPT':
+      case 'PPTX':
+        return Icons.slideshow_outlined;
+      case 'TXT':
+        return Icons.text_snippet_outlined;
+      case 'ZIP':
+      case 'RAR':
+      case '7Z':
+        return Icons.folder_zip_outlined;
+      default:
+        return Icons.insert_drive_file_outlined;
     }
   }
 

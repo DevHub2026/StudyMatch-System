@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../services/app_state.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
+import 'profile_avatar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,13 +17,16 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _phoneCtrl;
   late final TextEditingController _schoolCtrl;
   late final TextEditingController _bioCtrl;
+  late final TextEditingController _programCtrl;
 
   String? _selectedTopic;
   DateTime? _dob;
   String? _selectedGender;
   String? _selectedDepartment;
+  String? _selectedYearLevel;
   late final TextEditingController _degreeCtrl;
 
   late Set<String> _selectedSubjects;
@@ -35,44 +39,68 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _saving = false;
 
   Uint8List? _photoBytes;
-  String?    _photoFileName;
-  bool       _uploadingPhoto = false;
+  String? _photoFileName;
+  bool _uploadingPhoto = false;
 
   static const _subjectList = [
-    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
-    'Computer Science', 'History', 'Geography', 'Economics', 'Psychology',
-    'Literature', 'Statistics', 'Calculus', 'Algebra',
-    'Organic Chemistry', 'Programming',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'English',
+    'Computer Science',
+    'History',
+    'Geography',
+    'Economics',
+    'Psychology',
+    'Literature',
+    'Statistics',
+    'Calculus',
+    'Algebra',
+    'Organic Chemistry',
+    'Programming',
   ];
   static const _deptList = ['CTE', 'CAS', 'CET', 'CBE', 'CCJ', 'COAHS'];
-  static const _dayList  = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+  static const _dayList = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
   ];
   static const _timeList = [
-    'Morning (6am-12pm)', 'Afternoon (12pm-6pm)',
-    'Evening (6pm-9pm)',  'Night (9pm-6am)',
+    'Morning (6am-12pm)',
+    'Afternoon (12pm-6pm)',
+    'Evening (6pm-9pm)',
+    'Night (9pm-6am)',
   ];
 
   @override
   void initState() {
     super.initState();
     final user = context.read<AppState>().currentUser!;
-    _nameCtrl   = TextEditingController(text: user.fullName);
+    _nameCtrl = TextEditingController(text: user.fullName);
+    _phoneCtrl = TextEditingController(text: user.phoneNumber ?? '');
     _schoolCtrl = TextEditingController(text: user.school ?? '');
-    _bioCtrl    = TextEditingController(text: user.bio ?? '');
+    _bioCtrl = TextEditingController(text: user.bio ?? '');
+    _programCtrl = TextEditingController(
+        text: user.isStudent ? (user.department ?? '') : '');
     _degreeCtrl = TextEditingController(
         text: user.isTutor ? (user.department ?? '') : '');
 
-    _selectedTopic      = user.topic;
-    _dob                = user.dateOfBirth;
-    _selectedGender     = user.gender;
+    _selectedTopic = user.topic;
+    _dob = user.dateOfBirth;
+    _selectedGender = _genderFromDb(user.gender);
     _selectedDepartment = user.isStudent ? user.department : null;
+    _selectedYearLevel = _yearLevelFromDb(user.yearLevel);
 
-    _selectedSubjects       = Set.from(user.subjects);
-    _selectedStrengths      = Set.from(user.strengths);
-    _selectedWeaknesses     = Set.from(user.weaknesses);
+    _selectedSubjects = Set.from(user.subjects);
+    _selectedStrengths = Set.from(user.strengths);
+    _selectedWeaknesses = Set.from(user.weaknesses);
     _selectedLearningStyles = Set.from(user.learningStyles);
-    _selectedStudyStyles    = Set.from(user.studyStyles);
+    _selectedStudyStyles = Set.from(user.studyStyles);
     _availability =
         user.availability.map((k, v) => MapEntry(k, Set<String>.from(v)));
     _selectedDays = Set.from(_availability.keys);
@@ -81,20 +109,41 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _phoneCtrl.dispose();
     _schoolCtrl.dispose();
     _bioCtrl.dispose();
+    _programCtrl.dispose();
     _degreeCtrl.dispose();
     super.dispose();
   }
 
-  bool get _isTutor =>
-      context.read<AppState>().currentUser?.role == 'tutor';
+  bool get _isTutor => context.read<AppState>().currentUser?.role == 'tutor';
+
+  /// Converts a DB gender value (e.g. 'male', 'prefer_not_to_say') to the
+  /// display label used by the dropdown items.
+  static String? _genderFromDb(String? dbValue) {
+    const map = {
+      'male': 'Male',
+      'female': 'Female',
+      'other': 'Non-Binary',
+      'prefer_not_to_say': 'Prefer not to say',
+    };
+    if (dbValue == null) return null;
+    return map[dbValue] ?? dbValue;
+  }
+
+  /// Normalises the DB year_level value (e.g. '1st') to the dropdown label.
+  static String? _yearLevelFromDb(String? dbValue) {
+    const valid = ['1st', '2nd', '3rd', '4th', '5th'];
+    if (dbValue == null) return null;
+    return valid.contains(dbValue) ? dbValue : null;
+  }
 
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceLight,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -103,7 +152,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             const SizedBox(height: 8),
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                   color: AppTheme.borderLight,
                   borderRadius: BorderRadius.circular(2)),
@@ -122,7 +172,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 if (img != null) {
                   final bytes = await img.readAsBytes();
                   setState(() {
-                    _photoBytes    = bytes;
+                    _photoBytes = bytes;
                     _photoFileName = img.name;
                   });
                 }
@@ -141,7 +191,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 if (img != null) {
                   final bytes = await img.readAsBytes();
                   setState(() {
-                    _photoBytes    = bytes;
+                    _photoBytes = bytes;
                     _photoFileName = img.name;
                   });
                 }
@@ -169,7 +219,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _uploadingPhoto = true);
       final uploadResult = await state.uploadProfilePhoto(
         photoBytes: _photoBytes!,
-        fileName:   _photoFileName!,
+        fileName: _photoFileName!,
       );
       setState(() => _uploadingPhoto = false);
       if (uploadResult != null) {
@@ -178,21 +228,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     final fields = <String, dynamic>{
-      'fullName':      _nameCtrl.text.trim(),
-      'school':        _schoolCtrl.text.trim(),
-      'bio':           _bioCtrl.text.trim(),
-      'topic':         _selectedTopic,
-      'dateOfBirth':   _dob?.toIso8601String(),
-      'gender':        _selectedGender,
-      'department':    _isTutor
-          ? _degreeCtrl.text.trim()
-          : _selectedDepartment,
-      'subjects':      _selectedSubjects.toList(),
-      'strengths':     _selectedStrengths.toList(),
-      'weaknesses':    _selectedWeaknesses.toList(),
+      'fullName': _nameCtrl.text.trim(),
+      'phoneNumber':
+          _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      'school': _schoolCtrl.text.trim(),
+      'bio': _bioCtrl.text.trim(),
+      'topic': _selectedTopic,
+      'dateOfBirth': _dob?.toIso8601String(),
+      'gender': _selectedGender,
+      // For students: send 'program' (degree text) and keep 'department' for compatibility.
+      // For tutors: send 'department' mapped to specialization.
+      if (!_isTutor)
+        'program':
+            _programCtrl.text.trim().isEmpty ? null : _programCtrl.text.trim(),
+      'department': _isTutor ? _degreeCtrl.text.trim() : _selectedDepartment,
+      'yearLevel': _selectedYearLevel,
+      'subjects': _selectedSubjects.toList(),
+      'strengths': _selectedStrengths.toList(),
+      'weaknesses': _selectedWeaknesses.toList(),
       'learningStyles': _selectedLearningStyles.toList(),
-      'studyStyles':   _selectedStudyStyles.toList(),
-      'availability':  avail,
+      'studyStyles': _selectedStudyStyles.toList(),
+      'availability': avail,
     };
 
     if (photoUrl != null) {
@@ -311,7 +367,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: (_saving || _uploadingPhoto)
               ? const Center(
                   child: SizedBox(
-                    width: 20, height: 20,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppTheme.primary),
                   ),
@@ -331,8 +388,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildAvatarHeader() {
-    final name    = _nameCtrl.text;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    final name = _nameCtrl.text;
     final existingPhotoUrl =
         context.read<AppState>().currentUser?.profilePhotoUrl;
 
@@ -342,7 +398,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [Color(0xFF2D1F5E), Color(0xFF1A0A3A)],
           ),
         ),
@@ -351,48 +408,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           children: [
             Stack(
               children: [
-                Container(
-                  width: 88, height: 88,
-                  decoration: BoxDecoration(
-                    gradient: (_photoBytes == null &&
-                            (existingPhotoUrl == null || existingPhotoUrl.isEmpty))
-                        ? const LinearGradient(
-                            colors: [AppTheme.primary, AppTheme.accent])
-                        : null,
-                    shape: BoxShape.circle,
-                    border: _photoBytes != null
-                        ? Border.all(color: AppTheme.success, width: 3)
-                        : null,
-                  ),
-                  child: ClipOval(
-                    child: _photoBytes != null
-                        ? Image.memory(_photoBytes!, fit: BoxFit.cover,
-                            width: 88, height: 88)
-                        : (existingPhotoUrl != null && existingPhotoUrl.isNotEmpty)
-                            ? Image.network(existingPhotoUrl,
-                                fit: BoxFit.cover, width: 88, height: 88,
-                                errorBuilder: (_, __, ___) => Center(
-                                  child: Text(initial,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 36,
-                                          fontFamily: 'Poppins')),
-                                ))
-                            : Center(
-                                child: Text(initial,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 36,
-                                        fontFamily: 'Poppins')),
-                              ),
-                  ),
-                ),
+                _photoBytes != null
+                    ? Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.success, width: 3),
+                        ),
+                        child: ClipOval(
+                          child: Image.memory(_photoBytes!,
+                              fit: BoxFit.cover, width: 88, height: 88),
+                        ),
+                      )
+                    : ProfileAvatar(
+                        photoUrl: existingPhotoUrl,
+                        displayName: name,
+                        size: 88,
+                      ),
                 Positioned(
-                  bottom: 0, right: 0,
+                  bottom: 0,
+                  right: 0,
                   child: Container(
-                    width: 28, height: 28,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: _photoBytes != null
                           ? AppTheme.success
@@ -401,10 +440,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: Icon(
-                      _photoBytes != null
-                          ? Icons.check_rounded
-                          : Icons.camera_alt_rounded,
-                      color: Colors.white, size: 14),
+                        _photoBytes != null
+                            ? Icons.check_rounded
+                            : Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 14),
                   ),
                 ),
               ],
@@ -427,7 +467,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildSection({required IconData icon, required String title, required Widget child}) {
+  Widget _buildSection(
+      {required IconData icon, required String title, required Widget child}) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       decoration: BoxDecoration(
@@ -450,7 +491,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 32, height: 32,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -477,27 +519,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   static InputDecoration _lightDec({String? hint, IconData? icon}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+      hintStyle:
+          const TextStyle(color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
       prefixIcon: icon != null
           ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
           : null,
       filled: true,
       fillColor: const Color(0xFFF5F5F8),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.borderLight)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.borderLight)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+      errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.error)),
-      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+      focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppTheme.error, width: 1.5)),
     );
   }
 
-  static const _inputTextStyle = TextStyle(
-      color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14);
+  static const _inputTextStyle =
+      TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14);
 
   Widget _buildPersonalInfo() {
     return Column(
@@ -508,19 +556,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextFormField(
           controller: _nameCtrl,
           style: _inputTextStyle,
-          decoration: _lightDec(hint: 'Juan dela Cruz', icon: Icons.person_outline),
-          validator: (v) =>
-              (v == null || v.trim().length < 2) ? 'Enter your full name' : null,
+          decoration:
+              _lightDec(hint: 'Juan dela Cruz', icon: Icons.person_outline),
+          validator: (v) => (v == null || v.trim().length < 2)
+              ? 'Enter your full name'
+              : null,
         ),
         const SizedBox(height: 14),
-        _fieldLabel('School / University'),
+        _fieldLabel('Phone Number (Optional)'),
         const SizedBox(height: 6),
         TextFormField(
-          controller: _schoolCtrl,
+          controller: _phoneCtrl,
           style: _inputTextStyle,
-          decoration: _lightDec(
-              hint: 'e.g. University of Mindanao',
-              icon: Icons.location_city_outlined),
+          keyboardType: TextInputType.phone,
+          decoration:
+              _lightDec(hint: '+63 912 345 6789', icon: Icons.phone_outlined),
         ),
         const SizedBox(height: 14),
         _fieldLabel('Bio (Optional)'),
@@ -537,7 +587,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
             filled: true,
             fillColor: const Color(0xFFF5F5F8),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppTheme.borderLight)),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -596,16 +647,53 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         ] else ...[
+          _fieldLabel('Program'),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _programCtrl,
+            style: _inputTextStyle,
+            decoration: InputDecoration(
+              hintText: 'e.g. BS Computer Science',
+              hintStyle: const TextStyle(
+                  color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+              prefixIcon: const Icon(Icons.school_outlined,
+                  color: Color(0xFF9CA3AF), size: 20),
+              filled: true,
+              fillColor: const Color(0xFFF5F5F8),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.borderLight)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.borderLight)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primary, width: 1.5)),
+            ),
+          ),
+          const SizedBox(height: 14),
           _fieldLabel('College Department'),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 8, runSpacing: 8,
-            children: _deptList.map((d) => _LightChip(
-              label: d,
-              selected: _selectedDepartment == d,
-              onTap: () => setState(() =>
-                  _selectedDepartment = _selectedDepartment == d ? null : d),
-            )).toList(),
+            spacing: 8,
+            runSpacing: 8,
+            children: _deptList
+                .map((d) => _LightChip(
+                      label: d,
+                      selected: _selectedDepartment == d,
+                      onTap: () => setState(() => _selectedDepartment =
+                          _selectedDepartment == d ? null : d),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 14),
+          _DropdownField(
+            label: 'Year Level',
+            hint: 'Select year level',
+            value: _selectedYearLevel,
+            items: const ['1st', '2nd', '3rd', '4th', '5th'],
+            onChanged: (v) => setState(() => _selectedYearLevel = v),
           ),
         ],
         const SizedBox(height: 16),
@@ -634,14 +722,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     fontFamily: 'Poppins')),
           ),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _LightChip(
-            label: s,
-            selected: _selectedSubjects.contains(s),
-            onTap: () => setState(() => _selectedSubjects.contains(s)
-                ? _selectedSubjects.remove(s)
-                : _selectedSubjects.add(s)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _LightChip(
+                    label: s,
+                    selected: _selectedSubjects.contains(s),
+                    onTap: () => setState(() => _selectedSubjects.contains(s)
+                        ? _selectedSubjects.remove(s)
+                        : _selectedSubjects.add(s)),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -651,23 +742,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-            'Students weak in these subjects will be matched with you',
+        const Text('Students weak in these subjects will be matched with you',
             style: TextStyle(
-                color: Color(0xFF9CA3AF),
-                fontSize: 12,
-                fontFamily: 'Poppins')),
+                color: Color(0xFF9CA3AF), fontSize: 12, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _LightChip(
-            label: s,
-            selected: _selectedStrengths.contains(s),
-            selectedColor: AppTheme.success,
-            onTap: () => setState(() => _selectedStrengths.contains(s)
-                ? _selectedStrengths.remove(s)
-                : _selectedStrengths.add(s)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _LightChip(
+                    label: s,
+                    selected: _selectedStrengths.contains(s),
+                    selectedColor: AppTheme.success,
+                    onTap: () => setState(() => _selectedStrengths.contains(s)
+                        ? _selectedStrengths.remove(s)
+                        : _selectedStrengths.add(s)),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -680,20 +771,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const Text(
             'Tutors strong in these subjects will be prioritised in your matches',
             style: TextStyle(
-                color: Color(0xFF9CA3AF),
-                fontSize: 12,
-                fontFamily: 'Poppins')),
+                color: Color(0xFF9CA3AF), fontSize: 12, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _subjectList.map((s) => _LightChip(
-            label: s,
-            selected: _selectedWeaknesses.contains(s),
-            selectedColor: AppTheme.error,
-            onTap: () => setState(() => _selectedWeaknesses.contains(s)
-                ? _selectedWeaknesses.remove(s)
-                : _selectedWeaknesses.add(s)),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _subjectList
+              .map((s) => _LightChip(
+                    label: s,
+                    selected: _selectedWeaknesses.contains(s),
+                    selectedColor: AppTheme.error,
+                    onTap: () => setState(() => _selectedWeaknesses.contains(s)
+                        ? _selectedWeaknesses.remove(s)
+                        : _selectedWeaknesses.add(s)),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -706,35 +798,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _sectionLabel('LEARNING STYLE'),
         const SizedBox(height: 10),
         ...[
-          ('Visual',          Icons.visibility_outlined),
-          ('Auditory',        Icons.headphones_outlined),
-          ('Kinesthetic',     Icons.sports_handball_outlined),
+          ('Visual', Icons.visibility_outlined),
+          ('Auditory', Icons.headphones_outlined),
+          ('Kinesthetic', Icons.sports_handball_outlined),
           ('Reading/Writing', Icons.menu_book_outlined),
         ].map((pair) => _StyleOptionTile(
-          icon: pair.$2,
-          label: pair.$1,
-          selected: _selectedLearningStyles.contains(pair.$1),
-          onTap: () => setState(() =>
-              _selectedLearningStyles.contains(pair.$1)
-                  ? _selectedLearningStyles.remove(pair.$1)
-                  : _selectedLearningStyles.add(pair.$1)),
-        )),
+              icon: pair.$2,
+              label: pair.$1,
+              selected: _selectedLearningStyles.contains(pair.$1),
+              onTap: () => setState(() =>
+                  _selectedLearningStyles.contains(pair.$1)
+                      ? _selectedLearningStyles.remove(pair.$1)
+                      : _selectedLearningStyles.add(pair.$1)),
+            )),
         const SizedBox(height: 20),
         _sectionLabel('STUDY FORMAT'),
         const SizedBox(height: 10),
         Row(
-          children: ['Group', 'Individual'].map((s) => Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: s == 'Group' ? 8 : 0),
-              child: _LightChip(
-                label: s,
-                selected: _selectedStudyStyles.contains(s),
-                onTap: () => setState(() => _selectedStudyStyles.contains(s)
-                    ? _selectedStudyStyles.remove(s)
-                    : _selectedStudyStyles.add(s)),
-              ),
-            ),
-          )).toList(),
+          children: ['Group', 'Individual']
+              .map((s) => Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: s == 'Group' ? 8 : 0),
+                      child: _LightChip(
+                        label: s,
+                        selected: _selectedStudyStyles.contains(s),
+                        onTap: () => setState(() =>
+                            _selectedStudyStyles.contains(s)
+                                ? _selectedStudyStyles.remove(s)
+                                : _selectedStudyStyles.add(s)),
+                      ),
+                    ),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -747,93 +842,96 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _sectionLabel('DAYS AVAILABLE'),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _dayList.map((day) => _LightChip(
-            label: day.substring(0, 3),
-            selected: _selectedDays.contains(day),
-            onTap: () => setState(() {
-              if (_selectedDays.contains(day)) {
-                _selectedDays.remove(day);
-                _availability.remove(day);
-              } else {
-                _selectedDays.add(day);
-                _availability[day] = {};
-              }
-            }),
-          )).toList(),
+          spacing: 8,
+          runSpacing: 8,
+          children: _dayList
+              .map((day) => _LightChip(
+                    label: day.substring(0, 3),
+                    selected: _selectedDays.contains(day),
+                    onTap: () => setState(() {
+                      if (_selectedDays.contains(day)) {
+                        _selectedDays.remove(day);
+                        _availability.remove(day);
+                      } else {
+                        _selectedDays.add(day);
+                        _availability[day] = {};
+                      }
+                    }),
+                  ))
+              .toList(),
         ),
         if (_selectedDays.isNotEmpty) ...[
           const SizedBox(height: 20),
           _sectionLabel('TIME BLOCKS'),
           const SizedBox(height: 10),
-          ..._dayList.where((d) => _selectedDays.contains(d)).map((day) =>
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(day,
-                      style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Poppins',
-                          fontSize: 13)),
-                ),
-                ..._timeList.map((time) {
-                  final isSelected =
-                      _availability[day]?.contains(time) ?? false;
-                  return GestureDetector(
-                    onTap: () => setState(() {
-                      _availability.putIfAbsent(day, () => {});
-                      if (_availability[day]!.contains(time)) {
-                        _availability[day]!.remove(time);
-                      } else {
-                        _availability[day]!.add(time);
-                      }
-                    }),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppTheme.primary.withValues(alpha: 0.08)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.borderLight),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.check_circle_rounded
-                                : Icons.circle_outlined,
-                            color: isSelected
-                                ? AppTheme.primary
-                                : const Color(0xFF9CA3AF),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(time,
-                              style: TextStyle(
-                                  color: isSelected
-                                      ? AppTheme.primary
-                                      : const Color(0xFF6B7280),
-                                  fontSize: 13,
-                                  fontFamily: 'Poppins')),
-                        ],
-                      ),
+          ..._dayList.where((d) => _selectedDays.contains(d)).map(
+                (day) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(day,
+                          style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Poppins',
+                              fontSize: 13)),
                     ),
-                  );
-                }),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
+                    ..._timeList.map((time) {
+                      final isSelected =
+                          _availability[day]?.contains(time) ?? false;
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          _availability.putIfAbsent(day, () => {});
+                          if (_availability[day]!.contains(time)) {
+                            _availability[day]!.remove(time);
+                          } else {
+                            _availability[day]!.add(time);
+                          }
+                        }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppTheme.primary.withValues(alpha: 0.08)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : AppTheme.borderLight),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.check_circle_rounded
+                                    : Icons.circle_outlined,
+                                color: isSelected
+                                    ? AppTheme.primary
+                                    : const Color(0xFF9CA3AF),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(time,
+                                  style: TextStyle(
+                                      color: isSelected
+                                          ? AppTheme.primary
+                                          : const Color(0xFF6B7280),
+                                      fontSize: 13,
+                                      fontFamily: 'Poppins')),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                  ],
+                ),
+              ),
         ],
       ],
     );
@@ -878,9 +976,8 @@ class _LightChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.1)
-              : const Color(0xFFF5F5F8),
+          color:
+              selected ? color.withValues(alpha: 0.1) : const Color(0xFFF5F5F8),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? color : AppTheme.borderLight,
@@ -935,7 +1032,7 @@ class _DropdownField extends StatelessWidget {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: value,
+              value: (value != null && items.contains(value)) ? value : null,
               hint: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(hint,
@@ -943,7 +1040,7 @@ class _DropdownField extends StatelessWidget {
                         color: Color(0xFF9CA3AF), fontFamily: 'Poppins')),
               ),
               isExpanded: true,
-              dropdownColor: Colors.white,
+              dropdownColor: AppTheme.surfaceLight,
               style: const TextStyle(
                   color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1070,9 +1167,8 @@ class _StyleOptionTile extends StatelessWidget {
             const SizedBox(width: 14),
             Text(label,
                 style: TextStyle(
-                    color: selected
-                        ? AppTheme.primary
-                        : const Color(0xFF6B7280),
+                    color:
+                        selected ? AppTheme.primary : const Color(0xFF6B7280),
                     fontWeight: FontWeight.w500,
                     fontFamily: 'Poppins',
                     fontSize: 14)),

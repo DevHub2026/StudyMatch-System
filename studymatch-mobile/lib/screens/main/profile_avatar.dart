@@ -15,7 +15,9 @@ class ProfileAvatar extends StatelessWidget {
   final Color gradientStart;
   final Color gradientEnd;
 
-  static const _apiBase = 'http://127.0.0.1:8000';
+  // ── Change this to match your XAMPP path ─────────────────────────────────
+  static const _apiBase = 'http://localhost/StudyMatch/studymatch-api';
+  // ─────────────────────────────────────────────────────────────────────────
 
   const ProfileAvatar({
     super.key,
@@ -34,23 +36,24 @@ class ProfileAvatar extends StatelessWidget {
     String url = photoUrl!;
 
     // ── Step 1: Normalise whatever the DB stored ──────────────────────────
-    // The DB may contain any of these formats:
-    //   A) Bare filename:   "avatar.png"
-    //   B) Relative path:   "avatars/avatar.png"
-    //   C) Full URL:        "http://127.0.0.1:8000/storage/avatars/avatar.png"
+    // The DB may contain any of these three formats:
+    //   A) Bare filename:   "profile_123_456.png"
+    //   B) Relative path:   "uploads/profiles/profile_123_456.png"
+    //   C) Full URL:        "http://192.168.1.5/.../serve_photo.php?file=..."
     //
-    // All three are normalised to a full Laravel storage URL.
+    // All three are normalised to a localhost serve_photo.php URL.
 
     if (!url.startsWith('http')) {
-      // Format A or B — build a full storage URL.
+      // Format A or B — extract the filename and build a serve URL.
       final fileName = url.split('/').last;
-      url = '$_apiBase/storage/avatars/$fileName';
+      url = '$_apiBase/serve_photo.php?file=$fileName';
     } else if (kIsWeb) {
-      // Format C on web — normalise host to localhost so the browser
+      // Format C on web — rewrite the host to localhost so the browser
       // doesn't treat a LAN IP as a different (blocked) origin.
       final uri = Uri.tryParse(url);
-      if (uri != null && uri.host != 'localhost') {
-        url = uri.replace(host: 'localhost').toString();
+      if (uri != null) {
+        final file = uri.queryParameters['file'] ?? uri.pathSegments.last;
+        url = '$_apiBase/serve_photo.php?file=$file';
       }
     }
 
@@ -91,7 +94,7 @@ class ProfileAvatar extends StatelessWidget {
             : null,
       ),
       child: ClipOval(
-        child: url != null ? _buildImage(url) : _initials(),
+        child: hasPhoto ? _buildImage(url!) : _initials(),
       ),
     );
   }

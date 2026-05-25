@@ -363,7 +363,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                         ]),
                       ),
                       isExpanded: true,
-                      dropdownColor: Colors.white,
+                      dropdownColor: AppTheme.surfaceLight,
                       style: const TextStyle(
                           color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
                       padding: const EdgeInsets.symmetric(horizontal: 12),

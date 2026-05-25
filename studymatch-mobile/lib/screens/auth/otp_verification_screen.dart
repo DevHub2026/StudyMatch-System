@@ -33,8 +33,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       List.generate(_otpLength, (_) => FocusNode());
 
   bool _verifying = false;
-  bool _sending   = false;
-  bool _otpSent   = false;
+  bool _sending = false;
+  bool _otpSent = false;
   String? _errorMsg;
 
   int _secondsLeft = 0;
@@ -197,7 +197,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceLight,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -405,8 +405,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppTheme.primary),
+                                    strokeWidth: 2, color: AppTheme.primary),
                               )
                             : const Text.rich(TextSpan(
                                 text: "Didn't receive a code? ",

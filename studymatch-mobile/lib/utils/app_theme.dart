@@ -11,7 +11,9 @@ class AppTheme {
   static const Color error = Color(0xFFEF4444);
 
   // Light (mobile dashboard — matches studymatch-web)
-  static const Color bgLight = Color(0xFFFFFFFF);
+  // Slightly off-white scaffold background for a softer, modern look.
+  static const Color bgLight = Color(0xFFF3F4F6);
+  // Keep surface panels/cards pure white for contrast against bgLight.
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color borderLight = Color(0xFFE8E8EF);
   static const Color textDark = Color(0xFF1E1B4B);
@@ -54,7 +56,7 @@ class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         selectedLabelStyle: TextStyle(
-          fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: TextStyle(fontFamily: 'Poppins', fontSize: 11),
       ),
       cardTheme: CardThemeData(
@@ -87,7 +89,8 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: textPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),
       ),
@@ -132,17 +135,51 @@ class AppTheme {
 
 class AppConstants {
   static const List<String> subjects = [
-    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
-    'Computer Science', 'History', 'Geography', 'Economics', 'Psychology',
-    'Literature', 'Statistics', 'Calculus', 'Algebra', 'Programming',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'English',
+    'Computer Science',
+    'History',
+    'Geography',
+    'Economics',
+    'Psychology',
+    'Literature',
+    'Statistics',
+    'Calculus',
+    'Algebra',
+    'Programming',
   ];
 
-  static const List<String> learningStyles = ['Visual', 'Auditory', 'Kinesthetic', 'Reading/Writing'];
+  static const List<String> learningStyles = [
+    'Visual',
+    'Auditory',
+    'Kinesthetic',
+    'Reading/Writing'
+  ];
   static const List<String> studyStyles = ['Group', 'Individual'];
   static const List<String> daysOfWeek = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
-  static const List<String> collegeEnrollments = ['CTO', 'CAS', 'COE', 'CBE', 'CCJE'];
+  static const List<String> collegeEnrollments = [
+    'CTO',
+    'CAS',
+    'COE',
+    'CBE',
+    'CCJE'
+  ];
   static const List<String> bioOptions = ['STEM', 'ABM', 'HUMSS', 'GAS'];
-  static const List<String> genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer not to say'];
+  static const List<String> genderOptions = [
+    'Male',
+    'Female',
+    'Non-Binary',
+    'Prefer not to say'
+  ];
 }

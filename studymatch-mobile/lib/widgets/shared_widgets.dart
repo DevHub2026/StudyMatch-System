@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/app_theme.dart';
 import '../models/models.dart';
+import 'profile_avatar.dart';
 
 class GradientButton extends StatelessWidget {
   final String text;
@@ -263,27 +264,15 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final photoUrl = user?.profilePhotoUrl ?? realUser?.profilePhotoUrl;
+    final size = radius * 2;
+
     return Stack(
       children: [
-        Container(
-          width: radius * 2,
-          height: radius * 2,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-                colors: [AppTheme.primary, AppTheme.accent]),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              _name.isNotEmpty ? _name[0].toUpperCase() : 'U',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: radius * 0.75,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ),
+        ProfileAvatar(
+          photoUrl: photoUrl,
+          displayName: _name,
+          size: size,
         ),
         if (showOnline)
           Positioned(

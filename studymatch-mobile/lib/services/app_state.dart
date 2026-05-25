@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import 'api_service.dart';
 import 'message_service.dart';
 import 'package:flutter/foundation.dart';
-
 
 enum AuthState { unauthenticated, onboarding, authenticated }
 
@@ -17,29 +15,27 @@ class AppState extends ChangeNotifier {
   static const int _totalOnboardingSteps = 5;
   int get totalOnboardingSteps => _totalOnboardingSteps;
 
-  List<RealUser>   _matchUsers   = [];
-  List<RealUser>   _matchedUsers = [];
-  List<String>     _passedIds    = [];
-  List<DBResource> _dbResources  = [];
-  bool _loadingUsers     = false;
+  List<RealUser> _matchUsers = [];
+  List<RealUser> _matchedUsers = [];
+  List<RealUser> _pendingMatchUsers = [];
+  List<StudySession> _sessions = [];
+  List<String> _passedIds = [];
+  List<DBResource> _dbResources = [];
+  bool _loadingUsers = false;
   bool _loadingResources = false;
   final List<Conversation> _conversations = [];
 
-  UserModel?         get currentUser      => _currentUser;
-  bool               get isLoggedIn       => _currentUser != null;
-  int                get onboardingStep   => _onboardingStep;
-  List<RealUser>     get matchUsers       => List.unmodifiable(_matchUsers);
-  List<RealUser>     get matchedUsers     => List.unmodifiable(_matchedUsers);
-  List<DBResource>   get dbResources      => List.unmodifiable(_dbResources);
-  bool               get loadingUsers     => _loadingUsers;
-  bool               get loadingResources => _loadingResources;
-  List<Conversation> get conversations    => List.unmodifiable(_conversations);
-
-  /// Laravel API base (override with --dart-define=API_BASE=http://10.0.2.2:8000/api on emulator).
-  static String get _baseUrl => const String.fromEnvironment(
-        'API_BASE',
-        defaultValue: 'http://127.0.0.1:8000/api',
-      );
+  UserModel? get currentUser => _currentUser;
+  bool get isLoggedIn => _currentUser != null;
+  int get onboardingStep => _onboardingStep;
+  List<RealUser> get matchUsers => List.unmodifiable(_matchUsers);
+  List<RealUser> get matchedUsers => List.unmodifiable(_matchedUsers);
+  List<RealUser> get pendingMatchUsers => List.unmodifiable(_pendingMatchUsers);
+  List<StudySession> get sessions => List.unmodifiable(_sessions);
+  List<DBResource> get dbResources => List.unmodifiable(_dbResources);
+  bool get loadingUsers => _loadingUsers;
+  bool get loadingResources => _loadingResources;
+  List<Conversation> get conversations => List.unmodifiable(_conversations);
 
   int get unreadMessageCount =>
       _conversations.fold(0, (sum, c) => sum + c.unreadCount);
@@ -50,7 +46,9 @@ class AppState extends ChangeNotifier {
     return AuthState.authenticated;
   }
 
-  AppState() { _loadSession(); }
+  AppState() {
+    _loadSession();
+  }
 
   // ── Session ───────────────────────────────────────────────────────────────
   Future<void> _loadSession() async {
@@ -60,11 +58,22 @@ class AppState extends ChangeNotifier {
       if (raw != null) {
         final decoded = jsonDecode(raw);
         if (decoded is Map<String, dynamic>) {
-          _currentUser = UserModel.fromJson(decoded);
+          final candidate = UserModel.fromJson(decoded);
+          // Sessions saved before token persistence was added have no token.
+          // Clear them so the user is prompted to log in again rather than
+          // reaching screens that will immediately get 401 responses.
+          if (candidate.token == null || candidate.token!.isEmpty) {
+            await _clearSession();
+            return;
+          }
+          _currentUser = candidate;
+          ApiService.setToken(_currentUser!.token);
           notifyListeners();
           if (_currentUser!.onboardingComplete) {
             await _loadPassedIds();
             await _loadMatchedUsersFromDb();
+            await loadPendingMatches();
+            await loadSessions();
             await loadMatchUsers();
             await loadResources();
           }
@@ -96,6 +105,31 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> loadPendingMatches() async {
+    if (_currentUser == null) return;
+    try {
+      _pendingMatchUsers = await ApiService.getPendingMatches();
+      notifyListeners();
+    } catch (_) {
+      _pendingMatchUsers = [];
+    }
+  }
+
+  Future<void> refreshMatches() async {
+    await _loadMatchedUsersFromDb();
+    await loadPendingMatches();
+  }
+
+  Future<void> loadSessions() async {
+    if (_currentUser == null) return;
+    try {
+      _sessions = await ApiService.getSessions();
+      notifyListeners();
+    } catch (_) {
+      _sessions = [];
+    }
+  }
+
   // ── Passed IDs ────────────────────────────────────────────────────────────
   Future<void> _loadPassedIds() async {
     final prefs = await SharedPreferences.getInstance();
@@ -119,19 +153,23 @@ class AppState extends ChangeNotifier {
       // A tutor should see students (and vice-versa).
       final targetRole = (_currentUser?.role == 'tutor') ? 'student' : 'tutor';
       final all = await ApiService.getUsers(
-        subject:      subject,
-        search:       search,
-        excludeId:    _currentUser?.id,
-        myRole:       _currentUser?.role,
-        targetRole:   targetRole,
-        myStrengths:  _currentUser?.strengths,
+        subject: subject,
+        search: search,
+        excludeId: _currentUser?.id,
+        myRole: _currentUser?.role,
+        targetRole: targetRole,
+        myStrengths: _currentUser?.strengths,
         myWeaknesses: _currentUser?.weaknesses,
       );
       final excludeIds = {
         ..._matchedUsers.map((u) => u.id),
+        ..._pendingMatchUsers.map((u) => u.id),
         ..._passedIds,
       };
-      _matchUsers = all.where((u) => !excludeIds.contains(u.id)).toList();
+      final candidates = all.where((u) => !excludeIds.contains(u.id)).toList();
+      _matchUsers = currentUserHasAttributes
+          ? candidates.where(isCompatible).toList()
+          : candidates;
     } catch (_) {
       _matchUsers = [];
     }
@@ -144,8 +182,8 @@ class AppState extends ChangeNotifier {
     _loadingResources = true;
     notifyListeners();
     try {
-      _dbResources = await ApiService.getResources(
-          subject: subject, search: search);
+      _dbResources =
+          await ApiService.getResources(subject: subject, search: search);
     } catch (_) {
       _dbResources = [];
     }
@@ -163,13 +201,13 @@ class AppState extends ChangeNotifier {
     required String fileName,
   }) async {
     final result = await ApiService.uploadResource(
-      uploaderId:  _currentUser!.id,
-      title:       title,
-      subject:     subject,
+      uploaderId: _currentUser!.id,
+      title: title,
+      subject: subject,
       description: description,
-      authorName:  authorName,
-      fileBytes:   fileBytes,
-      fileName:    fileName,
+      authorName: authorName,
+      fileBytes: fileBytes,
+      fileName: fileName,
     );
     if (result['success'] == true) await loadResources();
     return result;
@@ -179,106 +217,54 @@ class AppState extends ChangeNotifier {
   static String _mimeFromExt(String ext) {
     switch (ext.toLowerCase()) {
       case 'jpg':
-      case 'jpeg': return 'image/jpeg';
-      case 'png':  return 'image/png';
-      case 'gif':  return 'image/gif';
-      case 'webp': return 'image/webp';
-      default:     return 'image/jpeg';
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
     }
-  }
-
-  // ── Extract bare filename from any URL or path format ─────────────────────
-  /// Given any of these inputs:
-  ///   "profile_123_456.png"                        → "profile_123_456.png"
-  ///   "uploads/profiles/profile_123_456.png"       → "profile_123_456.png"
-  ///   "http://localhost/.../serve_photo.php?file=profile_123_456.png"
-  ///                                                → "profile_123_456.png"
-  /// Always returns just the bare filename so ProfileAvatar can build
-  /// the correct host-specific URL at display time.
-  static String _extractFileName(String value) {
-    if (value.startsWith('http')) {
-      // It's a full URL — extract the 'file' query parameter
-      final uri = Uri.tryParse(value);
-      if (uri != null) {
-        final fileParam = uri.queryParameters['file'];
-        if (fileParam != null && fileParam.isNotEmpty) return fileParam;
-        // Fallback: last path segment
-        if (uri.pathSegments.isNotEmpty) return uri.pathSegments.last;
-      }
-    }
-    // It's a relative path or bare filename — take the last segment
-    return value.split('/').last;
   }
 
   // ── Upload profile photo ──────────────────────────────────────────────────
-  /// Sends the photo as base64 JSON (not multipart/form-data) so Flutter Web
-  /// doesn't trigger a CORS preflight OPTIONS request.
-  ///
-  /// Always stores just the bare FILENAME (e.g. "profile_123_456.png") in
-  /// the session and DB. ProfileAvatar._safeUrl() converts that to a proper
-  /// localhost URL at display time, which is then loaded as a native <img>
-  /// element (WebHtmlElementStrategy.allow) — bypassing CORS entirely.
+  /// Sends the photo as base64 JSON to POST /api/profile/avatar-base64.
+  /// The backend stores the file and returns a full public URL which is
+  /// stored directly in the session so ProfileAvatar can display it.
   Future<String?> uploadProfilePhoto({
     required Uint8List photoBytes,
-    required String    fileName,
+    required String fileName,
   }) async {
     if (_currentUser == null) return null;
     try {
-      final uri = Uri.parse('$_baseUrl/upload_profile_photo.php');
-
-      final base64Photo = base64Encode(photoBytes);
-      final ext         = fileName.contains('.')
+      final ext = fileName.contains('.')
           ? fileName.split('.').last.toLowerCase()
           : 'jpg';
+      final base64Photo = base64Encode(photoBytes);
 
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'id':       _currentUser!.id,
-          'photo':    base64Photo,
-          'fileName': fileName,
-          'mimeType': _mimeFromExt(ext),
-        }),
+      final data = await ApiService.uploadAvatarBase64(
+        userId: _currentUser!.id,
+        base64Photo: base64Photo,
+        fileName: fileName,
+        mimeType: _mimeFromExt(ext),
       );
 
-      debugPrint('Photo upload status: ${response.statusCode}');
-      debugPrint('Photo upload body:   ${response.body}');
-
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-
       if (data['success'] == true) {
-        // ── KEY FIX ────────────────────────────────────────────────────────
-        // Priority 1: 'fileName' key — bare filename, ideal.
-        //   (returned by the updated upload_photo.php above)
-        //
-        // Priority 2: extract filename from 'url' key — handles the old PHP
-        //   that only returned a full URL like:
-        //   "http://localhost/.../serve_photo.php?file=profile_123.png"
-        //   We parse out "profile_123.png" so we still store a bare filename.
-        //
-        // NEVER store the full URL — it embeds the server's host/IP and
-        // breaks when loaded from a different origin on Flutter Web.
-        // ──────────────────────────────────────────────────────────────────
-        final rawValue = (data['fileName'] as String?)
-                      ?? (data['url']      as String?);
-
-        if (rawValue == null || rawValue.isEmpty) {
-          debugPrint('Photo upload: no fileName or url in response');
+        final url = data['url'] as String?;
+        if (url == null || url.isEmpty) {
+          debugPrint('Photo upload: no url in response');
           return null;
         }
 
-        // Always reduce to a bare filename regardless of what we received
-        final storedValue = _extractFileName(rawValue);
-        debugPrint('Photo uploaded, storing bare filename: $storedValue');
-
-        final json = _currentUser!.toJson()
-          ..['profilePhotoUrl'] = storedValue;
+        debugPrint('Photo uploaded, storing url: $url');
+        final json = _currentUser!.toJson()..['profilePhotoUrl'] = url;
         _currentUser = UserModel.fromJson(json);
         await _saveSession(_currentUser!);
         notifyListeners();
-
-        return storedValue;
+        return url;
       }
 
       debugPrint('Photo upload failed: ${data['message']}');
@@ -299,12 +285,12 @@ class AppState extends ChangeNotifier {
       final result = await ApiService.rateUser(
         raterId: _currentUser!.id,
         ratedId: ratedId,
-        score:   score,
-        review:  review,
+        score: score,
+        review: review,
       );
       if (result['success'] == true) {
         final data = result['data'] as Map<String, dynamic>?;
-        _updateRatingInList(_matchUsers,   ratedId, data);
+        _updateRatingInList(_matchUsers, ratedId, data);
         _updateRatingInList(_matchedUsers, ratedId, data);
         notifyListeners();
       }
@@ -320,11 +306,17 @@ class AppState extends ChangeNotifier {
     if (idx != -1 && data != null) {
       final u = list[idx];
       list[idx] = RealUser(
-        id: u.id, fullName: u.fullName, email: u.email,
-        school: u.school, department: u.department,
-        profilePhotoUrl: u.profilePhotoUrl, bio: u.bio,
-        subjects: u.subjects, learningStyles: u.learningStyles,
-        studyStyles: u.studyStyles, strengths: u.strengths,
+        id: u.id,
+        fullName: u.fullName,
+        email: u.email,
+        school: u.school,
+        department: u.department,
+        profilePhotoUrl: u.profilePhotoUrl,
+        bio: u.bio,
+        subjects: u.subjects,
+        learningStyles: u.learningStyles,
+        studyStyles: u.studyStyles,
+        strengths: u.strengths,
         weaknesses: u.weaknesses,
         rating: (data['newRating'] as num?)?.toDouble() ?? u.rating,
         ratingCount: (data['ratingCount'] as int?) ?? u.ratingCount,
@@ -363,7 +355,7 @@ class AppState extends ChangeNotifier {
     try {
       final result = await ApiService.changePassword(
         currentPassword: currentPassword,
-        newPassword:     newPassword,
+        newPassword: newPassword,
       );
       if (result['success'] == true) return null;
       return result['message'] as String? ?? 'Failed to change password';
@@ -384,15 +376,34 @@ class AppState extends ChangeNotifier {
         if (rawData == null || rawData is! Map<String, dynamic>) {
           return 'Login failed: unexpected server response';
         }
-        final user = UserModel.fromJson(rawData);
+        // Embed the token into the user map so it survives app restarts.
+        final token = result['token'] as String?;
+        final userJson = Map<String, dynamic>.from(rawData);
+        if (token != null) userJson['token'] = token;
+
+        final user = UserModel.fromJson(userJson);
         _currentUser = user;
         _onboardingStep = 0;
-        await _saveSession(user);
         if (user.onboardingComplete) {
+          // Fetch full profile (login response only contains basic user fields).
+          try {
+            final profileResult = await ApiService.getProfile();
+            final profileData = profileResult['data'] as Map<String, dynamic>?;
+            if (profileData != null) {
+              final merged = Map<String, dynamic>.from(userJson)
+                ..addAll(profileData);
+              _currentUser = UserModel.fromJson(merged);
+            }
+          } catch (_) {}
+          await _saveSession(_currentUser!);
           await _loadPassedIds();
           await _loadMatchedUsersFromDb();
+          await loadPendingMatches();
+          await loadSessions();
           await loadMatchUsers();
           await loadResources();
+        } else {
+          await _saveSession(user);
         }
         notifyListeners();
         return null;
@@ -414,12 +425,14 @@ class AppState extends ChangeNotifier {
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   Future<void> signOut() async {
-    _currentUser    = null;
+    _currentUser = null;
     _onboardingStep = 0;
-    _matchUsers     = [];
-    _matchedUsers   = [];
-    _passedIds      = [];
-    _dbResources    = [];
+    _matchUsers = [];
+    _matchedUsers = [];
+    _pendingMatchUsers = [];
+    _sessions = [];
+    _passedIds = [];
+    _dbResources = [];
     _conversations.clear();
     await _clearSession();
     notifyListeners();
@@ -450,24 +463,25 @@ class AppState extends ChangeNotifier {
   Future<void> completeOnboarding() async {
     if (_currentUser == null) return;
     final updated = UserModel(
-      id:                 _currentUser!.id,
-      fullName:           _currentUser!.fullName,
-      email:              _currentUser!.email,
-      profilePhotoUrl:    _currentUser!.profilePhotoUrl,
-      school:             _currentUser!.school,
-      department:         _currentUser!.department,
-      topic:              _currentUser!.topic,
-      yearLevel:          _currentUser!.yearLevel,
-      dateOfBirth:        _currentUser!.dateOfBirth,
-      gender:             _currentUser!.gender,
-      bio:                _currentUser!.bio,
-      role:               _currentUser!.role,
-      subjects:           _currentUser!.subjects,
-      learningStyles:     _currentUser!.learningStyles,
-      studyStyles:        _currentUser!.studyStyles,
-      availability:       _currentUser!.availability,
-      strengths:          _currentUser!.strengths,
-      weaknesses:         _currentUser!.weaknesses,
+      id: _currentUser!.id,
+      fullName: _currentUser!.fullName,
+      email: _currentUser!.email,
+      token: _currentUser!.token,
+      profilePhotoUrl: _currentUser!.profilePhotoUrl,
+      school: _currentUser!.school,
+      department: _currentUser!.department,
+      topic: _currentUser!.topic,
+      yearLevel: _currentUser!.yearLevel,
+      dateOfBirth: _currentUser!.dateOfBirth,
+      gender: _currentUser!.gender,
+      bio: _currentUser!.bio,
+      role: _currentUser!.role,
+      subjects: _currentUser!.subjects,
+      learningStyles: _currentUser!.learningStyles,
+      studyStyles: _currentUser!.studyStyles,
+      availability: _currentUser!.availability,
+      strengths: _currentUser!.strengths,
+      weaknesses: _currentUser!.weaknesses,
       onboardingComplete: true,
     );
     // Save all profile fields first, then mark profile_completed = true
@@ -477,6 +491,8 @@ class AppState extends ChangeNotifier {
     _currentUser = updated;
     await _saveSession(updated);
     await _loadMatchedUsersFromDb();
+    await loadPendingMatches();
+    await loadSessions();
     await loadMatchUsers();
     await loadResources();
     notifyListeners();
@@ -518,16 +534,32 @@ class AppState extends ChangeNotifier {
       candidate.weaknesses.isNotEmpty ||
       candidate.subjects.isNotEmpty;
 
+  bool _hasOverlap(List<String> a, List<String> b) {
+    if (a.isEmpty || b.isEmpty) return false;
+    return a.toSet().intersection(b.toSet()).isNotEmpty;
+  }
+
   bool isCompatible(RealUser candidate) {
+    if (_currentUser == null) return false;
     if (!currentUserHasAttributes) return false;
     if (!_candidateHasAttributes(candidate)) return false;
-    return true;
+
+    if (_currentUser!.role == 'tutor') {
+      return _hasOverlap(_currentUser!.strengths, candidate.weaknesses);
+    }
+
+    if (_currentUser!.role == 'student') {
+      return _hasOverlap(_currentUser!.weaknesses, candidate.strengths);
+    }
+
+    return false;
   }
 
   // ── Match actions ─────────────────────────────────────────────────────────
-  Future<bool> likeUser(String userId) async {
+  // Returns 'matched' (mutual), 'pending' (request sent), or null (failed).
+  Future<String?> likeUser(String userId) async {
     final idx = _matchUsers.indexWhere((u) => u.id == userId);
-    if (idx == -1) return false;
+    if (idx == -1) return null;
 
     final liked = _matchUsers[idx];
 
@@ -538,45 +570,47 @@ class AppState extends ChangeNotifier {
         _savePassedIds();
       }
       notifyListeners();
-      return false;
+      return null;
     }
 
     _matchUsers.removeAt(idx);
     notifyListeners();
 
-    if (_currentUser != null) {
-      try {
-        final result = await ApiService.saveMatch(
-          userId:    _currentUser!.id,
-          matchedId: userId,
-        );
+    if (_currentUser == null) return null;
 
-        if (result['success'] == true) {
+    try {
+      final result = await ApiService.saveMatch(
+        userId: _currentUser!.id,
+        matchedId: userId,
+      );
+
+      if (result['success'] == true) {
+        final status = result['status'] as String? ?? 'pending';
+        if (status == 'accepted' || status == 'matched') {
+          // Mutual match: add to matched users and remove from pending
           if (!_matchedUsers.any((u) => u.id == userId)) {
             _matchedUsers.insert(0, liked);
           }
-          notifyListeners();
-          return true;
+          _pendingMatchUsers.removeWhere((u) => u.id == userId);
         } else {
-          if (!_passedIds.contains(userId)) {
-            _passedIds.add(userId);
-            _savePassedIds();
+          // Pending request: add to pending match users
+          if (!_pendingMatchUsers.any((u) => u.id == userId)) {
+            _pendingMatchUsers.insert(0, liked);
           }
-          notifyListeners();
-          return false;
-        }
-      } catch (_) {
-        if (!_passedIds.contains(userId)) {
-          _passedIds.add(userId);
-          _savePassedIds();
+          _matchedUsers.removeWhere((u) => u.id == userId);
         }
         notifyListeners();
-        return false;
+        return status == 'accepted' || status == 'matched'
+            ? 'matched'
+            : 'pending';
       }
-    }
 
-    notifyListeners();
-    return false;
+      notifyListeners();
+      return null;
+    } catch (_) {
+      notifyListeners();
+      return null;
+    }
   }
 
   void passUser(String userId) {
@@ -588,17 +622,156 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Update match status ────────────────────────────────────────────────────
+  // Used to update the local state when a match request is sent/accepted
+  // without triggering a full refresh from the backend.
+  void updateMatchStatus(RealUser user, String status) {
+    if (status == 'matched' || status == 'accepted') {
+      // Remove from pending, add to matched
+      if (!_matchedUsers.any((u) => u.id == user.id)) {
+        _matchedUsers.insert(0, user);
+      }
+      _pendingMatchUsers.removeWhere((u) => u.id == user.id);
+    } else if (status == 'pending') {
+      // Add to pending if not already there
+      if (!_pendingMatchUsers.any((u) => u.id == user.id)) {
+        _pendingMatchUsers.insert(0, user);
+      }
+      _matchedUsers.removeWhere((u) => u.id == user.id);
+    }
+    notifyListeners();
+  }
+
   Future<void> unmatchUser(String userId) async {
     _matchedUsers.removeWhere((u) => u.id == userId);
     if (_currentUser != null) {
       try {
         await ApiService.removeMatch(
-          userId:    _currentUser!.id,
+          userId: _currentUser!.id,
           matchedId: userId,
         );
       } catch (_) {}
     }
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> acceptMatchRequest(String matchedId) async {
+    if (_currentUser == null) return {'success': false, 'message': 'Not logged in'};
+    try {
+      final res = await ApiService.acceptMatch(
+        userId: _currentUser!.id,
+        matchedId: matchedId,
+      );
+      await loadPendingMatches();
+      await _loadMatchedUsersFromDb();
+      await loadMatchUsers();
+      notifyListeners();
+      return res;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> declineMatchRequest(String matchedId) async {
+    if (_currentUser == null) return {'success': false, 'message': 'Not logged in'};
+    try {
+      final res = await ApiService.declineMatch(
+        userId: _currentUser!.id,
+        matchedId: matchedId,
+      );
+      await loadPendingMatches();
+      await loadMatchUsers();
+      notifyListeners();
+      return res;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> cancelMatchRequest(String matchedId) async {
+    if (_currentUser == null) return {'success': false, 'message': 'Not logged in'};
+    try {
+      final res = await ApiService.removeMatch(
+        userId: _currentUser!.id,
+        matchedId: matchedId,
+      );
+      await loadPendingMatches();
+      await loadMatchUsers();
+      notifyListeners();
+      return res;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> cancelSession(String sessionId) async {
+    try {
+      final res = await ApiService.cancelSession(sessionId);
+      await loadSessions();
+      notifyListeners();
+      return res;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  void updateConversationsFromInbox(List<Map<String, dynamic>> inboxData) {
+    _conversations.clear();
+    for (final c in inboxData) {
+      try {
+        final participant = RealUser(
+          id:         c['participantId']    as String,
+          fullName:   c['participantName']  as String,
+          email:      c['participantEmail'] as String? ?? '',
+          role:       c['participantRole']  as String? ?? 'student',
+          department: c['participantDept']   as String?,
+          school:     c['participantSchool'] as String?,
+          bio:        c['participantBio']    as String?,
+          rating: (c['participantRating'] as num?)?.toDouble() ?? 0,
+          ratingCount: c['participantRatingCount'] as int? ?? 0,
+          subjects: List<String>.from((c['participantSubjects']       as List?) ?? []),
+          strengths: List<String>.from((c['participantStrengths']     as List?) ?? []),
+          weaknesses: List<String>.from((c['participantWeaknesses']   as List?) ?? []),
+          learningStyles: List<String>.from((c['participantLearningStyles'] as List?) ?? []),
+          studyStyles: List<String>.from((c['participantStudyStyles'] as List?) ?? []),
+        );
+
+        final lastMessageText = c['lastMessage'] as String? ?? '';
+        final lastMessageSenderId = c['lastMessageSenderId'] as String? ?? '';
+        final lastMessageTimeStr = c['lastMessageTime'] as String? ?? '';
+        
+        DateTime lastTime;
+        try {
+          lastTime = DateTime.parse(lastMessageTimeStr);
+        } catch (_) {
+          lastTime = DateTime.now();
+        }
+
+        final lastMessage = Message(
+          id: 'last',
+          senderId: lastMessageSenderId,
+          content: lastMessageText,
+          timestamp: lastTime,
+          isRead: (c['unreadCount'] as int? ?? 0) == 0,
+        );
+
+        _conversations.add(Conversation(
+          id: c['participantId'] as String,
+          participant: participant,
+          messages: [lastMessage],
+          lastActivity: lastTime,
+        ));
+      } catch (_) {}
+    }
+    notifyListeners();
+  }
+
+  Future<void> loadConversations() async {
+    if (_currentUser == null) return;
+    try {
+      final inboxData = await MessageService.getInbox(userId: _currentUser!.id);
+      updateConversationsFromInbox(inboxData);
+    } catch (_) {}
   }
 
   // ── Unread count ──────────────────────────────────────────────────────────

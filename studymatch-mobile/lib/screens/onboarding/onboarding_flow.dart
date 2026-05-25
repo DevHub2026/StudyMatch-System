@@ -14,45 +14,63 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   String? _role;
 
   // Step 1 — Basic Info
-  final _bioCtrl    = TextEditingController();
+  final _bioCtrl = TextEditingController();
   final _degreeCtrl = TextEditingController();
   String? _gender;
   DateTime? _dob;
   String? _department;
 
   // Step 2 — Subjects
-  final Set<String> _subjects   = {};
-  final Set<String> _strengths  = {};
+  final Set<String> _subjects = {};
+  final Set<String> _strengths = {};
   final Set<String> _weaknesses = {};
 
   // Step 3 — Schedule
-  final Set<String> _days       = {};
+  final Set<String> _days = {};
   final Set<String> _timeBlocks = {};
 
   // Step 4 — Study Style
   final Set<String> _learningStyles = {};
-  final Set<String> _studyStyles    = {};
+  final Set<String> _studyStyles = {};
 
   bool _saving = false;
 
   static const _subjectList = [
-    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
-    'Computer Science', 'History', 'Economics', 'Statistics', 'Filipino',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'English',
+    'Computer Science',
+    'History',
+    'Economics',
+    'Statistics',
+    'Filipino',
   ];
-  static const _deptList  = ['CET', 'CTE', 'CCJ', 'CAS', 'CBE', 'COAHS'];
-  static const _dayList   = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  static const _timeList  = [
-    'Morning (6am-12pm)', 'Afternoon (12pm-6pm)',
-    'Evening (6pm-9pm)',  'Night (9pm-6am)',
+  static const _deptList = ['CET', 'CTE', 'CCJ', 'CAS', 'CBE', 'COAHS'];
+  static const _dayList = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ];
+  static const _timeList = [
+    'Morning (6am-12pm)',
+    'Afternoon (12pm-6pm)',
+    'Evening (6pm-9pm)',
+    'Night (9pm-6am)',
   ];
   static const _learnStyles = [
-    ('👁️', 'Visual',      'Learn through diagrams & charts'),
-    ('🎧', 'Auditory',    'Learn through listening & discussion'),
-    ('📖', 'Reading',     'Learn through reading & writing'),
+    ('👁️', 'Visual', 'Learn through diagrams & charts'),
+    ('🎧', 'Auditory', 'Learn through listening & discussion'),
+    ('📖', 'Reading', 'Learn through reading & writing'),
     ('🤚', 'Kinesthetic', 'Learn through practice & doing'),
   ];
   static const _studyFmts = [
-    ('👥', 'Group',      'Learn better with others'),
+    ('👥', 'Group', 'Learn better with others'),
     ('🧘', 'Individual', 'Learn better alone'),
   ];
 
@@ -69,7 +87,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Future<void> _next() async {
     final state = context.read<AppState>();
-    final step  = state.onboardingStep;
+    final step = state.onboardingStep;
 
     if (step == 0) {
       if (_role == null) {
@@ -81,34 +99,32 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       }
       state.updateUserProfile({'role': _role});
       state.nextOnboardingStep();
-
     } else if (step == 1) {
       state.updateUserProfile({
-        'gender':      _gender,
+        'gender': _gender,
         'dateOfBirth': _dob?.toIso8601String(),
-        'department':  _isTutor ? _degreeCtrl.text.trim() : _department,
-        'bio':         _bioCtrl.text.trim(),
+        'department': _isTutor ? _degreeCtrl.text.trim() : _department,
+        'bio': _bioCtrl.text.trim(),
       });
       state.nextOnboardingStep();
-
     } else if (step == 2) {
       state.updateUserProfile({
-        'subjects':   _subjects.toList(),
-        'strengths':  _strengths.toList(),
+        'subjects': _subjects.toList(),
+        'strengths': _strengths.toList(),
         'weaknesses': _weaknesses.toList(),
       });
       state.nextOnboardingStep();
-
     } else if (step == 3) {
       final avail = <String, List<String>>{};
-      for (final d in _days) { avail[d] = _timeBlocks.toList(); }
+      for (final d in _days) {
+        avail[d] = _timeBlocks.toList();
+      }
       state.updateUserProfile({'availability': avail});
       state.nextOnboardingStep();
-
     } else if (step == 4) {
       state.updateUserProfile({
         'learningStyles': _learningStyles.toList(),
-        'studyStyles':    _studyStyles.toList(),
+        'studyStyles': _studyStyles.toList(),
       });
       setState(() => _saving = true);
       await state.completeOnboarding();
@@ -121,10 +137,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final step  = state.onboardingStep;
+    final step = state.onboardingStep;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surfaceLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -139,8 +155,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
             // Title
             Text(
-              ['Who are you?', 'Basic Information', 'Your Subjects',
-               'Study Schedule', 'Study Style'][step],
+              [
+                'Who are you?',
+                'Basic Information',
+                'Your Subjects',
+                'Study Schedule',
+                'Study Style'
+              ][step],
               style: const TextStyle(
                 color: Color(0xFF1A1A2E),
                 fontSize: 24,
@@ -166,18 +187,20 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Row(
-                children: List.generate(_totalSteps, (i) => Expanded(
-                  child: Container(
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      color: i <= step
-                          ? AppTheme.primary
-                          : const Color(0xFFE8E8EF),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                )),
+                children: List.generate(
+                    _totalSteps,
+                    (i) => Expanded(
+                          child: Container(
+                            height: 4,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              color: i <= step
+                                  ? AppTheme.primary
+                                  : const Color(0xFFE8E8EF),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        )),
               ),
             ),
             const SizedBox(height: 24),
@@ -284,12 +307,18 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _buildStep(int step) {
     switch (step) {
-      case 0: return _buildRoleSelection();
-      case 1: return _buildBasicInfo();
-      case 2: return _isTutor ? _buildTutorSubjects() : _buildStudentSubjects();
-      case 3: return _buildSchedule();
-      case 4: return _buildStudyStyle();
-      default: return const SizedBox();
+      case 0:
+        return _buildRoleSelection();
+      case 1:
+        return _buildBasicInfo();
+      case 2:
+        return _isTutor ? _buildTutorSubjects() : _buildStudentSubjects();
+      case 3:
+        return _buildSchedule();
+      case 4:
+        return _buildStudyStyle();
+      default:
+        return const SizedBox();
     }
   }
 
@@ -312,7 +341,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _RoleCard(
           emoji: '🎓',
           title: 'Student',
-          subtitle: 'I want to find study partners and tutors to help me with difficult subjects.',
+          subtitle:
+              'I want to find study partners and tutors to help me with difficult subjects.',
           badge: 'Learner',
           badgeColor: const Color(0xFF3B82F6),
           features: const [
@@ -327,7 +357,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _RoleCard(
           emoji: '🏫',
           title: 'Tutor',
-          subtitle: 'I want to help other students by sharing my knowledge in my strong subjects.',
+          subtitle:
+              'I want to help other students by sharing my knowledge in my strong subjects.',
           badge: 'Educator',
           badgeColor: AppTheme.success,
           features: const [
@@ -375,7 +406,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       children: [
         _roleBadge(),
         const SizedBox(height: 20),
-
         Row(
           children: [
             Expanded(
@@ -388,7 +418,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     value: _gender,
                     hint: 'Select gender',
                     items: const [
-                      'Male', 'Female', 'Non-Binary', 'Prefer not to say'
+                      'Male',
+                      'Female',
+                      'Non-Binary',
+                      'Prefer not to say'
                     ],
                     onChanged: (v) => setState(() => _gender = v),
                   ),
@@ -454,7 +487,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ],
         ),
         const SizedBox(height: 16),
-
         if (_isTutor) ...[
           _label('College Degree'),
           const SizedBox(height: 8),
@@ -479,7 +511,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 .toList(),
           ),
         ],
-
         const SizedBox(height: 16),
         _label('Bio (Optional)'),
         const SizedBox(height: 8),
@@ -487,9 +518,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           controller: _bioCtrl,
           maxLines: 3,
           style: const TextStyle(
-              color: Color(0xFF1A1A2E),
-              fontFamily: 'Poppins',
-              fontSize: 13),
+              color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 13),
           decoration: InputDecoration(
             hintText: _isTutor
                 ? 'Tell students about your teaching approach...'
@@ -506,8 +535,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                 borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    const BorderSide(color: AppTheme.primary)),
+                borderSide: const BorderSide(color: AppTheme.primary)),
           ),
         ),
       ],
@@ -542,9 +570,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         const Text(
             'Tutors strong in these subjects will be prioritised in your matches',
             style: TextStyle(
-                color: Color(0xFF9CA3AF),
-                fontSize: 11,
-                fontFamily: 'Poppins')),
+                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -592,9 +618,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         const Text(
             'Students who are weak in these subjects will be matched with you',
             style: TextStyle(
-                color: Color(0xFF9CA3AF),
-                fontSize: 11,
-                fontFamily: 'Poppins')),
+                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -615,9 +639,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         const SizedBox(height: 6),
         const Text('Helps find peer study partners for these subjects',
             style: TextStyle(
-                color: Color(0xFF9CA3AF),
-                fontSize: 11,
-                fontFamily: 'Poppins')),
+                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -644,9 +666,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       children: [
         _roleBadge(),
         const SizedBox(height: 20),
-        _label(_isTutor
-            ? 'Days you\'re available to tutor'
-            : 'Study Days'),
+        _label(_isTutor ? 'Days you\'re available to tutor' : 'Study Days'),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -700,14 +720,18 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           childAspectRatio: 1.2,
           children: [
             ..._learnStyles.map((s) => _styleCard(
-                  s.$1, s.$2, s.$3,
+                  s.$1,
+                  s.$2,
+                  s.$3,
                   _learningStyles.contains(s.$2),
                   () => setState(() => _learningStyles.contains(s.$2)
                       ? _learningStyles.remove(s.$2)
                       : _learningStyles.add(s.$2)),
                 )),
             ..._studyFmts.map((s) => _styleCard(
-                  s.$1, s.$2, s.$3,
+                  s.$1,
+                  s.$2,
+                  s.$3,
                   _studyStyles.contains(s.$2),
                   () => setState(() => _studyStyles.contains(s.$2)
                       ? _studyStyles.remove(s.$2)
@@ -732,17 +756,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_isTutor ? '🏫' : '🎓',
-              style: const TextStyle(fontSize: 16)),
+          Text(_isTutor ? '🏫' : '🎓', style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           Text(
             _isTutor
                 ? 'Tutor — setting up your teaching profile'
                 : 'Student — setting up your learning profile',
             style: TextStyle(
-              color: _isTutor
-                  ? AppTheme.success
-                  : const Color(0xFF3B82F6),
+              color: _isTutor ? AppTheme.success : const Color(0xFF3B82F6),
               fontSize: 12,
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w500,
@@ -776,9 +797,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             const SizedBox(height: 8),
             Text(label,
                 style: TextStyle(
-                    color: selected
-                        ? AppTheme.primary
-                        : const Color(0xFF1A1A2E),
+                    color:
+                        selected ? AppTheme.primary : const Color(0xFF1A1A2E),
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Poppins',
                     fontSize: 13)),
@@ -814,8 +834,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(
-              color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+          hintStyle:
+              const TextStyle(color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
           prefixIcon: icon != null
               ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
               : null,
@@ -854,7 +874,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       color: Color(0xFF9CA3AF), fontFamily: 'Poppins')),
             ),
             isExpanded: true,
-            dropdownColor: Colors.white,
+            dropdownColor: AppTheme.surfaceLight,
             style: const TextStyle(
                 color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -891,8 +911,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     : const Color(0xFF6B7280),
                 fontFamily: 'Poppins',
                 fontSize: 13,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
               )),
         ),
       );
@@ -1004,8 +1023,7 @@ class _RoleCard extends StatelessWidget {
                         width: 2),
                   ),
                   child: selected
-                      ? const Icon(Icons.check,
-                          color: Colors.white, size: 14)
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
                       : null,
                 ),
               ],

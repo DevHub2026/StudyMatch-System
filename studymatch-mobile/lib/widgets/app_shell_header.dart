@@ -64,6 +64,7 @@ class AppShellHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              const Spacer(),
             ] else if (title != null)
               Expanded(
                 child: Text(
