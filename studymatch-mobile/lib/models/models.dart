@@ -48,9 +48,9 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        id: json['id'] as String,
-        fullName: json['fullName'] as String,
-        email: json['email'] as String,
+        id: (json['id'] ?? '').toString(),
+        fullName: (json['fullName'] ?? json['name'] ?? '').toString(),
+        email: (json['email'] ?? '').toString(),
         password: json['password'] as String?,
         token: json['token'] as String?,
         profilePhotoUrl: json['profilePhotoUrl'] as String?,
@@ -173,9 +173,9 @@ class RealUser {
   });
 
   factory RealUser.fromJson(Map<String, dynamic> json) => RealUser(
-        id: json['id'] as String,
-        fullName: json['fullName'] as String,
-        email: json['email'] as String,
+        id: (json['id'] ?? '').toString(),
+        fullName: (json['fullName'] ?? json['name'] ?? '').toString(),
+        email: (json['email'] ?? '').toString(),
         school: json['school'] as String?,
         department: json['department'] as String?,
         profilePhotoUrl: json['profilePhotoUrl'] as String?,
@@ -222,16 +222,37 @@ class DBResource {
     required this.uploadedAt,
   });
 
-  factory DBResource.fromJson(Map<String, dynamic> json) => DBResource(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        subject: json['subject'] as String,
-        description: json['description'] as String? ?? '',
-        uploaderName: json['uploaderName'] as String,
-        fileUrl: json['fileUrl'] as String?,
-        fileType: json['fileType'] as String? ?? 'pdf',
-        uploadedAt: json['uploadedAt'] as String,
-      );
+  factory DBResource.fromJson(Map<String, dynamic> json) {
+    // subject: API returns 'subjectName' (string) or nested 'subject' object or raw string
+    String subjectName = '';
+    final rawSubject = json['subjectName'] ?? json['subject'];
+    if (rawSubject is String) {
+      subjectName = rawSubject;
+    } else if (rawSubject is Map) {
+      subjectName = rawSubject['name'] as String? ?? '';
+    }
+
+    // uploaderName: API returns 'uploaderName' (string) or nested 'uploader' object
+    String uploaderName = 'Unknown';
+    final rawUploader = json['uploaderName'] ?? json['uploader'];
+    if (rawUploader is String) {
+      uploaderName = rawUploader;
+    } else if (rawUploader is Map) {
+      uploaderName = rawUploader['name'] as String? ?? 'Unknown';
+    }
+
+    return DBResource(
+      id: json['id'].toString(),
+      title: json['title'] as String? ?? '',
+      subject: subjectName,
+      description: json['description'] as String? ?? '',
+      uploaderName: uploaderName,
+      // API returns 'fileUrl' (Storage::url) or falls back to download path
+      fileUrl: json['fileUrl'] as String?,
+      fileType: json['file_type'] as String? ?? json['fileType'] as String? ?? 'application/octet-stream',
+      uploadedAt: json['uploadedAt'] as String? ?? json['created_at'] as String? ?? '',
+    );
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

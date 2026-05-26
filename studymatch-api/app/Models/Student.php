@@ -14,11 +14,7 @@ class Student extends Model
         'student_id',
         'program',
         'year_level',
-        'bio',
-        'study_style',
-        'preferred_days',
-        'preferred_time',
-        'study_goals',
+        'bio'
     ];
 
     // Relationships

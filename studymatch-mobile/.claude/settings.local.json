@@ -50,7 +50,12 @@
       "Bash(git -C C:/Project/StudyMatch-System status --short)",
       "Bash(git -C C:/Project/StudyMatch-System commit -m \"add all sub-projects as regular folders for team access\")",
       "Bash(git -C C:/Project/StudyMatch-System push)",
-      "Bash(git -C C:/Project/StudyMatch-System push --set-upstream origin main)"
+      "Bash(git -C C:/Project/StudyMatch-System push --set-upstream origin main)",
+      "Bash(ls -la \"c:\\\\xampp\\\\htdocs\\\\StudyMatch-System\\\\studymatch-api\\\\app\\\\Http\\\\Controllers\\\\\")",
+      "Read(//c/xampp/htdocs/StudyMatch-System/studymatch-api/app/Http/**)",
+      "Read(//c/xampp/htdocs/StudyMatch-System/studymatch-api/routes/**)",
+      "Bash(grep -r \"formatMobileUser\" 'c:/xampp/htdocs/StudyMatch-System/studymatch-api/app' --include=\"*.php\" | head -5)",
+      "Read(//c/xampp/htdocs/StudyMatch-System/studymatch-api/app/**)"
     ]
   }
 }

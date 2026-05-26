@@ -80,16 +80,17 @@ export default function TutorMessagesPage() {
           getMatchRequests(),
         ])
 
-        // Normalize conversations — backend returns other_user, latestMessage
+        // Normalize conversations — backend returns participantId, participantName, lastMessage, etc.
         const rawConvs = (convRes.status === 'fulfilled'
-          ? (convRes.value?.conversations || [])
+          ? (convRes.value?.data || convRes.value?.conversations || [])
           : []
         ).map(c => ({
           ...c,
-          partner_id:      c.other_user?.id   || c.partner_id,
-          partner_name:    c.other_user?.name  || c.partner_name || 'Unknown',
-          last_message:    c.latestMessage?.content || c.last_message || '',
-          last_message_at: c.latestMessage?.created_at || c.last_message_at,
+          partner_id:      c.participantId    || c.other_user?.id   || c.partner_id,
+          partner_name:    c.participantName  || c.other_user?.name  || c.partner_name || 'Unknown',
+          last_message:    c.lastMessage      || c.latestMessage?.content || c.last_message || '',
+          last_message_at: c.lastMessageTime  || c.latestMessage?.created_at || c.last_message_at,
+          unread_count:    c.unreadCount      ?? c.unread_count ?? 0,
         }))
 
         // Deduplicate real convs by partner_id
@@ -101,17 +102,18 @@ export default function TutorMessagesPage() {
           return true
         })
 
-        // Merge accepted students who don't yet have a conversation
-        const received = reqRes.status === 'fulfilled'
-          ? (reqRes.value?.data?.received || [])
+        // Merge accepted matches who don't yet have a conversation
+        // getMatchRequests() returns formatMobileUser objects with top-level id and fullName
+        const matched = reqRes.status === 'fulfilled'
+          ? (reqRes.value?.data?.data || reqRes.value?.data || [])
           : []
-        for (const r of received.filter(r => r.status === 'accepted')) {
-          const uid = r.student?.user?.id
+        for (const u of Array.isArray(matched) ? matched : []) {
+          const uid = u.id
           if (uid && !seenIds.has(String(uid))) {
             seenIds.add(String(uid))
             deduped.push({
               partner_id:   uid,
-              partner_name: r.student?.user?.name || 'Student',
+              partner_name: u.fullName || u.name || 'Student',
               last_message: '',
               unread_count: 0,
             })
@@ -141,8 +143,17 @@ export default function TutorMessagesPage() {
       if (initial) { setLoadingMsgs(true); setMessages([]) }
       try {
         const res = await getConversation(activeId)
-        const msgs = res?.messages?.data || res?.messages || []
-        if (Array.isArray(msgs)) setMessages([...msgs].reverse())
+        const msgs = res?.data || res?.messages?.data || res?.messages || []
+        if (Array.isArray(msgs)) {
+          setMessages(msgs.map(m => ({
+            ...m,
+            sender_id:    m.sender_id    ?? m.senderId,
+            message_type: m.message_type ?? m.messageType,
+            file_path:    m.file_path    ?? m.fileUrl,
+            file_name:    m.file_name    ?? m.fileName,
+            created_at:   m.created_at   ?? m.createdAt,
+          })))
+        }
       } catch {}
       finally { if (initial) setLoadingMsgs(false) }
     }
@@ -280,7 +291,7 @@ export default function TutorMessagesPage() {
                   ) : messages.length === 0 ? (
                     <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 24 }}>No messages yet. Say hello! 👋</div>
                   ) : messages.map(m => {
-                    const isMine = m.is_mine || m.sender_id === me?.id
+                    const isMine = m.is_mine || String(m.sender_id ?? m.senderId) === String(me?.id)
                     return (
                       <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start', gap: 4 }}>
                         {!isMine && <Avatar name={partnerName} color={partnerColor} size={28} />}

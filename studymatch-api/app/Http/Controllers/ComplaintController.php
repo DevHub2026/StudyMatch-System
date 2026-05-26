@@ -41,4 +41,56 @@ class ComplaintController extends Controller
 
         return response()->json(['message' => 'Complaint submitted.', 'complaint' => $complaint], 201);
     }
+
+    public function adminIndex(Request $request)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $query = Complaint::with(['submittedBy', 'reportedUser'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $complaints = $query->get()->map(fn ($c) => [
+            'id'               => $c->id,
+            'subject'          => $c->subject,
+            'description'      => $c->description,
+            'status'           => $c->status,
+            'priority'         => $c->priority,
+            'resolution_notes' => $c->resolution_notes,
+            'created_at'       => $c->created_at,
+            'submitted_by'     => $c->submittedBy ? ['id' => $c->submittedBy->id, 'name' => $c->submittedBy->name] : null,
+            'reported_user'    => $c->reportedUser ? ['id' => $c->reportedUser->id, 'name' => $c->reportedUser->name] : null,
+        ]);
+
+        return response()->json(['data' => $complaints]);
+    }
+
+    public function adminUpdate(Request $request, $id)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $complaint = Complaint::findOrFail($id);
+
+        $request->validate([
+            'status'           => 'sometimes|in:open,reviewing,resolved,dismissed',
+            'resolution_notes' => 'nullable|string|max:3000',
+        ]);
+
+        $data = $request->only(['status', 'resolution_notes']);
+
+        if (in_array($data['status'] ?? null, ['resolved', 'dismissed'])) {
+            $data['resolved_by'] = $request->user()->id;
+            $data['resolved_at'] = now();
+        }
+
+        $complaint->update($data);
+
+        return response()->json(['message' => 'Complaint updated.', 'complaint' => $complaint->fresh()]);
+    }
 }

@@ -16,6 +16,11 @@ class LibraryController extends Controller
             $query->where('subject_id', $request->subject_id);
         }
 
+        // Mobile sends subject as a plain name string (not an ID)
+        if ($request->filled('subject') && !$request->filled('subject_id')) {
+            $query->whereHas('subject', fn ($q) => $q->where('name', 'LIKE', "%{$request->subject}%"));
+        }
+
         if ($request->filled('search')) {
             $query->where('title', 'LIKE', "%{$request->search}%");
         }
@@ -24,26 +29,44 @@ class LibraryController extends Controller
             $query->where('file_type', 'LIKE', "%{$request->type}%");
         }
 
-        $resources = $query->latest()->paginate(20);
+        $paginator = $query->latest()->paginate(20);
 
-        return response()->json($resources);
+        // Append mobile-friendly aliases to each item without breaking web clients
+        $paginator->setCollection(
+            $paginator->getCollection()->map(fn ($r) => array_merge($r->toArray(), [
+                'uploaderName' => $r->uploader?->name ?? 'Unknown',
+                'subjectName'  => $r->subject?->name ?? '',
+                'fileUrl'      => $r->file_path ? Storage::url($r->file_path) : null,
+                'uploadedAt'   => $r->created_at?->toIso8601String() ?? '',
+            ]))
+        );
+
+        return response()->json($paginator);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'title'      => 'required|string|max:255',
+            'title'       => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'subject_id' => 'nullable|exists:subjects,id',
-            'file'       => 'required|file|max:51200', // 50 MB max
+            'subject_id'  => 'nullable|exists:subjects,id',
+            'subject'     => 'nullable|string|max:255',
+            'file'        => 'required|file|max:51200', // 50 MB max
         ]);
+
+        // Resolve subject_id from name when mobile sends a plain string
+        $subjectId = $request->subject_id;
+        if (!$subjectId && $request->filled('subject')) {
+            $subjectId = \App\Models\Subject::where('name', 'LIKE', "%{$request->subject}%")
+                ->value('id');
+        }
 
         $file = $request->file('file');
         $path = $file->store('library', 'public');
 
         $resource = Resource::create([
             'uploader_id'  => $request->user()->id,
-            'subject_id'   => $request->subject_id,
+            'subject_id'   => $subjectId,
             'title'        => $request->title,
             'description'  => $request->description,
             'file_path'    => $path,

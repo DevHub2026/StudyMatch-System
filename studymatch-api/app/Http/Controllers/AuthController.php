@@ -38,11 +38,7 @@ class AuthController extends Controller
         ]);
 
         if ($role === 'tutor') {
-            Tutor::create([
-                'user_id'             => $user->id,
-                'verification_status' => 'approved',
-                'verified_at'         => now(),
-            ]);
+            Tutor::create(['user_id' => $user->id]);
         } else {
             Student::create(['user_id' => $user->id]);
         }
@@ -59,7 +55,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        $response = [
+        return response()->json([
             'success' => true,
             'message' => 'Registration successful.',
             'data'    => [
@@ -69,13 +65,7 @@ class AuthController extends Controller
             ],
             'user'    => $user->load(['student', 'tutor']),
             'token'   => $token,
-        ];
-
-        if (app()->environment('local')) {
-            $response['debug_otp'] = $otp;
-        }
-
-        return response()->json($response, 201);
+        ], 201);
     }
 
     /**
@@ -237,11 +227,11 @@ class AuthController extends Controller
     }
 
     /**
-     * Shape user payload for mobile clients (legacy PHP api.php formatUser).
+     * Shape user payload for mobile clients.
      */
     private function formatMobileUser(User $user): array
     {
-        $weakNames = [];
+        $weakNames   = [];
         $strongNames = [];
 
         if ($user->student) {
@@ -260,6 +250,29 @@ class AuthController extends Controller
                 ->all();
         }
 
+        // Convert tutor_availability rows to Flutter's { "Monday": ["Morning (6am-12pm)"] } format
+        $availability = (object) [];
+        if ($user->tutor && $user->tutor->availability->isNotEmpty()) {
+            $blockMap = [
+                '06:00-12:00' => 'Morning (6am-12pm)',
+                '12:00-18:00' => 'Afternoon (12pm-6pm)',
+                '18:00-21:00' => 'Evening (6pm-9pm)',
+                '21:00-06:00' => 'Night (9pm-6am)',
+            ];
+            $avail = [];
+            foreach ($user->tutor->availability as $slot) {
+                $day   = ucfirst($slot->day_of_week);
+                $key   = substr($slot->start_time, 0, 5) . '-' . substr($slot->end_time, 0, 5);
+                $block = $blockMap[$key] ?? null;
+                if ($block) {
+                    $avail[$day][] = $block;
+                }
+            }
+            if (!empty($avail)) {
+                $availability = $avail;
+            }
+        }
+
         return [
             'id'                 => (string) $user->id,
             'fullName'           => $user->name,
@@ -274,9 +287,9 @@ class AuthController extends Controller
             'bio'                => $user->bio ?? $user->student?->bio ?? $user->tutor?->bio,
             'role'               => $user->role,
             'subjects'           => $user->isStudent() ? $weakNames : $strongNames,
-            'learningStyles'     => [],
-            'studyStyles'        => [],
-            'availability'       => (object) [],
+            'learningStyles'     => $user->learning_styles ?? [],
+            'studyStyles'        => $user->study_styles ?? [],
+            'availability'       => $availability,
             'strengths'          => $user->isTutor() ? $strongNames : [],
             'weaknesses'         => $user->isStudent() ? $weakNames : [],
             'onboardingComplete' => (bool) $user->profile_completed,

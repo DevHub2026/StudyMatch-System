@@ -31,7 +31,7 @@ function CreateModal({ acceptedTutors, subjects, onClose, onCreated }) {
     setSaving(true); setError('')
     try {
       const res = await createSession({
-        tutor_id:         parseInt(form.tutor_id),
+        tutor_user_id:    parseInt(form.tutor_id),
         subject_id:       form.subject_id ? parseInt(form.subject_id) : undefined,
         scheduled_at:     new Date(form.scheduled_at).toISOString(),
         duration_minutes: parseInt(form.duration_minutes) || 60,
@@ -238,10 +238,10 @@ export default function StudySessionsPage() {
       } catch { setSubjects([]) }
       try {
         const res = await getMatchRequests()
-        const sent = res?.data?.sent || []
-        setAcceptedTutors(sent.filter(r => r.status === 'accepted').map(r => ({
-          tutor_id: r.tutor_id,
-          name: r.tutor?.user?.name || `Tutor #${r.tutor_id}`,
+        const matched = res?.data?.data || res?.data || []
+        setAcceptedTutors((Array.isArray(matched) ? matched : []).filter(u => u.role === 'tutor').map(u => ({
+          tutor_id: u.id,
+          name: u.fullName || u.name || `Tutor #${u.id}`,
         })))
       } catch {}
       setLoading(false)

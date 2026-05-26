@@ -2,144 +2,193 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Tutor;
+use App\Models\User;
+use App\Traits\MobileUserFormatter;
 use Illuminate\Http\Request;
 
 class TutorController extends Controller
 {
+    use MobileUserFormatter;
+
     /**
-     * Browse all tutors with filters
+     * GET /tutors | GET /partners
+     * Supports subject-based matching via my_strengths / my_weaknesses params.
      */
     public function index(Request $request)
     {
-        $query = Tutor::with(['user', 'strongSubjects.subject', 'availability'])
-            ->verified();
+        $targetRole = $request->input('target_role', 'tutor');
+        $excludeId  = $request->input('exclude_id');
+        $search     = $request->input('search');
+        $subject    = $request->input('subject');
 
-        // Filter by subject ID
-        if ($request->filled('subject_id')) {
-            $query->whereHas('strongSubjects', function($q) use ($request) {
-                $q->where('subject_id', $request->subject_id);
+        $myStrengths  = $this->parseJsonArray($request->input('my_strengths'));
+        $myWeaknesses = $this->parseJsonArray($request->input('my_weaknesses'));
+
+        $query = User::with([
+            'student.weakSubjects.subject',
+            'tutor.strongSubjects.subject',
+            'tutor.availability',
+        ])->where('role', $targetRole);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if ($search) {
+            $query->where('name', 'LIKE', "%{$search}%");
+        }
+
+        // Subject-based matching: tutor strengths ↔ student weaknesses
+        if ($targetRole === 'tutor' && !empty($myWeaknesses)) {
+            $query->whereHas('tutor.strongSubjects.subject', function ($q) use ($myWeaknesses) {
+                $q->whereIn('name', $myWeaknesses);
+            });
+        } elseif ($targetRole === 'student' && !empty($myStrengths)) {
+            $query->whereHas('student.weakSubjects.subject', function ($q) use ($myStrengths) {
+                $q->whereIn('name', $myStrengths);
             });
         }
 
-        // Filter by subject names (comma-separated, from frontend "subjects" param)
-        if ($request->filled('subjects')) {
-            $names = array_filter(array_map('trim', explode(',', $request->subjects)));
-            if (!empty($names)) {
-                $query->whereHas('strongSubjects.subject', function($q) use ($names) {
-                    $q->whereIn('name', $names);
+        // Optional single-subject filter
+        if ($subject) {
+            if ($targetRole === 'tutor') {
+                $query->whereHas('tutor.strongSubjects.subject', function ($q) use ($subject) {
+                    $q->where('name', $subject);
+                });
+            } else {
+                $query->whereHas('student.weakSubjects.subject', function ($q) use ($subject) {
+                    $q->where('name', $subject);
                 });
             }
         }
 
-        // Filter by department — match tutor subjects (name) and text fields
-        if ($request->filled('department')) {
-            $department = $request->department;
-            $subjectNames = $this->departmentSubjectNames($department);
+        $users = $query->get();
 
-            $query->where(function ($q) use ($department, $subjectNames) {
-                $q->whereHas('strongSubjects.subject', function ($s) use ($subjectNames) {
-                    $s->whereIn('name', $subjectNames);
-                })
-                ->orWhere('specialization', 'LIKE', '%' . $department . '%')
-                ->orWhere('position', 'LIKE', '%' . $department . '%');
-            });
-        }
-
-        // Filter by tutor type
-        if ($request->filled('tutor_type')) {
-            $query->where('tutor_type', $request->tutor_type);
-        }
-
-        // Filter by minimum rating
-        if ($request->filled('min_rating')) {
-            $query->where('average_rating', '>=', $request->min_rating);
-        }
-
-        // Filter by maximum hourly rate
-        if ($request->filled('max_rate')) {
-            $query->where('hourly_rate', '<=', $request->max_rate);
-        }
-
-        // Search by name or subject
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->whereHas('user', function($u) use ($search) {
-                    $u->where('name', 'LIKE', "%{$search}%");
-                })->orWhereHas('strongSubjects.subject', function($s) use ($search) {
-                    $s->where('name', 'LIKE', "%{$search}%");
-                })->orWhere('specialization', 'LIKE', "%{$search}%");
-            });
-        }
-
-        $tutors = $query->paginate(20);
-
-        return response()->json($tutors);
+        return response()->json([
+            'success' => true,
+            'data'    => $users->map(fn (User $u) => $this->formatMobileUser($u))->values()->all(),
+        ]);
     }
 
     /**
-     * Get specific tutor profile
+     * GET /tutors/{id} | GET /partners/{id}
      */
     public function show($id)
     {
-        $tutor = Tutor::with([
-            'user',
-            'strongSubjects.subject',
-            'availability',
-            'reviews.student.user'
+        $user = User::with([
+            'student.weakSubjects.subject',
+            'tutor.strongSubjects.subject',
+            'tutor.availability',
         ])->findOrFail($id);
 
-        return response()->json($tutor);
+        return response()->json([
+            'success' => true,
+            'data'    => $this->formatMobileUser($user),
+        ]);
     }
 
     /**
-     * Get tutor availability
+     * GET /tutors/{id}/availability
      */
     public function getAvailability($id)
     {
-        $tutor = Tutor::findOrFail($id);
-        $availability = $tutor->availability()->where('is_active', true)->get();
+        $user  = User::findOrFail($id);
+        $tutor = $user->tutor;
 
-        return response()->json($availability);
+        if (!$tutor) {
+            return response()->json(['availability' => []]);
+        }
+
+        return response()->json([
+            'availability' => $tutor->availability()->where('is_active', true)->get(),
+        ]);
     }
 
     /**
-     * Search tutors
+     * GET /tutors/search
      */
     public function search(Request $request)
     {
-        $query = $request->q;
+        $search = $request->input('q', '');
 
-        $tutors = Tutor::with(['user', 'strongSubjects.subject'])
-            ->verified()
-            ->available()
-            ->whereHas('user', function($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%");
-            })
-            ->orWhereHas('strongSubjects.subject', function($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%");
-            })
-            ->limit(10)
-            ->get();
+        $users = User::with([
+            'student.weakSubjects.subject',
+            'tutor.strongSubjects.subject',
+            'tutor.availability',
+        ])->where(function ($q) use ($search) {
+            $q->where('name', 'LIKE', "%{$search}%")
+              ->orWhereHas('tutor.strongSubjects.subject', function ($sq) use ($search) {
+                  $sq->where('name', 'LIKE', "%{$search}%");
+              })
+              ->orWhereHas('student.weakSubjects.subject', function ($sq) use ($search) {
+                  $sq->where('name', 'LIKE', "%{$search}%");
+              });
+        })->limit(10)->get();
 
-        return response()->json($tutors);
+        return response()->json([
+            'success' => true,
+            'data'    => $users->map(fn (User $u) => $this->formatMobileUser($u))->values()->all(),
+        ]);
     }
 
-    /**
-     * Map UI department labels to subject names stored in the database.
-     */
-    private function departmentSubjectNames(string $department): array
+    public function adminPending(Request $request)
     {
-        $map = [
-            'Mathematics'      => ['Mathematics', 'Calculus', 'Algebra', 'Statistics'],
-            'Physics'          => ['Physics'],
-            'Chemistry'        => ['Chemistry'],
-            'Computer Science' => ['Computer Science', 'Programming'],
-            'Biology'          => ['Biology'],
-            'Engineering'      => ['Computer Science', 'Programming', 'Physics', 'Mathematics'],
-        ];
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
 
-        return $map[$department] ?? [$department];
+        $tutors = \App\Models\Tutor::with('user')
+            ->where('verification_status', 'pending')
+            ->latest()
+            ->get()
+            ->map(fn ($t) => [
+                'id'             => $t->id,
+                'specialization' => $t->specialization,
+                'tutor_type'     => $t->tutor_type,
+                'credentials'    => $t->credentials,
+                'created_at'     => $t->created_at,
+                'user'           => $t->user ? ['id' => $t->user->id, 'name' => $t->user->name, 'email' => $t->user->email] : null,
+            ]);
+
+        return response()->json(['tutors' => $tutors]);
+    }
+
+    public function adminApprove(Request $request, $id)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $tutor = \App\Models\Tutor::findOrFail($id);
+        $tutor->update([
+            'verification_status' => 'approved',
+            'verified_at'         => now(),
+            'verified_by'         => $request->user()->id,
+        ]);
+
+        return response()->json(['message' => 'Tutor approved.']);
+    }
+
+    public function adminReject(Request $request, $id)
+    {
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $tutor = \App\Models\Tutor::findOrFail($id);
+        $tutor->update(['verification_status' => 'rejected']);
+
+        return response()->json(['message' => 'Tutor rejected.']);
+    }
+
+    private function parseJsonArray(?string $val): array
+    {
+        if (!$val) return [];
+        try {
+            $decoded = json_decode($val, true);
+            return is_array($decoded) ? array_filter($decoded) : [];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 }

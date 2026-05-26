@@ -6,6 +6,7 @@ import api from './axiosInstance';
 export const browseStudents = async (filters = {}) => {
   const params = new URLSearchParams();
 
+  params.append('target_role', 'student');
   if (filters.matchAll !== false) params.append('match_all', '1');
   if (filters.strict) params.append('strict', '1');
   if (filters.search) params.append('search', filters.search);

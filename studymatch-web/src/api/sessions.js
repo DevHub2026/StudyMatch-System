@@ -41,21 +41,21 @@ export const cancelSession = async (id) => {
 }
 
 export const acceptSession = async (id) => {
-  const response = await api.post(`/sessions/${id}/accept`)
+  const response = await api.post(`/sessions/${id}/confirm`)
   return response.data
 }
 
 export const declineSession = async (id) => {
-  const response = await api.post(`/sessions/${id}/decline`)
+  const response = await api.put(`/sessions/${id}`, { status: 'cancelled' })
   return response.data
 }
 
 export const rescheduleSession = async (id, data) => {
-  const response = await api.post(`/sessions/${id}/reschedule`, data)
+  const response = await api.put(`/sessions/${id}`, data)
   return response.data
 }
 
 export const completeSession = async (id) => {
-  const response = await api.post(`/sessions/${id}/complete`)
+  const response = await api.put(`/sessions/${id}`, { status: 'completed' })
   return response.data
 }

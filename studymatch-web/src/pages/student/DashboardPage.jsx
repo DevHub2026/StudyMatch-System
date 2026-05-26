@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUser } from '../../store/authStore'
 import * as matchRequestsApi from '../../api/matchRequests'
+import { getPendingRequests } from '../../api/matchRequests'
 import * as notificationsApi from '../../api/notifications'
 import logo from '../../assets/logo.png'
 
@@ -329,12 +330,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const requestsData = await matchRequestsApi.getMatchRequests()
-        const received = requestsData?.data?.received || []
-        const sent     = requestsData?.data?.sent     || []
-        const all      = [...received, ...sent]
-        const active   = all.filter(r => r.status === 'accepted').length
-        const pending  = sent.filter(r => r.status === 'pending').length
+        const [matchRes, pendingRes] = await Promise.allSettled([
+          matchRequestsApi.getMatchRequests(),
+          getPendingRequests(),
+        ])
+        const active  = matchRes.status === 'fulfilled'  ? (matchRes.value?.data?.data?.length  || matchRes.value?.data?.length  || 0) : 0
+        const pending = pendingRes.status === 'fulfilled' ? (pendingRes.value?.data?.data?.length || pendingRes.value?.data?.length || 0) : 0
         setStats(prev => ({ ...prev, activeMatches: active, pendingRequests: pending }))
       } catch {}
 

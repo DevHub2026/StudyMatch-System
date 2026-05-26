@@ -3,29 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Session;
-use App\Models\Student;
-use App\Models\Tutor;
-use App\Services\SessionNotificationService;
+use App\Models\TutorRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class SessionController extends Controller
 {
     public function index(Request $request)
     {
-        $user  = $request->user()->load(['student', 'tutor']);
+        $user  = $request->user();
         $query = Session::with(['tutor.user', 'student.user', 'subject']);
 
         if ($user->student) {
             $query->where('student_id', $user->student->id);
-        } elseif ($user->role === 'tutor') {
-            if (!$user->tutor) {
-                Tutor::create([
-                    'user_id'             => $user->id,
-                    'verification_status' => 'approved',
-                    'verified_at'         => now(),
-                ]);
-                $user->load('tutor');
-            }
+        } elseif ($user->tutor) {
             $query->where('tutor_id', $user->tutor->id);
         }
 
@@ -33,17 +24,47 @@ class SessionController extends Controller
             $query->where('status', $request->status);
         }
 
-        if ($request->boolean('today')) {
-            $query->whereDate('scheduled_at', now()->toDateString());
-        }
+        $sessions = $query->latest('scheduled_at')->get();
 
-        if ($request->filled('subject_id')) {
-            $query->where('subject_id', $request->subject_id);
-        }
+        $data = $sessions->map(fn ($s) => [
+            'id'              => (string) $s->id,
+            // camelCase fields (mobile compat)
+            'tutorUserId'     => (string) ($s->tutor?->user?->id ?? ''),
+            'tutorName'       => $s->tutor?->user?->name ?? 'Tutor',
+            'studentUserId'   => (string) ($s->student?->user?->id ?? ''),
+            'studentName'     => $s->student?->user?->name ?? 'Student',
+            'scheduledAt'     => $s->scheduled_at,
+            'durationMinutes' => $s->duration_minutes ?? 60,
+            'createdAt'       => $s->created_at,
+            // snake_case fields (web compat)
+            'scheduled_at'    => $s->scheduled_at,
+            'duration_minutes'=> $s->duration_minutes ?? 60,
+            'session_type'    => $s->session_type ?? 'online',
+            'session_link'    => $s->session_link,
+            'subject_id'      => $s->subject_id,
+            'tutor_id'        => $s->tutor_id,
+            'student_id'      => $s->student_id,
+            'status'          => $s->status,
+            'notes'           => $s->notes,
+            // nested objects for web components
+            'tutor'   => $s->tutor ? [
+                'id'   => $s->tutor->id,
+                'user' => $s->tutor->user
+                    ? ['id' => $s->tutor->user->id, 'name' => $s->tutor->user->name]
+                    : null,
+            ] : null,
+            'student' => $s->student ? [
+                'id'   => $s->student->id,
+                'user' => $s->student->user
+                    ? ['id' => $s->student->user->id, 'name' => $s->student->user->name]
+                    : null,
+            ] : null,
+            'subject' => $s->subject
+                ? ['id' => $s->subject->id, 'name' => $s->subject->name]
+                : null,
+        ]);
 
-        $sessions = $query->latest('scheduled_at')->paginate(20);
-
-        return response()->json($sessions);
+        return response()->json(['success' => true, 'data' => $data]);
     }
 
     public function show(Request $request, $id)
@@ -58,8 +79,10 @@ class SessionController extends Controller
     {
         $request->validate([
             'tutor_request_id' => 'nullable|exists:tutor_requests,id',
-            'tutor_id'         => 'required_without:student_id|exists:tutors,id',
-            'student_id'       => 'required_without:tutor_id|exists:students,id',
+            'tutor_id'         => 'sometimes|exists:tutors,id',
+            'tutor_user_id'    => 'sometimes|exists:users,id',
+            'student_id'       => 'sometimes|exists:students,id',
+            'student_user_id'  => 'sometimes|exists:users,id',
             'subject_id'       => 'nullable|exists:subjects,id',
             'scheduled_at'     => 'required|date|after:now',
             'duration_minutes' => 'sometimes|integer|min:30|max:480',
@@ -68,62 +91,57 @@ class SessionController extends Controller
             'session_link'     => 'nullable|url',
         ]);
 
-        $user = $request->user();
+        $currentUser = $request->user();
+        $tutorId     = null;
+        $student     = null;
 
-        if ($user->role === 'tutor' && $request->filled('student_id')) {
-            if (!$user->tutor) {
-                Tutor::create([
-                    'user_id'             => $user->id,
-                    'verification_status' => 'approved',
-                    'verified_at'         => now(),
-                ]);
-                $user->load('tutor');
+        if ($currentUser->student) {
+            // Student booking a session — they are the student
+            $student = $currentUser->student;
+
+            // Resolve tutor from tutor_user_id (mobile) or tutor_id (direct)
+            $tutorId = $request->tutor_id;
+            if (!$tutorId && $request->filled('tutor_user_id')) {
+                $tutorUser = User::findOrFail($request->tutor_user_id);
+                if (!$tutorUser->tutor) {
+                    return response()->json(['message' => 'This user is not a registered tutor.'], 422);
+                }
+                $tutorId = $tutorUser->tutor->id;
             }
+            if (!$tutorId) {
+                return response()->json(['message' => 'tutor_id or tutor_user_id is required.'], 422);
+            }
+        } elseif ($currentUser->tutor) {
+            // Tutor requesting a session — they are the tutor, student is provided
+            $tutorId = $currentUser->tutor->id;
 
-            $session = Session::create([
-                'tutor_request_id' => $request->tutor_request_id,
-                'tutor_id'         => $user->tutor->id,
-                'student_id'       => $request->student_id,
-                'subject_id'       => $request->subject_id,
-                'scheduled_at'     => $request->scheduled_at,
-                'duration_minutes' => $request->duration_minutes ?? 60,
-                'session_type'     => $request->input('session_type', 'online'),
-                'notes'            => $request->notes,
-                'session_link'     => $request->session_link,
-                'status'           => 'pending',
-            ]);
-
-            $session->load(['tutor.user', 'student.user', 'subject']);
-            SessionNotificationService::sessionBooked($session);
-
-            return response()->json(['message' => 'Session request sent to student.', 'session' => $session], 201);
-        }
-
-        $student = $user->student;
-        if (!$student && $user->role === 'student') {
-            $student = Student::create(['user_id' => $user->id]);
-        }
-        if (!$student) {
-            return response()->json(['message' => 'Only students can book sessions this way.'], 403);
+            if ($request->filled('student_id')) {
+                $student = \App\Models\Student::find($request->student_id);
+            } elseif ($request->filled('student_user_id')) {
+                $studentUser = User::find($request->student_user_id);
+                $student     = $studentUser?->student;
+            }
+            if (!$student) {
+                return response()->json(['message' => 'student_id or student_user_id is required.'], 422);
+            }
+        } else {
+            return response()->json(['message' => 'Only students or tutors can book sessions.'], 403);
         }
 
         $session = Session::create([
             'tutor_request_id' => $request->tutor_request_id,
-            'tutor_id'         => $request->tutor_id,
+            'tutor_id'         => $tutorId,
             'student_id'       => $student->id,
             'subject_id'       => $request->subject_id,
             'scheduled_at'     => $request->scheduled_at,
             'duration_minutes' => $request->duration_minutes ?? 60,
-            'session_type'     => $request->input('session_type', 'online'),
+            'session_type'     => $request->session_type ?? 'online',
             'notes'            => $request->notes,
             'session_link'     => $request->session_link,
             'status'           => 'pending',
         ]);
 
-        $session->load(['tutor.user', 'student.user', 'subject']);
-        SessionNotificationService::sessionBooked($session);
-
-        return response()->json(['message' => 'Session booked.', 'session' => $session], 201);
+        return response()->json(['message' => 'Session booked.', 'session' => $session->load(['tutor.user', 'subject'])], 201);
     }
 
     public function update(Request $request, $id)
@@ -134,17 +152,13 @@ class SessionController extends Controller
         $request->validate([
             'scheduled_at'     => 'sometimes|date|after:now',
             'duration_minutes' => 'sometimes|integer|min:30|max:480',
+            'session_type'     => 'sometimes|in:online,in_person',
             'notes'            => 'nullable|string|max:1000',
             'session_link'     => 'nullable|url',
-            'session_type'     => 'sometimes|in:online,in_person',
-            'subject_id'       => 'nullable|exists:subjects,id',
-            'status'           => 'sometimes|in:completed,cancelled,scheduled',
+            'status'           => 'sometimes|in:scheduled,completed,cancelled,rescheduled',
         ]);
 
-        $data = $request->only([
-            'scheduled_at', 'duration_minutes', 'notes',
-            'session_link', 'session_type', 'subject_id', 'status',
-        ]);
+        $data = $request->only(['scheduled_at', 'duration_minutes', 'session_type', 'notes', 'session_link', 'status']);
 
         if (($data['status'] ?? null) === 'completed') {
             $data['completed_at'] = now();
@@ -152,114 +166,33 @@ class SessionController extends Controller
 
         $session->update($data);
 
-        return response()->json([
-            'message' => 'Session updated.',
-            'session' => $session->fresh()->load(['tutor.user', 'student.user', 'subject']),
-        ]);
+        return response()->json(['message' => 'Session updated.', 'session' => $session->fresh()]);
     }
 
-    public function reschedule(Request $request, $id)
+    public function confirm(Request $request, $id)
     {
         $session = Session::findOrFail($id);
-        $this->authorizeSession($request->user(), $session);
+        $tutor   = $request->user()->tutor;
 
-        $request->validate([
-            'scheduled_at'     => 'required|date|after:now',
-            'duration_minutes' => 'sometimes|integer|min:30|max:480',
-            'session_link'     => 'nullable|url',
-            'notes'            => 'nullable|string|max:1000',
-        ]);
-
-        $user = $request->user();
-        $byRole = $user->student ? 'student' : 'tutor';
-
-        $session->update([
-            'scheduled_at'     => $request->scheduled_at,
-            'duration_minutes' => $request->duration_minutes ?? $session->duration_minutes,
-            'session_link'     => $request->session_link ?? $session->session_link,
-            'notes'            => $request->has('notes') ? $request->notes : $session->notes,
-            'status'           => $session->status === 'pending' ? 'pending' : 'rescheduled',
-        ]);
-
-        $session->load(['tutor.user', 'student.user', 'subject']);
-        SessionNotificationService::sessionRescheduled($session, $byRole);
-
-        return response()->json([
-            'message' => 'Session rescheduled.',
-            'session' => $session->fresh()->load(['tutor.user', 'student.user', 'subject']),
-        ]);
-    }
-
-    public function accept(Request $request, $id)
-    {
-        $session = Session::findOrFail($id);
-        $user    = $request->user();
-
-        if (!$user->tutor || $session->tutor_id !== $user->tutor->id) {
-            abort(403, 'Only the assigned tutor can accept this session.');
+        if (!$tutor || $session->tutor_id !== $tutor->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
         if ($session->status !== 'pending') {
-            return response()->json(['message' => 'Session is not pending.'], 422);
+            return response()->json(['success' => false, 'message' => 'Session is not pending confirmation.'], 422);
         }
 
         $session->update(['status' => 'scheduled']);
-        $session->load(['tutor.user', 'student.user', 'subject']);
-        SessionNotificationService::sessionAccepted($session);
 
-        return response()->json([
-            'message' => 'Session accepted.',
-            'session' => $session->fresh()->load(['tutor.user', 'student.user', 'subject']),
-        ]);
-    }
-
-    public function decline(Request $request, $id)
-    {
-        $session = Session::findOrFail($id);
-        $user    = $request->user();
-
-        if (!$user->tutor || $session->tutor_id !== $user->tutor->id) {
-            abort(403, 'Only the assigned tutor can decline this session.');
-        }
-
-        if ($session->status !== 'pending') {
-            return response()->json(['message' => 'Session is not pending.'], 422);
-        }
-
-        $session->update(['status' => 'cancelled', 'cancelled_at' => now()]);
-        $session->load(['tutor.user', 'student.user']);
-        SessionNotificationService::sessionCancelled($session, 'tutor');
-
-        return response()->json(['message' => 'Session declined.']);
-    }
-
-    public function complete(Request $request, $id)
-    {
-        $session = Session::findOrFail($id);
-        $user    = $request->user();
-
-        if (!$user->tutor || $session->tutor_id !== $user->tutor->id) {
-            abort(403, 'Only the assigned tutor can complete this session.');
-        }
-
-        $session->update(['status' => 'completed', 'completed_at' => now()]);
-
-        return response()->json([
-            'message' => 'Session marked as completed.',
-            'session' => $session->fresh()->load(['tutor.user', 'student.user', 'subject']),
-        ]);
+        return response()->json(['success' => true, 'message' => 'Session confirmed.']);
     }
 
     public function cancel(Request $request, $id)
     {
         $session = Session::findOrFail($id);
-        $user    = $request->user();
-        $this->authorizeSession($user, $session);
+        $this->authorizeSession($request->user(), $session);
 
         $session->update(['status' => 'cancelled', 'cancelled_at' => now()]);
-        $session->load(['tutor.user', 'student.user']);
-        $byRole = $user->student ? 'student' : 'tutor';
-        SessionNotificationService::sessionCancelled($session, $byRole);
 
         return response()->json(['message' => 'Session cancelled.']);
     }

@@ -237,7 +237,7 @@ export default function TutorProfilePage() {
                   <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 16 }}>Recent Reviews</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {reviews.slice(0, 3).map((r, i) => {
-                      const reviewer = r.reviewer?.name || r.student?.name || r.user?.name || 'Student'
+                      const reviewer = r.reviewer?.name || r.student?.user?.name || r.student?.name || r.user?.name || 'Student'
                       return (
                         <div key={i} style={{ background: '#F8F9FB', borderRadius: 12, padding: '14px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>

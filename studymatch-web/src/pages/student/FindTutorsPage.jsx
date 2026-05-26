@@ -42,10 +42,10 @@ function Stars({ rating = 0 }) {
 
 function TutorCard({ tutor, index, onRequest, requested }) {
   const color = getColor(index)
-  const name  = tutor.user?.name || tutor.name || 'Unknown'
+  const name  = tutor.fullName || tutor.user?.name || tutor.name || 'Unknown'
   const dept  = tutor.specialization || tutor.position || tutor.department || tutor.user?.department || ''
   const rating = parseFloat(tutor.average_rating || tutor.rating || 0)
-  const reviews = tutor.reviews_count || tutor.total_reviews || 0
+  const reviews = tutor.ratingCount || tutor.reviews_count || tutor.total_reviews || 0
   const subjects = tutor.strong_subjects
     ? tutor.strong_subjects.map(s => s.subject?.name || '').filter(Boolean)
     : (tutor.subjects || [])
@@ -121,7 +121,7 @@ function TutorCard({ tutor, index, onRequest, requested }) {
           </div>
         )}
         <button
-          onClick={() => onRequest(tutor.user?.id || tutor.user_id)}
+          onClick={() => onRequest(tutor.id || tutor.user?.id || tutor.user_id)}
           disabled={requested}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -173,11 +173,10 @@ export default function FindTutorsPage() {
   useEffect(() => {
     getMatchRequests()
       .then(res => {
-        const sent = res?.data?.sent || []
+        const matched = res?.data?.data || res?.data || []
         const ids = {}
-        sent.forEach(r => {
-          const uid = r.tutor?.user?.id || r.tutor?.user_id
-          if (uid) ids[uid] = true
+        ;(Array.isArray(matched) ? matched : []).forEach(u => {
+          if (u.id) ids[String(u.id)] = true
         })
         setRequested(ids)
       })
@@ -301,7 +300,7 @@ export default function FindTutorsPage() {
                   key={tutor.id || tutor.user_id || i}
                   tutor={tutor} index={i}
                   onRequest={handleRequest}
-                  requested={!!requested[tutor.user?.id || tutor.user_id]}
+                  requested={!!requested[String(tutor.id || tutor.user?.id || tutor.user_id)]}
                 />
               ))}
             </div>

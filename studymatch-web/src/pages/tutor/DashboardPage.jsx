@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUser } from '../../store/authStore'
-import { getMatchRequests, acceptMatchRequest, declineMatchRequest } from '../../api/matchRequests'
+import { getIncomingRequests, acceptMatchRequest, declineMatchRequest } from '../../api/matchRequests'
 import { browseStudents } from '../../api/students'
 import { getProfile } from '../../api/profile'
 import { requestSessionWithStudent } from '../../api/sessions'
@@ -219,7 +219,12 @@ function StudentCard({ student, index, saved, onSave, onConnect, onRequestSessio
   const year     = student.year_level || ''
   const subjects = student.subjects || student.help_subjects || []
   const goal     = student.study_goals || student.goal || ''
-  const avail    = student.availability || [student.preferred_days, student.preferred_time].filter(Boolean).join(' · ')
+  const availRaw = student.availability
+  const avail    = typeof availRaw === 'string'
+    ? availRaw
+    : availRaw && typeof availRaw === 'object' && !Array.isArray(availRaw) && Object.keys(availRaw).length > 0
+      ? Object.keys(availRaw).slice(0, 3).join(', ')
+      : [student.preferred_days, student.preferred_time].filter(Boolean).join(' · ')
   const matchPct = student.match_percentage
   const activity = student.activity_label
   const style    = student.study_style
@@ -354,12 +359,14 @@ export default function TutorDashboardPage() {
       setLoading(true)
       try {
         const [matchRes, profileRes] = await Promise.all([
-          getMatchRequests(),
+          getIncomingRequests(),
           getProfile().catch(() => null),
         ])
-        const received = matchRes?.data?.received || []
-        setRequests(received.filter(r => r.status === 'pending'))
-        const acc = received.filter(r => r.status === 'accepted')
+        // getIncomingRequests() returns raw TutorRequest objects (all statuses)
+        const incoming = matchRes?.data?.data || matchRes?.data || []
+        const pending  = incoming.filter(r => r.status === 'pending')
+        const acc      = incoming.filter(r => r.status === 'accepted')
+        setRequests(pending)
         setAccepted(acc)
         setWeekStats(p => ({ ...p, matches: acc.length }))
 

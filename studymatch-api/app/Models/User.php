@@ -24,6 +24,8 @@ class User extends Authenticatable
         'phone',
         'date_of_birth',
         'gender',
+        'learning_styles',
+        'study_styles',
     ];
 
     protected $hidden = [
@@ -36,6 +38,8 @@ class User extends Authenticatable
         'suspended_at'       => 'datetime',
         'date_of_birth'      => 'date',
         'profile_completed'  => 'boolean',
+        'learning_styles'    => 'array',
+        'study_styles'       => 'array',
         'password'           => 'hashed',
     ];
 

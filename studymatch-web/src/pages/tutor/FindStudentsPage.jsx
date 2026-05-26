@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-  getMatchRequests,
+  getIncomingRequests,
   acceptMatchRequest,
   declineMatchRequest,
 } from '../../api/matchRequests'
@@ -231,8 +231,8 @@ export default function FindStudentsPage() {
   const fetchRequests = async () => {
     setLoading(true); setError('')
     try {
-      const res      = await getMatchRequests()
-      const received = res?.data?.received || []
+      const res      = await getIncomingRequests()
+      const received = res?.data?.data || res?.data || []
       setRequests(received)
       setStats({
         total:    received.length,

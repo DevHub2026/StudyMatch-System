@@ -40,35 +40,20 @@ export default function PartnersPage() {
     const fetch = async () => {
       setLoading(true); setError('')
       try {
-        const res      = await getMatchRequests()
-        const sent     = res?.data?.sent     || []
-        const received = res?.data?.received || []
+        const res     = await getMatchRequests()
+        const matched = res?.data?.data || res?.data || []
 
-        const fromSent = sent
-          .filter(r => r.status === 'accepted')
-          .map(r => ({
-            id:       r.id,
-            name:     r.tutor?.user?.name     || 'Tutor',
-            role:     'tutor',
-            subject:  r.subject?.name         || '',
-            message:  r.message               || '',
-            date:     r.accepted_at || r.created_at,
-            userId:   r.tutor?.user?.id,
-          }))
+        const partners = matched.map(u => ({
+          id:      u.id,
+          name:    u.fullName || u.name || 'User',
+          role:    u.role     || (isTutor ? 'student' : 'tutor'),
+          subject: Array.isArray(u.subjects) ? (u.subjects[0] || '') : '',
+          message: u.bio || '',
+          date:    null,
+          userId:  u.id,
+        }))
 
-        const fromReceived = received
-          .filter(r => r.status === 'accepted')
-          .map(r => ({
-            id:       r.id,
-            name:     r.student?.user?.name   || 'Student',
-            role:     'student',
-            subject:  r.subject?.name         || '',
-            message:  r.message               || '',
-            date:     r.accepted_at || r.created_at,
-            userId:   r.student?.user?.id,
-          }))
-
-        setPartners([...fromSent, ...fromReceived])
+        setPartners(partners)
       } catch {
         setError('Failed to load matches. Please try again.')
       } finally { setLoading(false) }

@@ -15,7 +15,7 @@ use App\Http\Controllers\HelpCenterController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\SessionController;
-use App\Http\Controllers\StudentController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::post('/profile/avatar-base64', [ProfileController::class, 'uploadAvatarBase64']);
     Route::post('/profile/complete', [ProfileController::class, 'complete']);
     Route::put('/profile/step-1', [ProfileController::class, 'step1']);
     Route::put('/profile/step-2', [ProfileController::class, 'step2']);
@@ -55,6 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile/step-4', [ProfileController::class, 'step4']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
     Route::delete('/profile/delete-account', [ProfileController::class, 'deleteAccount']);
+
+    // Students — for tutor discovery feed
+    Route::get('/students', [TutorController::class, 'index']);
 
     // Tutors — canonical paths
     Route::get('/tutors', [TutorController::class, 'index']);
@@ -66,9 +70,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/partners', [TutorController::class, 'index']);
     Route::get('/partners/{id}', [TutorController::class, 'show']);
 
-    // Students — tutor discovery
-    Route::get('/students', [StudentController::class, 'index']);
-
     // Tutor Requests — canonical paths
     Route::get('/tutor-requests', [TutorRequestController::class, 'index']);
     Route::post('/tutor-requests/send', [TutorRequestController::class, 'send']);
@@ -78,6 +79,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tutor Requests — frontend alias (match-requests); send accepts receiver_user_id
     Route::get('/match-requests', [TutorRequestController::class, 'index']);
+    Route::get('/match-requests/pending', [TutorRequestController::class, 'pending']);
+    Route::get('/match-requests/incoming', [TutorRequestController::class, 'incoming']);
     Route::post('/match-requests/send', [TutorRequestController::class, 'sendByUserId']);
     Route::post('/match-requests/{id}/accept', [TutorRequestController::class, 'accept']);
     Route::post('/match-requests/{id}/decline', [TutorRequestController::class, 'decline']);
@@ -101,16 +104,30 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sessions', [SessionController::class, 'index']);
     Route::get('/sessions/{id}', [SessionController::class, 'show']);
     Route::post('/sessions', [SessionController::class, 'store']);
-    Route::post('/sessions/{id}/accept', [SessionController::class, 'accept']);
-    Route::post('/sessions/{id}/decline', [SessionController::class, 'decline']);
-    Route::post('/sessions/{id}/reschedule', [SessionController::class, 'reschedule']);
-    Route::post('/sessions/{id}/complete', [SessionController::class, 'complete']);
+    Route::post('/sessions/{id}/confirm', [SessionController::class, 'confirm']);
     Route::put('/sessions/{id}', [SessionController::class, 'update']);
     Route::delete('/sessions/{id}', [SessionController::class, 'cancel']);
 
     // Announcements (read-only for users)
     Route::get('/announcements', [AnnouncementController::class, 'index']);
     Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
+
+    // Announcements (admin CRUD)
+    Route::get('/admin/announcements', [AnnouncementController::class, 'adminIndex']);
+    Route::post('/admin/announcements', [AnnouncementController::class, 'adminStore']);
+    Route::put('/admin/announcements/{id}', [AnnouncementController::class, 'adminUpdate']);
+    Route::delete('/admin/announcements/{id}', [AnnouncementController::class, 'adminDestroy']);
+
+    // Admin — stats, users, tutors, complaints
+    Route::get('/admin/stats', [AdminController::class, 'stats']);
+    Route::get('/admin/users', [AdminController::class, 'users']);
+    Route::post('/admin/users/{id}/suspend', [AdminController::class, 'suspendUser']);
+    Route::post('/admin/users/{id}/unsuspend', [AdminController::class, 'unsuspendUser']);
+    Route::get('/admin/tutors/pending', [TutorController::class, 'adminPending']);
+    Route::post('/admin/tutors/{id}/approve', [TutorController::class, 'adminApprove']);
+    Route::post('/admin/tutors/{id}/reject', [TutorController::class, 'adminReject']);
+    Route::get('/admin/complaints', [ComplaintController::class, 'adminIndex']);
+    Route::put('/admin/complaints/{id}', [ComplaintController::class, 'adminUpdate']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -132,6 +149,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Chat
     Route::get('/chat/conversations', [ChatController::class, 'conversations']);
+    Route::get('/chat/unread-count', [ChatController::class, 'unreadCount']);
     Route::get('/chat/{partnerId}/messages', [ChatController::class, 'messages']);
     Route::post('/chat/send', [ChatController::class, 'send']);
     Route::post('/chat/send-file', [ChatController::class, 'sendFile']);

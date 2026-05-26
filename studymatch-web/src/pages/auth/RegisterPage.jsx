@@ -75,6 +75,7 @@ export default function RegisterPage() {
   const [formData,setFormData]=useState({ name:'',email:'',password:'',password_confirmation:'' })
   const [showPw,setShowPw]=useState(false); const [showCpw,setShowCpw]=useState(false)
   const [error,setError]=useState(''); const [loading,setLoading]=useState(false)
+  const [registered,setRegistered]=useState(false); const [registeredEmail,setRegisteredEmail]=useState('')
   const [otp,setOtp]=useState(['','','','','','']); const [resendTimer,setResendTimer]=useState(0)
   const otpRefs=useRef([])
   const [bio,setBio]=useState(''); const [course,setCourse]=useState(''); const [yearLevel,setYearLevel]=useState('')
@@ -101,7 +102,7 @@ export default function RegisterPage() {
 
   const handleNext=async()=>{
     setError('')
-    if(step===1){ const err=v1();if(err){setError(err);return};setLoading(true);try{const res=await register({...formData,role:role==='tutor'?'tutor':'student'});saveAuth(res.data.token,res.data.user);setResendTimer(60);setStep(2)}catch(e){setError(e.response?.data?.message||'Registration failed.')}finally{setLoading(false)};return }
+    if(step===1){ const err=v1();if(err){setError(err);return};setLoading(true);if(registered&&registeredEmail===formData.email){try{await sendOtp();setResendTimer(60);setStep(2)}catch(e){setError(e.response?.data?.message||'Failed to resend verification code.')}finally{setLoading(false)};return};try{const res=await register({...formData,role:role==='tutor'?'tutor':'student'});saveAuth(res.data.token,res.data.user);setRegistered(true);setRegisteredEmail(formData.email);setResendTimer(60);setStep(2)}catch(e){setError(e.response?.data?.message||'Registration failed.')}finally{setLoading(false)};return }
     if(step===2){ const code=otp.join('');if(code.length<6){setError('Please enter the 6-digit code.');return};setLoading(true);try{await verifyOtp(code);setStep(3)}catch(e){setError(e.response?.data?.message||'Invalid or expired code.')}finally{setLoading(false)};return }
     setStep(s=>s+1)
   }

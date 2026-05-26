@@ -533,17 +533,18 @@ class ApiService {
           .replace(queryParameters: params.isEmpty ? null : params);
       final res = await http.get(uri, headers: _jsonHeaders);
       final data = jsonDecode(res.body);
-      if (data is Map && data['success'] == true && data['data'] != null) {
-        return (data['data'] as List)
-            .map((r) => DBResource.fromJson(r as Map<String, dynamic>))
-            .toList();
+      List<dynamic> rawList = [];
+      if (data is Map) {
+        // Handles both {success:true, data:[...]} and Laravel paginator {data:[...]}
+        if (data['data'] is List) {
+          rawList = data['data'] as List;
+        }
+      } else if (data is List) {
+        rawList = data;
       }
-      if (data is List) {
-        return data
-            .map((r) => DBResource.fromJson(r as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
+      return rawList
+          .map((r) => DBResource.fromJson(r as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       return [];
     }

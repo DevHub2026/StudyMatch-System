@@ -13,7 +13,7 @@ class Session extends Model
 
     protected $fillable = [
         'tutor_request_id', 'tutor_id', 'student_id', 'subject_id',
-        'scheduled_at', 'duration_minutes', 'session_type', 'status',
+        'scheduled_at', 'duration_minutes', 'status', 'session_type',
         'notes', 'session_link', 'cancelled_at', 'completed_at',
     ];
 
