@@ -89,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Subjects
     Route::get('/subjects', [SubjectController::class, 'index']);
+    Route::get('/study-overview', [SubjectController::class, 'studyOverview']);
     Route::get('/weak-subjects', [SubjectController::class, 'getWeakSubjects']);
     Route::post('/weak-subjects', [SubjectController::class, 'addWeakSubject']);
     Route::put('/weak-subjects/{id}', [SubjectController::class, 'updateWeakSubject']);
@@ -155,7 +156,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/send-file', [ChatController::class, 'sendFile']);
 
     // Library
+    Route::get('/library/stats', [LibraryController::class, 'stats']);
+    Route::get('/library/folders', [LibraryController::class, 'foldersIndex']);
+    Route::post('/library/folders', [LibraryController::class, 'foldersStore']);
+    Route::get('/library/share-targets', [LibraryController::class, 'shareTargets']);
     Route::get('/library', [LibraryController::class, 'index']);
     Route::post('/library', [LibraryController::class, 'store']);
+    Route::get('/library/{id}/preview', [LibraryController::class, 'preview']);
     Route::get('/library/{id}/download', [LibraryController::class, 'download']);
+    Route::post('/library/{id}/share', [LibraryController::class, 'share']);
+    Route::post('/library/{id}/favorite', [LibraryController::class, 'toggleFavorite']);
+    Route::delete('/library/{id}', [LibraryController::class, 'destroy']);
 });

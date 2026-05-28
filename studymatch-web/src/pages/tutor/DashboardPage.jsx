@@ -4,7 +4,8 @@ import { getUser } from '../../store/authStore'
 import { getIncomingRequests, acceptMatchRequest, declineMatchRequest } from '../../api/matchRequests'
 import { browseStudents } from '../../api/students'
 import { getProfile } from '../../api/profile'
-import { requestSessionWithStudent } from '../../api/sessions'
+import { getSessions } from '../../api/sessions'
+import { isUpcomingTabSession, formatSessionDate, effectiveStatus, STATUS_STYLES } from '../../utils/sessionUtils'
 import {
   getSavedStudentIds, setSavedStudentIds, normalizeStudentFromMatchRequest,
   filterStudentsBySearch,
@@ -130,89 +131,9 @@ function DetailRow({ icon: Icon, label, value }) {
   )
 }
 
-function RequestSessionModal({ student, onClose, onSuccess }) {
-  const [form, setForm] = useState({
-    scheduled_at: '',
-    duration_minutes: '60',
-    session_type: 'online',
-    notes: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const name = student?.name || 'Student'
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.scheduled_at) { setError('Pick a date and time.'); return }
-    setSaving(true)
-    setError('')
-    try {
-      await requestSessionWithStudent({
-        student_id: student.id,
-        scheduled_at: new Date(form.scheduled_at).toISOString(),
-        duration_minutes: parseInt(form.duration_minutes, 10) || 60,
-        session_type: form.session_type,
-        notes: form.notes || `Session request for ${name}`,
-      })
-      onSuccess()
-      onClose()
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Could not send session request.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const inputStyle = {
-    width: '100%', padding: '10px 12px', border: '1.5px solid #E5E7EB',
-    borderRadius: 10, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box',
-  }
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }} onClick={onClose}>
-      <form onClick={e => e.stopPropagation()} onSubmit={handleSubmit} style={{
-        background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 420,
-        boxShadow: '0 20px 50px rgba(0,0,0,.15)',
-      }}>
-        <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>Request Session</h3>
-        <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 18 }}>with {name}</p>
-        {error && <div style={{ fontSize: 13, color: '#EF4444', marginBottom: 12 }}>{error}</div>}
-        <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Date & time</label>
-        <input type="datetime-local" required value={form.scheduled_at}
-          onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))}
-          style={{ ...inputStyle, marginBottom: 14 }} />
-        <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Format</label>
-        <select value={form.session_type} onChange={e => setForm(p => ({ ...p, session_type: e.target.value }))}
-          style={{ ...inputStyle, marginBottom: 14 }}>
-          <option value="online">Online</option>
-          <option value="in_person">Face-to-face</option>
-        </select>
-        <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Notes (optional)</label>
-        <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-          rows={2} style={{ ...inputStyle, marginBottom: 18, resize: 'vertical' }} />
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onClose} style={{
-            padding: '10px 18px', background: 'white', border: '1px solid #E5E7EB',
-            borderRadius: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-          }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{
-            padding: '10px 20px', background: '#7C3AED', color: 'white', border: 'none',
-            borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          }}>
-            {saving ? 'Sending…' : 'Send Request'}
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
 /* ─── student card ───────────────────────────────────────────── */
 
-function StudentCard({ student, index, saved, onSave, onConnect, onRequestSession, compact }) {
+function StudentCard({ student, index, saved, onSave, onConnect }) {
   const color    = getColor(index)
   const name     = student.name || student.user?.name || 'Student'
   const field    = student.department || student.program || student.course || ''
@@ -232,15 +153,15 @@ function StudentCard({ student, index, saved, onSave, onConnect, onRequestSessio
 
   return (
     <div style={{
-      display: 'flex', alignItems: compact ? 'flex-start' : 'center', gap: 20,
-      padding: compact ? '18px 20px' : '20px 24px', borderBottom: '1px solid #F8F9FB',
-      transition: 'background .12s', flexWrap: compact ? 'wrap' : 'nowrap',
+      display: 'flex', alignItems: 'flex-start', gap: 20,
+      padding: '20px 24px', borderBottom: '1px solid #F8F9FB',
+      transition: 'background .12s', flexWrap: 'nowrap',
     }}
       onMouseEnter={e => e.currentTarget.style.background = '#FAFAFA'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        <Avatar name={name} color={color} size={compact ? 52 : 60} online={student.is_online} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, width: 72 }}>
+        <Avatar name={name} color={color} size={60} online={student.is_online} />
         {matchPct != null && (
           <>
             <span style={{ fontSize: 13, fontWeight: 800, color: '#10B981', background: '#F0FDF4', borderRadius: 20, padding: '2px 8px' }}>
@@ -258,7 +179,7 @@ function StudentCard({ student, index, saved, onSave, onConnect, onRequestSessio
         )}
       </div>
 
-      <div style={{ width: compact ? '100%' : 200, flex: compact ? '1 1 180px' : undefined, flexShrink: compact ? undefined : 0, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 3 }}>{name}</div>
         <div style={{ fontSize: 12.5, color: '#9CA3AF', marginBottom: 8 }}>
           {field}{year ? ` · ${year}` : ''}
@@ -276,21 +197,11 @@ function StudentCard({ student, index, saved, onSave, onConnect, onRequestSessio
         <DetailRow icon={MapPin} label="Format" value={sessionPref} />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, alignItems: 'flex-end', marginLeft: compact ? 'auto' : 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0, alignItems: 'flex-end' }}>
         <button type="button" onClick={() => onSave(student.id)} title={saved ? 'Remove bookmark' : 'Save student'}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <Bookmark size={16} color={saved ? '#7C3AED' : '#D1D5DB'} fill={saved ? '#7C3AED' : 'none'} />
         </button>
-        {onRequestSession && (
-          <button type="button" onClick={() => onRequestSession(student)} style={{
-            padding: '8px 18px', background: '#7C3AED', border: 'none',
-            borderRadius: 9, color: 'white', fontSize: 13, fontWeight: 600,
-            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            <Calendar size={14} /> Request Session
-          </button>
-        )}
         <button type="button" onClick={onConnect} style={{
           padding: '8px 18px', background: 'white',
           border: '1.5px solid #7C3AED', borderRadius: 9,
@@ -320,14 +231,13 @@ export default function TutorDashboardPage() {
   const [requests,  setRequests]  = useState([])
   const [accepted,  setAccepted]  = useState([])
   const [weekStats, setWeekStats] = useState({ matches: 0, sessions: 0, messages: 0 })
+  const [upcomingSessions, setUpcomingSessions] = useState([])
   const [loading,   setLoading]   = useState(true)
 
   const [recommendations, setRecommendations] = useState([])
   const [searching,       setSearching]       = useState(false)
   const [hasSearched,     setHasSearched]     = useState(false)
   const [searchError,     setSearchError]     = useState('')
-  const [sessionTarget,   setSessionTarget]   = useState(null)
-  const [sessionSent,     setSessionSent]     = useState(null)
   const [tutorSubjects,   setTutorSubjects]   = useState([])
 
   const firstName = user?.name?.split(' ')[0] || 'Tutor'
@@ -358,9 +268,15 @@ export default function TutorDashboardPage() {
     const load = async () => {
       setLoading(true)
       try {
+<<<<<<< HEAD
         const [matchRes, profileRes] = await Promise.all([
           getIncomingRequests(),
+=======
+        const [matchRes, profileRes, sessionsRes] = await Promise.all([
+          getMatchRequests(),
+>>>>>>> 9c4a0e7 (jeoffrey final)
           getProfile().catch(() => null),
+          getSessions().catch(() => null),
         ])
         // getIncomingRequests() returns raw TutorRequest objects (all statuses)
         const incoming = matchRes?.data?.data || matchRes?.data || []
@@ -369,6 +285,19 @@ export default function TutorDashboardPage() {
         setRequests(pending)
         setAccepted(acc)
         setWeekStats(p => ({ ...p, matches: acc.length }))
+
+        const sessionsList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
+        const now = new Date()
+        const upcoming = sessionsList.filter(s => isUpcomingTabSession(s, now))
+        setUpcomingSessions(upcoming)
+        const weekEnd = new Date(now)
+        weekEnd.setDate(weekEnd.getDate() + 7)
+        const thisWeekCount = upcoming.filter(s => {
+          if (!s.scheduled_at) return false
+          const d = new Date(s.scheduled_at)
+          return d >= now && d < weekEnd
+        }).length
+        setWeekStats(p => ({ ...p, sessions: thisWeekCount }))
 
         const tutor = profileRes?.user?.tutor || profileRes?.tutor
         const names = (tutor?.strong_subjects || tutor?.strongSubjects || [])
@@ -525,15 +454,6 @@ export default function TutorDashboardPage() {
             </div>
           </div>
 
-          {sessionSent && (
-            <div style={{
-              background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12,
-              padding: '12px 16px', fontSize: 13.5, color: '#166534', fontWeight: 600,
-            }}>
-              Session request sent to {sessionSent}. They will see it in Study Sessions.
-            </div>
-          )}
-
           {hasSearched && (
             <div>
               {!searching && !searchError && (
@@ -584,11 +504,9 @@ export default function TutorDashboardPage() {
                         key={s.id || i}
                         student={s}
                         index={i}
-                        compact
                         saved={savedIds.includes(Number(s.id))}
                         onSave={toggleSave}
                         onConnect={() => navigate(`/tutor/messages?partner=${s.user_id || s.user?.id}`)}
-                        onRequestSession={setSessionTarget}
                       />
                     ))}
                   </div>
@@ -609,7 +527,6 @@ export default function TutorDashboardPage() {
                         saved={savedIds.includes(Number(s.id))}
                         onSave={toggleSave}
                         onConnect={() => navigate(`/tutor/messages?partner=${s.user_id || s.user?.id}`)}
-                        onRequestSession={setSessionTarget}
                       />
                     ))}
                   </div>
@@ -668,7 +585,6 @@ export default function TutorDashboardPage() {
                       saved={savedIds.includes(Number(base.id))}
                       onSave={toggleSave}
                       onConnect={() => navigate(`/tutor/messages?partner=${base.user_id}`)}
-                      onRequestSession={setSessionTarget}
                     />
                   )
                 })
@@ -745,16 +661,47 @@ export default function TutorDashboardPage() {
             )}
           </div>
 
-          {/* Upcoming Sessions — empty state */}
+          {/* Upcoming Sessions */}
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '18px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <span style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Upcoming Sessions</span>
               <Link to="/tutor/study-sessions" style={{ color: '#7C3AED', fontSize: 12.5, fontWeight: 600, textDecoration: 'none' }}>View all</Link>
             </div>
-            <div style={{ padding: '16px 0', textAlign: 'center' }}>
-              <Calendar size={24} color="#DDD6FE" style={{ margin: '0 auto 8px' }} />
-              <div style={{ fontSize: 13, color: '#9CA3AF' }}>No upcoming sessions</div>
-            </div>
+            {upcomingSessions.length === 0 ? (
+              <div style={{ padding: '16px 0', textAlign: 'center' }}>
+                <Calendar size={24} color="#DDD6FE" style={{ margin: '0 auto 8px' }} />
+                <div style={{ fontSize: 13, color: '#9CA3AF' }}>No upcoming sessions</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {upcomingSessions.slice(0, 5).map((s, i) => {
+                  const name = s.student?.user?.name || 'Student'
+                  const statusKey = effectiveStatus(s)
+                  const style = STATUS_STYLES[statusKey] || STATUS_STYLES.pending
+                  return (
+                    <Link
+                      key={s.id}
+                      to="/tutor/study-sessions"
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <Avatar name={name} color={getColor(i)} size={40} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: '#1E1B4B' }}>{name}</div>
+                        <div style={{ fontSize: 11.5, color: '#9CA3AF', marginTop: 1 }}>
+                          {s.subject?.name || 'Study Session'} · {formatSessionDate(s.scheduled_at)}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                        background: style.bg, color: style.text, border: `1px solid ${style.border}`, flexShrink: 0,
+                      }}>
+                        {style.label}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* This Week Overview */}
@@ -796,13 +743,6 @@ export default function TutorDashboardPage() {
         </div>
       </div>
 
-      {sessionTarget && (
-        <RequestSessionModal
-          student={sessionTarget}
-          onClose={() => setSessionTarget(null)}
-          onSuccess={() => setSessionSent(sessionTarget.name || 'student')}
-        />
-      )}
     </>
   )
 }

@@ -1,129 +1,203 @@
-import { useState } from 'react'
-import { Plus, Trophy, BookOpen } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Plus, Trophy, BookOpen, Loader2, RefreshCw, Calendar,
+  ChevronRight, Search, X,
+} from 'lucide-react'
 import { getUser } from '../../store/authStore'
+import {
+  getStudyOverview, getSubjects, addWeakSubject, removeWeakSubject,
+} from '../../api/subjects'
+import {
+  DonutChart, InactiveAlerts, ProgressBar,
+} from '../../components/student/StudyOverviewWidgets'
+import {
+  subjectColor, subjectBg, subjectInitials, formatOverviewDate,
+} from '../../utils/studyOverviewUtils'
 
-/* ─── donut chart (empty state — 0%) ────────────────────────── */
+const REFRESH_MS = 45000
 
-function DonutChart() {
-  const r = 54, cx = 70, cy = 70
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-      <svg width={140} height={140}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E5E7EB" strokeWidth={14} />
-        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="20" fontWeight="800" fill="#1E1B4B" fontFamily="DM Sans, sans-serif">0%</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="11" fill="#9CA3AF" fontFamily="DM Sans, sans-serif">Overall</text>
-      </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {[
-          { label: 'Completed',   pct: '0%', color: '#7C3AED' },
-          { label: 'In Progress', pct: '0%', color: '#A78BFA' },
-          { label: 'Not Started', pct: '0%', color: '#E5E7EB' },
-        ].map(({ label, pct, color }) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, color: '#374151', fontWeight: 500 }}>{label}</span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1E1B4B', marginLeft: 4 }}>{pct}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+function AddSubjectModal({ catalog, onClose, onAdd, adding }) {
+  const [query, setQuery] = useState('')
+  const [error, setError] = useState('')
 
-/* ─── add subject modal ──────────────────────────────────────── */
+  const filtered = (catalog || []).filter(s => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return (s.name || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q)
+  }).slice(0, 12)
 
-function AddSubjectModal({ onClose, onAdd }) {
-  const [name,     setName]     = useState('')
-  const [category, setCategory] = useState('')
-
-  const handleAdd = () => {
-    if (!name.trim()) return
-    onAdd({ name: name.trim(), category: category.trim() || 'General' })
-    onClose()
+  const handlePick = async (subject) => {
+    setError('')
+    try {
+      await onAdd({
+        subject_id: subject.id,
+        difficulty_level: 'moderate',
+      })
+      onClose()
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not add subject. It may already be on your list.')
+    }
   }
 
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 100 }} onClick={onClose} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'white', borderRadius: 20, padding: 32, zIndex: 101, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,.15)', fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <span style={{ fontWeight: 800, fontSize: 18, color: '#1E1B4B' }}>Add New Subject</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 22, lineHeight: 1 }}>×</button>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.45)', zIndex: 100 }} onClick={onClose} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        background: 'white', borderRadius: 20, padding: 28, zIndex: 101, width: 'min(440px, 92vw)',
+        boxShadow: '0 20px 60px rgba(0,0,0,.18)', fontFamily: "'DM Sans', sans-serif",
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span style={{ fontWeight: 800, fontSize: 18, color: '#1E1B4B' }}>Add Subject</span>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}>
+            <X size={20} />
+          </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {[
-            { label: 'Subject Name', value: name,     set: setName,     ph: 'e.g. Calculus, Physics...' },
-            { label: 'Category',     value: category, set: setCategory, ph: 'e.g. Mathematics, Science...' },
-          ].map(({ label, value, set, ph }) => (
-            <div key={label}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>{label}</label>
-              <input value={value} onChange={e => set(e.target.value)} placeholder={ph}
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 13.5, color: '#1E1B4B', outline: 'none', fontFamily: 'inherit' }}
-                onFocus={e => e.currentTarget.style.borderColor = '#7C3AED'}
-                onBlur={e => e.currentTarget.style.borderColor = '#E5E7EB'}
-              />
-            </div>
+        <div style={{ position: 'relative', marginBottom: 14 }}>
+          <Search size={15} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search subjects..."
+            style={{
+              width: '100%', padding: '10px 14px 10px 36px',
+              border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 13.5,
+              outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+        {error && (
+          <div style={{ fontSize: 12.5, color: '#B91C1C', background: '#FEF2F2', padding: '8px 12px', borderRadius: 8, marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+        <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>No matching subjects</div>
+          ) : filtered.map(s => (
+            <button
+              key={s.id}
+              type="button"
+              disabled={adding}
+              onClick={() => handlePick(s)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 14px', border: '1px solid #F0F0F4', borderRadius: 10,
+                background: 'white', cursor: adding ? 'wait' : 'pointer', fontFamily: 'inherit',
+                textAlign: 'left', transition: 'background .12s',
+              }}
+              onMouseEnter={e => { if (!adding) e.currentTarget.style.background = '#F8F9FB' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'white' }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B' }}>{s.name}</div>
+                <div style={{ fontSize: 11.5, color: '#9CA3AF' }}>{s.code}</div>
+              </div>
+              <Plus size={16} color="#7C3AED" />
+            </button>
           ))}
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1.5px solid #E5E7EB', borderRadius: 10, background: 'white', color: '#374151', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button onClick={handleAdd} style={{ flex: 1, padding: 11, border: 'none', borderRadius: 10, background: '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Add Subject</button>
         </div>
       </div>
     </>
   )
 }
 
-/* ─── subject card ───────────────────────────────────────────── */
-
-const COLORS = ['#7C3AED','#6366F1','#10B981','#F59E0B','#EF4444','#EC4899']
-const BGS    = ['#F3F0FF','#EEF2FF','#F0FDF4','#FFFBEB','#FEF2F2','#FDF2F8']
-
-function SubjectCard({ subject, index, onRemove }) {
-  const color = COLORS[index % COLORS.length]
-  const bg    = BGS[index % BGS.length]
-  const initials = subject.name.slice(0, 2).toUpperCase()
+function SubjectCard({ subject, index, onRemove, removing }) {
+  const color = subjectColor(index)
+  const bg = subjectBg(index)
+  const next = subject.next_session
 
   return (
-    <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 18, overflow: 'hidden' }}>
-      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
-        {/* Icon */}
-        <div style={{ width: 60, height: 60, borderRadius: 16, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800, fontSize: 18, color }}>
-          {initials}
+    <div style={{
+      background: 'white', border: '1px solid #F0F0F4', borderRadius: 18,
+      overflow: 'hidden', transition: 'box-shadow .18s',
+    }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(124,58,237,.08)' }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none' }}
+    >
+      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+        <div style={{
+          width: 60, height: 60, borderRadius: 16, background: bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, fontWeight: 800, fontSize: 18, color,
+        }}>
+          {subjectInitials(subject.name)}
         </div>
 
-        {/* Name + progress */}
-        <div style={{ width: 200, flexShrink: 0 }}>
+        <div style={{ minWidth: 180, flex: '1 1 180px' }}>
           <div style={{ fontWeight: 700, fontSize: 17, color: '#1E1B4B', marginBottom: 2 }}>{subject.name}</div>
           <div style={{ fontSize: 12.5, color: '#9CA3AF', marginBottom: 10 }}>{subject.category}</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 5 }}>0% Complete</div>
-          <div style={{ background: '#E5E7EB', borderRadius: 10, height: 7, overflow: 'hidden', width: 160 }}>
-            <div style={{ width: '0%', height: '100%', background: color, borderRadius: 10 }} />
+          <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 5 }}>
+            {subject.progress_percent}% Complete
+          </div>
+          <ProgressBar percent={subject.progress_percent} color={color} width={160} />
+          <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: 11.5, color: '#6B7280' }}>
+            <span>{subject.completed_sessions} completed</span>
+            <span>{subject.upcoming_sessions} upcoming</span>
+            {subject.ongoing_sessions > 0 && (
+              <span style={{ color: '#7C3AED', fontWeight: 600 }}>{subject.ongoing_sessions} ongoing</span>
+            )}
           </div>
         </div>
 
-        <div style={{ width: 1, height: 56, background: '#F0F0F4', flexShrink: 0 }} />
-
-        {/* No session yet */}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Next Session</div>
-          <div style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>No sessions scheduled yet</div>
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>
+            Next Session
+          </div>
+          {next ? (
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#1E1B4B' }}>
+                {next.tutor_name ? `with ${next.tutor_name}` : 'Scheduled'}
+              </div>
+              <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Calendar size={12} />
+                {formatOverviewDate(next.scheduled_at)}
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>
+              No sessions scheduled —{' '}
+              <Link to="/student/find-tutors" style={{ color: '#7C3AED', fontWeight: 600 }}>find a tutor</Link>
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-          <button onClick={() => onRemove(subject.id)} style={{ padding: '8px 16px', border: '1px solid #FECACA', borderRadius: 9, background: '#FEF2F2', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <Link
+            to="/student/study-sessions"
+            style={{
+              padding: '8px 16px', border: '1px solid #DDD6FE', borderRadius: 9,
+              background: '#F3F0FF', color: '#7C3AED', fontSize: 13, fontWeight: 600,
+              textDecoration: 'none', fontFamily: 'inherit',
+            }}
+          >
+            Sessions
+          </Link>
+          <button
+            type="button"
+            disabled={removing}
+            onClick={() => onRemove(subject.id)}
+            style={{
+              padding: '8px 16px', border: '1px solid #FECACA', borderRadius: 9,
+              background: '#FEF2F2', color: '#EF4444', fontSize: 13, fontWeight: 600,
+              cursor: removing ? 'wait' : 'pointer', fontFamily: 'inherit',
+            }}
+          >
             Remove
           </button>
         </div>
       </div>
 
-      {/* Bottom detail row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', background: '#FAFAFA', borderTop: '1px solid #F0F0F4' }}>
-        {['Upcoming Assignments', 'Next Session', 'Resources'].map((section, i) => (
-          <div key={section} style={{ padding: '16px 20px', borderRight: i < 2 ? '1px solid #F0F0F4' : 'none' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#1E1B4B', marginBottom: 10 }}>{section}</div>
-            <div style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' }}>None yet</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', background: '#FAFAFA', borderTop: '1px solid #F0F0F4' }}>
+        {[
+          { title: 'Completed', value: subject.completed_sessions },
+          { title: 'Upcoming', value: subject.upcoming_sessions },
+          { title: 'Progress', value: `${subject.progress_percent}%` },
+        ].map(({ title, value }, i) => (
+          <div key={title} style={{ padding: '16px 20px', borderRight: i < 2 ? '1px solid #F0F0F4' : 'none' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#1E1B4B', marginBottom: 6 }}>{title}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#7C3AED' }}>{value}</div>
           </div>
         ))}
       </div>
@@ -131,40 +205,161 @@ function SubjectCard({ subject, index, onRemove }) {
   )
 }
 
-/* ─── main page ──────────────────────────────────────────────── */
-
 export default function MySubjectsPage() {
   const user = getUser()
-  const [subjects,      setSubjects]      = useState([])
-  const [showAddModal,  setShowAddModal]  = useState(false)
+  const [overview, setOverview] = useState(null)
+  const [catalog, setCatalog] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [removingId, setRemovingId] = useState(null)
+  const [error, setError] = useState('')
 
-  const handleAdd    = (data) => setSubjects(p => [...p, { ...data, id: Date.now() }])
-  const handleRemove = (id)  => setSubjects(p => p.filter(s => s.id !== id))
+  const loadOverview = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    setError('')
+    try {
+      const [data, subjectsList] = await Promise.all([
+        getStudyOverview(),
+        getSubjects().catch(() => []),
+      ])
+      setOverview(data)
+      const cat = Array.isArray(subjectsList) ? subjectsList : subjectsList?.data || []
+      setCatalog(cat)
+    } catch {
+      setError('Failed to load study overview. Please try again.')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadOverview()
+    const interval = setInterval(() => loadOverview(true), REFRESH_MS)
+    const onFocus = () => loadOverview(true)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [loadOverview])
+
+  const handleAdd = async (payload) => {
+    setAdding(true)
+    try {
+      await addWeakSubject(payload)
+      await loadOverview(true)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleRemove = async (id) => {
+    setRemovingId(id)
+    try {
+      await removeWeakSubject(id)
+      await loadOverview(true)
+    } catch {
+      setError('Could not remove subject.')
+    } finally {
+      setRemovingId(null)
+    }
+  }
 
   const firstName = user?.name?.split(' ')[0] || 'Student'
+  const subjects = overview?.subjects || []
+  const analytics = overview?.analytics || {}
+  const upcoming = overview?.upcoming_sessions || []
+  const alerts = overview?.inactive_alerts || []
+  const streak = overview?.streak || { current_days: 0, week_days: [] }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh', color: '#6B7280', fontFamily: "'DM Sans', sans-serif", gap: 10 }}>
+        <Loader2 size={22} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+        Loading study overview...
+      </div>
+    )
+  }
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @keyframes spin { to { transform: rotate(360deg); } }
         .ms-wrap * { box-sizing: border-box; }
         .ms-wrap { font-family: 'DM Sans', sans-serif; color: #1E1B4B; display: flex; gap: 24px; align-items: flex-start; }
         .ms-main { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-        .ms-right { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
-        .ms-add-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; background: #7C3AED; color: white; border: none; border-radius: 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background .15s; }
-        .ms-add-btn:hover { background: #6D28D9; }
+        .ms-right { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+        .ms-add-btn {
+          display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+          background: #7C3AED; color: white; border: none; border-radius: 10px;
+          font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+          transition: background .15s, transform .15s;
+        }
+        .ms-add-btn:hover { background: #6D28D9; transform: translateY(-1px); }
+        .ms-refresh-btn {
+          display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px;
+          background: white; color: #6B7280; border: 1px solid #E5E7EB; border-radius: 10px;
+          font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+        @media (max-width: 960px) {
+          .ms-wrap { flex-direction: column; }
+          .ms-right { width: 100%; }
+        }
       `}</style>
 
       <div className="ms-wrap">
         <div className="ms-main">
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>My Subjects</h1>
-              <p style={{ fontSize: 13, color: '#9CA3AF' }}>Manage your subjects, assignments, and study materials all in one place.</p>
+              <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Study Overview</h1>
+              <p style={{ fontSize: 13, color: '#9CA3AF' }}>
+                Track subjects, session progress, and stay organized across StudyMatch.
+              </p>
             </div>
-            <button className="ms-add-btn" onClick={() => setShowAddModal(true)}>
-              <Plus size={15} /> Add Subject
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" className="ms-refresh-btn" onClick={() => loadOverview(true)} disabled={refreshing}>
+                <RefreshCw size={14} style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined} />
+                Refresh
+              </button>
+              <button type="button" className="ms-add-btn" onClick={() => setShowAddModal(true)}>
+                <Plus size={15} /> Add Subject
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, color: '#B91C1C', fontSize: 13 }}>
+              {error}
+              <button type="button" onClick={() => loadOverview()} style={{ marginLeft: 12, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED' }}>
+                Retry
+              </button>
+            </div>
+          )}
+
+          <InactiveAlerts alerts={alerts} />
+
+          {/* Analytics strip */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: 12,
+          }}>
+            {[
+              { label: 'Subjects', value: analytics.total_subjects ?? 0 },
+              { label: 'Completed sessions', value: analytics.total_completed_sessions ?? 0 },
+              { label: 'Upcoming', value: analytics.total_upcoming_sessions ?? 0 },
+              { label: 'Overall progress', value: `${analytics.overall_progress_percent ?? 0}%` },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#7C3AED' }}>{value}</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{label}</div>
+              </div>
+            ))}
           </div>
 
           {subjects.length === 0 ? (
@@ -173,43 +368,94 @@ export default function MySubjectsPage() {
                 <BookOpen size={24} color="#7C3AED" />
               </div>
               <div style={{ fontWeight: 700, fontSize: 16, color: '#1E1B4B', marginBottom: 8 }}>No subjects added yet</div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 20 }}>Add your subjects to track your progress and upcoming sessions.</div>
-              <button className="ms-add-btn" onClick={() => setShowAddModal(true)}>
+              <div style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 20, maxWidth: 360, margin: '0 auto 20px' }}>
+                Add subjects you need help with to track progress, sessions, and study reminders.
+              </div>
+              <button type="button" className="ms-add-btn" onClick={() => setShowAddModal(true)}>
                 <Plus size={15} /> Add Your First Subject
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {subjects.map((s, i) => (
-                <SubjectCard key={s.id} subject={s} index={i} onRemove={handleRemove} />
+                <SubjectCard
+                  key={s.id}
+                  subject={s}
+                  index={i}
+                  onRemove={handleRemove}
+                  removing={removingId === s.id}
+                />
               ))}
             </div>
           )}
         </div>
 
-        {/* ── Right panel ── */}
         <div className="ms-right">
-
-          {/* Overall Study Progress */}
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: 20 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 16 }}>Overall Study Progress</div>
-            <DonutChart />
+            <DonutChart analytics={analytics} />
           </div>
 
-          {/* Upcoming Sessions */}
+          <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 8 }}>Study Streak</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#1E1B4B', marginBottom: 12 }}>
+              {streak.current_days} <span style={{ fontSize: 14, fontWeight: 500, color: '#9CA3AF' }}>days</span>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(streak.week_days || []).map((d) => (
+                <div key={d.date} style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%', margin: '0 auto',
+                    background: d.active ? '#7C3AED' : '#F3F4F6',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {d.active && <span style={{ fontSize: 10, color: 'white' }}>✓</span>}
+                  </div>
+                  <div style={{ fontSize: 9.5, color: '#9CA3AF', marginTop: 4 }}>{d.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <span style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Upcoming Sessions</span>
+              <Link to="/student/schedule" style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600, textDecoration: 'none' }}>Schedule</Link>
             </div>
-            <div style={{ padding: '16px 0', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: '#9CA3AF' }}>No upcoming sessions</div>
-            </div>
-            <button style={{ width: '100%', marginTop: 8, padding: '10px', background: 'transparent', border: '1px solid #E5E7EB', borderRadius: 10, color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {upcoming.length === 0 ? (
+              <div style={{ padding: '16px 0', textAlign: 'center', fontSize: 13, color: '#9CA3AF' }}>No upcoming sessions</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {upcoming.slice(0, 5).map(s => (
+                  <Link
+                    key={s.id}
+                    to="/student/study-sessions"
+                    style={{
+                      padding: '10px 12px', borderRadius: 10, border: '1px solid #F0F0F4',
+                      textDecoration: 'none', color: 'inherit', transition: 'background .12s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#FAFAFA' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1E1B4B' }}>{s.subject_name || 'Session'}</div>
+                    <div style={{ fontSize: 11.5, color: '#9CA3AF', marginTop: 2 }}>{s.tutor_name}</div>
+                    <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 4 }}>{formatOverviewDate(s.scheduled_at)}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <Link
+              to="/student/study-sessions"
+              style={{
+                display: 'block', width: '100%', marginTop: 12, padding: '10px', textAlign: 'center',
+                background: 'transparent', border: '1px solid #E5E7EB', borderRadius: 10,
+                color: '#374151', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+              }}
+            >
               View All Sessions
-            </button>
+            </Link>
           </div>
 
-          {/* Motivational card */}
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -217,17 +463,35 @@ export default function MySubjectsPage() {
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', marginBottom: 4 }}>Keep it up, {firstName}!</div>
-                <div style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.5 }}>Add your subjects and start tracking your progress to achieve your goals!</div>
+                <div style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.5 }}>
+                  {analytics.overall_progress_percent >= 100
+                    ? 'Amazing — you have subjects at full progress. Keep scheduling sessions!'
+                    : 'Complete sessions to boost your progress across all subjects.'}
+                </div>
               </div>
             </div>
-            <button style={{ width: '100%', padding: '10px', background: '#F3F0FF', border: 'none', borderRadius: 10, color: '#7C3AED', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              View Achievements
-            </button>
+            <Link
+              to="/student/study-sessions"
+              style={{
+                display: 'block', width: '100%', padding: '10px', textAlign: 'center',
+                background: '#F3F0FF', border: 'none', borderRadius: 10,
+                color: '#7C3AED', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+              }}
+            >
+              View Study Sessions
+            </Link>
           </div>
         </div>
       </div>
 
-      {showAddModal && <AddSubjectModal onClose={() => setShowAddModal(false)} onAdd={handleAdd} />}
+      {showAddModal && (
+        <AddSubjectModal
+          catalog={catalog}
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAdd}
+          adding={adding}
+        />
+      )}
     </>
   )
 }

@@ -37,6 +37,19 @@ const QUICK_ACTIONS = [
   { icon: LayoutTemplate,label: 'Message Templates',        color: '#10B981', bg: '#F0FDF4' },
 ]
 
+function buildMeetUrl(meId, partnerId, mode = 'video') {
+  const a = Number(meId || 0)
+  const b = Number(partnerId || 0)
+  const min = Math.min(a, b)
+  const max = Math.max(a, b)
+  const room = `studymatch-${min}-${max}`
+
+  // Jitsi public instance. Audio-only is implemented by starting with video muted.
+  const base = `https://meet.jit.si/${encodeURIComponent(room)}`
+  const config = mode === 'audio' ? 'config.startWithVideoMuted=true' : ''
+  return config ? `${base}#${config}` : base
+}
+
 export default function TutorMessagesPage() {
   const me = getUser()
   const location = useLocation()
@@ -187,6 +200,12 @@ export default function TutorMessagesPage() {
   const partnerIdx    = convs.findIndex(c => (c.partner_id || c.id) === activeId)
   const partnerColor  = getColor(partnerIdx >= 0 ? partnerIdx : 0)
 
+  const startCall = (mode) => {
+    if (!activeId) return
+    const url = buildMeetUrl(me?.id, activeId, mode)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   const filtered = convs.filter(c => {
     if (activeTab === 'unread') return (c.unread_count || 0) > 0
     if (activeTab === 'groups') return c.is_group
@@ -278,11 +297,29 @@ export default function TutorMessagesPage() {
                     <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>{partnerName}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[Video, Phone, MoreVertical].map((Icon, i) => (
-                      <button key={i} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <Icon size={15} color="#6B7280" />
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      title="Video call"
+                      onClick={() => startCall('video')}
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <Video size={15} color="#6B7280" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Audio call"
+                      onClick={() => startCall('audio')}
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <Phone size={15} color="#6B7280" />
+                    </button>
+                    <button
+                      type="button"
+                      title="More"
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <MoreVertical size={15} color="#6B7280" />
+                    </button>
                   </div>
                 </div>
                 <div className="msgs-area" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>

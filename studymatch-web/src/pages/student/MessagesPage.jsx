@@ -42,6 +42,18 @@ function formatTime(ts) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+function buildMeetUrl(meId, partnerId, mode = 'video') {
+  const a = Number(meId || 0)
+  const b = Number(partnerId || 0)
+  const min = Math.min(a, b)
+  const max = Math.max(a, b)
+  const room = `studymatch-${min}-${max}`
+
+  const base = `https://meet.jit.si/${encodeURIComponent(room)}`
+  const config = mode === 'audio' ? 'config.startWithVideoMuted=true' : ''
+  return config ? `${base}#${config}` : base
+}
+
 /* ─── main page ───────────────────────────────────────────── */
 
 export default function StudentMessagesPage() {
@@ -216,6 +228,12 @@ export default function StudentMessagesPage() {
   const partnerName = activeConv?.partner_name || activeConv?.name || 'User'
   const partnerColor = getColor(activeId)
 
+  const startCall = (mode) => {
+    if (!activeId) return
+    const url = buildMeetUrl(me?.id, activeId, mode)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   const filteredConvs = convs.filter(c => {
     const name = c.partner_name || c.name || ''
     return !search || name.toLowerCase().includes(search.toLowerCase())
@@ -311,11 +329,29 @@ export default function StudentMessagesPage() {
                     <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>{partnerName}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[Video, Phone, MoreVertical].map((Icon, i) => (
-                      <button key={i} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <Icon size={15} color="#6B7280" />
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      title="Video call"
+                      onClick={() => startCall('video')}
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <Video size={15} color="#6B7280" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Audio call"
+                      onClick={() => startCall('audio')}
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <Phone size={15} color="#6B7280" />
+                    </button>
+                    <button
+                      type="button"
+                      title="More"
+                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                      <MoreVertical size={15} color="#6B7280" />
+                    </button>
                   </div>
                 </div>
 

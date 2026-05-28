@@ -5,8 +5,23 @@ export const getSubjects = async () => {
   return response.data;
 };
 
+export const getStudyOverview = async () => {
+  const response = await api.get('/study-overview');
+  return response.data;
+};
+
 export const getWeakSubjects = async () => {
   const response = await api.get('/weak-subjects');
+  return response.data;
+};
+
+export const addWeakSubject = async (payload) => {
+  const response = await api.post('/weak-subjects', payload);
+  return response.data;
+};
+
+export const removeWeakSubject = async (id) => {
+  const response = await api.delete(`/weak-subjects/${id}`);
   return response.data;
 };
 

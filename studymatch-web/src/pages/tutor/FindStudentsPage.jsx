@@ -4,10 +4,11 @@ import {
   acceptMatchRequest,
   declineMatchRequest,
 } from '../../api/matchRequests'
+import { getStudentHelpSubjects } from '../../utils/studentMatchUtils'
 import {
   ChevronDown, Clock, SlidersHorizontal,
   Users, ArrowRight, Trophy, Check, X,
-  GraduationCap, Loader2, RefreshCw, MessageSquare,
+  GraduationCap, Loader2, RefreshCw, MessageSquare, BookOpen,
 } from 'lucide-react'
 
 /* ─── constants ──────────────────────────────────────────────── */
@@ -114,7 +115,7 @@ function RequestCard({ request, index, onAccept, onDecline, accepting, declining
   const student = request.student || {}
   const name    = student.user?.name || student.user?.email || 'Student'
   const color   = getColor(index)
-  const subject = request.subject?.name || ''
+  const subjects = getStudentHelpSubjects(request)
   const message = request.message || ''
   const date    = request.created_at
     ? new Date(request.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -136,9 +137,14 @@ function RequestCard({ request, index, onAccept, onDecline, accepting, declining
       {/* Name + subject */}
       <div style={{ width: 200, flexShrink: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 4 }}>{name}</div>
-        {subject && (
+        {subjects.length > 0 && (
           <div style={{ marginBottom: 8 }}>
-            <SubjectTag label={subject} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginBottom: 5 }}>
+              <BookOpen size={11} color="#7C3AED" /> Needs help with
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {subjects.map(s => <SubjectTag key={s} label={s} />)}
+            </div>
           </div>
         )}
         <StatusBadge status={request.status} />
@@ -266,7 +272,7 @@ export default function FindStudentsPage() {
 
   const filtered = requests.filter(r => {
     if (statusFilter !== 'All Requests' && r.status !== statusFilter.toLowerCase()) return false
-    if (subjectFilter !== 'All Subjects' && r.subject?.name !== subjectFilter) return false
+    if (subjectFilter !== 'All Subjects' && !getStudentHelpSubjects(r).includes(subjectFilter)) return false
     return true
   })
 

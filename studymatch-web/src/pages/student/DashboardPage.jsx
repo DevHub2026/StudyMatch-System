@@ -1,17 +1,64 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { getUser } from '../../store/authStore'
 import * as matchRequestsApi from '../../api/matchRequests'
 import { getPendingRequests } from '../../api/matchRequests'
 import * as notificationsApi from '../../api/notifications'
+import { getSessions } from '../../api/sessions'
+import { getConversations } from '../../api/chat'
+import { getStudyOverview } from '../../api/subjects'
+import { SubjectsOverviewPanel, InactiveAlerts } from '../../components/student/StudyOverviewWidgets'
+import { isUpcomingTabSession, formatSessionDate, effectiveStatus, STATUS_STYLES } from '../../utils/sessionUtils'
 import logo from '../../assets/logo.png'
 
 import {
   Users, GitPullRequest, Clock, Flame,
-  ArrowRight, Zap, Calendar, MessageSquare, BookOpen,
+  ArrowRight, Zap, Calendar, MessageSquare,
 } from 'lucide-react'
 
 /* ─── helpers ─────────────────────────────────────────────── */
+
+const SESSION_COLORS = ['#7C3AED', '#10B981', '#6366F1', '#F59E0B', '#EC4899', '#EF4444']
+const MSG_COLORS = SESSION_COLORS
+
+function timeAgo(ts) {
+  if (!ts) return ''
+  const diff = Date.now() - new Date(ts)
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${days}d ago`
+}
+
+function normalizeConversations(res) {
+  const raw = res?.conversations ?? res?.data ?? (Array.isArray(res) ? res : [])
+  if (!Array.isArray(raw)) return []
+  const seen = new Set()
+  return raw
+    .map(c => ({
+      partner_id: c.other_user?.id || c.partner_id || c.id,
+      partner_name: c.other_user?.name || c.partner_name || c.name || 'User',
+      last_message: typeof c.last_message === 'string'
+        ? c.last_message
+        : c.latestMessage?.content || c.last_message?.content || '',
+      last_message_at: c.last_message_at || c.latestMessage?.created_at || c.updated_at,
+      unread_count: c.unread_count || 0,
+    }))
+    .filter(c => {
+      const key = String(c.partner_id)
+      if (!c.partner_id || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0))
+}
+
+function sessionInitials(name = '') {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+}
 
 function Avatar({ initials = '?', color = '#7C3AED', size = 40 }) {
   return (
@@ -78,10 +125,103 @@ const EmptyState = ({ icon: Icon, title, sub, actionLabel, actionTo }) => (
   </div>
 )
 
+function RecentMessagesList({ conversations, compact = false, limit = 5 }) {
+  const list = conversations.slice(0, limit)
+
+  if (list.length === 0) {
+    if (compact) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MessageSquare size={18} color="#7C3AED" />
+          </div>
+          <div style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No messages yet</div>
+        </div>
+      )
+    }
+    return (
+      <EmptyState
+        icon={MessageSquare}
+        title="No messages yet"
+        sub="Start a conversation with a study partner."
+        actionLabel="Go to Messages"
+        actionTo="/student/messages"
+      />
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 10 : 12 }}>
+      {list.map((c, i) => {
+        const id = c.partner_id || i
+        const name = c.partner_name
+        const color = MSG_COLORS[(id || 0) % MSG_COLORS.length]
+        const preview = c.last_message || 'No messages yet'
+        return (
+          <Link
+            key={id}
+            to={`/student/messages?partner=${id}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: compact ? '8px 0' : '12px 14px',
+              borderRadius: compact ? 0 : 12,
+              border: compact ? 'none' : '1px solid #F0F0F4',
+              borderBottom: compact ? '1px solid #F8F9FB' : undefined,
+              textDecoration: 'none', color: 'inherit',
+              transition: 'background .12s',
+            }}
+            onMouseEnter={e => { if (!compact) e.currentTarget.style.background = '#FAFAFA' }}
+            onMouseLeave={e => { if (!compact) e.currentTarget.style.background = 'transparent' }}
+          >
+            <Avatar initials={sessionInitials(name)} color={color} size={compact ? 36 : 44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                <span style={{
+                  fontWeight: 700, fontSize: compact ? 13 : 14, color: '#1E1B4B',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {name}
+                </span>
+                <span style={{ fontSize: 11, color: '#9CA3AF', flexShrink: 0 }}>
+                  {timeAgo(c.last_message_at)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontSize: 12, color: '#9CA3AF',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {preview}
+                </span>
+                {c.unread_count > 0 && (
+                  <span style={{
+                    background: '#7C3AED', color: 'white', borderRadius: '50%',
+                    minWidth: 18, height: 18, fontSize: 10, fontWeight: 800,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 4px', flexShrink: 0,
+                  }}>
+                    {c.unread_count > 9 ? '9+' : c.unread_count}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
 /* ─── dashboard UI ─────────────────────────────────────────── */
 
-function StudentDashboard({ user, stats }) {
-  const streakDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+function StudentDashboard({
+  user, stats, upcomingSessions = [], recentMessages = [],
+  studyOverview = null,
+}) {
+  const streak = studyOverview?.streak || { current_days: 0, week_days: [] }
+  const weekDays = streak.week_days?.length
+    ? streak.week_days
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(label => ({ label, active: false }))
   const initials = user?.name
     ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : 'S'
@@ -202,7 +342,7 @@ function StudentDashboard({ user, stats }) {
                 <div>
                   <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.1 }}>{value}</div>
                   <div style={{ fontSize: 11.5, color: '#6B7280', fontWeight: 500, marginTop: 2 }}>{label}</div>
-                  <div style={{ fontSize: 11, color, fontWeight: 500, marginTop: 1 }}>{sub}</div>
+                  <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500, marginTop: 1 }}>{sub}</div>
                 </div>
               </Link>
             ))}
@@ -211,25 +351,65 @@ function StudentDashboard({ user, stats }) {
           {/* Upcoming sessions */}
           <Card>
             <SectionHeader title="Upcoming Sessions" linkTo="/student/study-sessions" />
-            <EmptyState
-              icon={Calendar}
-              title="No upcoming sessions"
-              sub="Connect with a study partner to schedule your first session."
-              actionLabel="Find Partners"
-              actionTo="/student/find-tutors"
-            />
+            {upcomingSessions.length === 0 ? (
+              <EmptyState
+                icon={Calendar}
+                title="No upcoming sessions"
+                sub="Connect with a study partner to schedule your first session."
+                actionLabel="Find Partners"
+                actionTo="/student/find-tutors"
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {upcomingSessions.slice(0, 5).map((s, i) => {
+                  const tutorName = s.tutor?.user?.name || 'Tutor'
+                  const color = SESSION_COLORS[i % SESSION_COLORS.length]
+                  const statusKey = effectiveStatus(s)
+                  const badge = STATUS_STYLES[statusKey] || STATUS_STYLES.pending
+                  return (
+                    <Link
+                      key={s.id}
+                      to="/student/study-sessions"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 14px', borderRadius: 12,
+                        border: '1px solid #F0F0F4', textDecoration: 'none', color: 'inherit',
+                        transition: 'background .12s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#FAFAFA' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <Avatar initials={sessionInitials(tutorName)} color={color} size={44} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B' }}>
+                          {s.subject?.name || 'Study Session'}
+                        </div>
+                        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 2 }}>
+                          with {tutorName}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={11} />
+                          {formatSessionDate(s.scheduled_at)}
+                          {s.duration_minutes ? ` · ${s.duration_minutes} min` : ''}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, flexShrink: 0,
+                        background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
+                      }}>
+                        {badge.label}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </Card>
 
           {/* Recent messages */}
           <Card>
             <SectionHeader title="Recent Messages" linkTo="/student/messages" />
-            <EmptyState
-              icon={MessageSquare}
-              title="No messages yet"
-              sub="Start a conversation with a study partner."
-              actionLabel="Go to Messages"
-              actionTo="/student/messages"
-            />
+            <RecentMessagesList conversations={recentMessages} limit={5} />
           </Card>
         </div>
 
@@ -266,20 +446,21 @@ function StudentDashboard({ user, stats }) {
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Study Streak</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <Flame size={26} color="#F59E0B" fill="#F59E0B" />
-              <span style={{ fontSize: 34, fontWeight: 800, color: '#1E1B4B' }}>0</span>
+              <span style={{ fontSize: 34, fontWeight: 800, color: '#1E1B4B' }}>{streak.current_days ?? 0}</span>
               <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 500 }}>days in a row</span>
             </div>
             <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 14 }}>Keep it up! Consistency is key.</div>
             <div style={{ display: 'flex', gap: 4 }}>
-              {streakDays.map((d, i) => (
-                <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+              {weekDays.map((d, i) => (
+                <div key={d.date || i} style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{
-                    width: 28, height: 28, borderRadius: '50%', background: '#F3F4F6',
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: d.active ? '#EDE9FE' : '#F3F4F6',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto',
                   }}>
-                    <Zap size={11} color="#D1D5DB" />
+                    <Zap size={11} color={d.active ? '#7C3AED' : '#D1D5DB'} />
                   </div>
-                  <div style={{ fontSize: 9.5, color: '#9CA3AF', marginTop: 4 }}>{d}</div>
+                  <div style={{ fontSize: 9.5, color: '#9CA3AF', marginTop: 4 }}>{d.label}</div>
                 </div>
               ))}
             </div>
@@ -288,26 +469,17 @@ function StudentDashboard({ user, stats }) {
           {/* Subjects overview */}
           <Card>
             <SectionHeader title="Subjects Overview" linkTo="/student/my-subjects" linkLabel="View Progress →" />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0' }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BookOpen size={18} color="#7C3AED" />
-              </div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No subjects added yet</div>
-              <Link to="/student/my-subjects" style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600, textDecoration: 'none' }}>
-                + Add subjects
-              </Link>
-            </div>
+            <InactiveAlerts alerts={studyOverview?.inactive_alerts || []} compact />
+            <SubjectsOverviewPanel
+              subjects={studyOverview?.subjects || []}
+              analytics={studyOverview?.analytics}
+            />
           </Card>
 
           {/* Recent Messages */}
           <Card>
             <SectionHeader title="Recent Messages" linkTo="/student/messages" />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0' }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MessageSquare size={18} color="#7C3AED" />
-              </div>
-              <div style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No messages yet</div>
-            </div>
+            <RecentMessagesList conversations={recentMessages} compact limit={4} />
           </Card>
         </div>
       </div>
@@ -318,17 +490,18 @@ function StudentDashboard({ user, stats }) {
 /* ─── page wrapper ─────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const user     = getUser()
-  const navigate = useNavigate()
+  const user = getUser()
 
   const [stats, setStats] = useState({
     activeMatches: 0, pendingRequests: 0,
     upcomingSessions: 0, unreadNotifications: 0,
   })
+  const [upcomingSessions, setUpcomingSessions] = useState([])
+  const [recentMessages, setRecentMessages] = useState([])
+  const [studyOverview, setStudyOverview] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchStats = async () => {
+  const fetchDashboard = async () => {
       try {
         const [matchRes, pendingRes] = await Promise.allSettled([
           matchRequestsApi.getMatchRequests(),
@@ -346,9 +519,54 @@ export default function DashboardPage() {
         setStats(prev => ({ ...prev, unreadNotifications: unread }))
       } catch {}
 
+      try {
+        const sessionsRes = await getSessions()
+        const sessionsList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
+        const now = new Date()
+        const upcoming = sessionsList.filter(s => isUpcomingTabSession(s, now))
+        setUpcomingSessions(upcoming)
+        setStats(prev => ({ ...prev, upcomingSessions: upcoming.length }))
+      } catch {
+        setUpcomingSessions([])
+      }
+
+      try {
+        const convRes = await getConversations()
+        setRecentMessages(normalizeConversations(convRes))
+      } catch {
+        setRecentMessages([])
+      }
+
+      try {
+        const overview = await getStudyOverview()
+        setStudyOverview(overview)
+      } catch {
+        setStudyOverview(null)
+      }
+
       setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchDashboard()
+    const interval = setInterval(() => {
+      getStudyOverview().then(setStudyOverview).catch(() => {})
+      getSessions()
+        .then(sessionsRes => {
+          const sessionsList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
+          const now = new Date()
+          const upcoming = sessionsList.filter(s => isUpcomingTabSession(s, now))
+          setUpcomingSessions(upcoming)
+          setStats(prev => ({ ...prev, upcomingSessions: upcoming.length }))
+        })
+        .catch(() => {})
+    }, 45000)
+    const onFocus = () => fetchDashboard()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
     }
-    fetchStats()
   }, [])
 
   if (loading) {
@@ -359,5 +577,13 @@ export default function DashboardPage() {
     )
   }
 
-  return <StudentDashboard user={user} stats={stats} navigate={navigate} />
+  return (
+    <StudentDashboard
+      user={user}
+      stats={stats}
+      upcomingSessions={upcomingSessions}
+      recentMessages={recentMessages}
+      studyOverview={studyOverview}
+    />
+  )
 }

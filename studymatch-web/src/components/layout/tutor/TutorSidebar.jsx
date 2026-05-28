@@ -136,8 +136,8 @@ export default function TutorSidebar() {
 
         {/* ── User card ── */}
         <div style={{
-          padding: collapsed ? '12px 8px' : '12px 14px',
-          margin: '8px 8px',
+          padding: collapsed ? '12px 8px' : '14px 16px',
+          margin: '8px 10px',
           background: '#F8F9FB', borderRadius: 12,
           display: 'flex', alignItems: 'center',
           gap: collapsed ? 0 : 10,
@@ -164,7 +164,7 @@ export default function TutorSidebar() {
         </div>
 
         {/* ── Nav links ── */}
-        <nav style={{ flex: 1, padding: '4px 8px', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '4px 10px', overflowY: 'auto' }}>
           {NAV_LINKS.map(({ icon: Icon, label, to, badge }) => (
             <div key={to} className="ts-link-wrap">
               <Link

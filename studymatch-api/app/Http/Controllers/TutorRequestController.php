@@ -41,8 +41,17 @@ class TutorRequestController extends Controller
         }
 
         if ($user->tutor) {
+<<<<<<< HEAD
             $requests = TutorRequest::where('tutor_id', $user->tutor->id)
                 ->where('status', 'accepted')
+=======
+            $receivedRequests = TutorRequest::with([
+                'student.user',
+                'student.weakSubjects.subject',
+                'subject',
+            ])
+                ->where('tutor_id', $user->tutor->id)
+>>>>>>> 9c4a0e7 (jeoffrey final)
                 ->latest()
                 ->get();
 

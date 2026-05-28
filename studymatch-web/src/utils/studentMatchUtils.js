@@ -22,14 +22,25 @@ export function toggleSavedStudentId(id) {
   return next;
 }
 
+/** Subjects from request subject or student "Subjects I need help with" (weak_subjects). */
+export function getStudentHelpSubjects(request) {
+  const student = request?.student || {};
+  if (request?.subject?.name) {
+    return [request.subject.name];
+  }
+  const fromWeak = (student.weak_subjects || student.weakSubjects || [])
+    .filter(ws => ws.needs_help !== false)
+    .map(ws => ws.subject?.name)
+    .filter(Boolean);
+  if (fromWeak.length) return fromWeak;
+  const program = (student.program || '').trim();
+  return program ? [program] : [];
+}
+
 export function normalizeStudentFromMatchRequest(request, index = 0) {
   const student = request.student || {};
   const name = student.user?.name || student.user?.email || 'Student';
-  const subjects = request.subject?.name
-    ? [request.subject.name]
-    : (student.weak_subjects || [])
-        .map(ws => ws.subject?.name)
-        .filter(Boolean);
+  const subjects = getStudentHelpSubjects(request);
 
   return {
     id: student.id,

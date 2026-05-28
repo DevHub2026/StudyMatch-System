@@ -295,6 +295,7 @@ export function RescheduleModal({ session, onClose, onSave, saving }) {
 
 export function SessionCard({
   session, role, onCancel, onReschedule, onAccept, onDecline, onComplete, onOpenDetails,
+  listMode = false,
 }) {
   const [hovered, setHovered] = useState(false)
   const partner = role === 'student' ? session.tutor : session.student
@@ -314,9 +315,13 @@ export function SessionCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: 'white', border: `1px solid ${hovered ? '#DDD6FE' : '#F0F0F4'}`,
-        borderRadius: 16, padding: '22px 24px', display: 'flex', gap: 18, alignItems: 'flex-start',
-        boxShadow: hovered ? '0 8px 24px rgba(124,58,237,.08)' : '0 1px 3px rgba(0,0,0,.04)',
+        background: listMode ? (hovered ? '#FAFAFA' : 'white') : 'white',
+        border: listMode ? 'none' : `1px solid ${hovered ? '#DDD6FE' : '#F0F0F4'}`,
+        borderBottom: listMode ? '1px solid #F8F9FB' : undefined,
+        borderRadius: listMode ? 0 : 16,
+        padding: listMode ? '18px 20px' : '22px 24px',
+        display: 'flex', gap: 18, alignItems: 'flex-start',
+        boxShadow: listMode ? 'none' : (hovered ? '0 8px 24px rgba(124,58,237,.08)' : '0 1px 3px rgba(0,0,0,.04)'),
         transition: 'all .18s', cursor: 'pointer',
       }}
     >

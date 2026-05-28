@@ -186,8 +186,8 @@ export default function StudentSidebar() {
 
         {/* ── User card ── */}
         <div style={{
-          padding: collapsed ? '12px 8px' : '12px 14px',
-          margin: '8px 8px',
+          padding: collapsed ? '12px 8px' : '14px 16px',
+          margin: '8px 10px',
           background: '#F8F9FB',
           borderRadius: 12,
           display: 'flex',
@@ -224,7 +224,7 @@ export default function StudentSidebar() {
         </div>
 
         {/* ── Nav links ── */}
-        <nav style={{ flex: 1, padding: '4px 8px', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '4px 10px', overflowY: 'auto' }}>
           {NAV_LINKS.map(({ icon: Icon, label, to, badge }) => (
             <div key={to} className="ss-link-wrap">
               <Link
@@ -318,7 +318,7 @@ export default function StudentSidebar() {
 
         {/* ── Help card ── */}
         {!collapsed ? (
-          <div style={{ padding: '8px 8px 16px' }}>
+          <div style={{ padding: '8px 10px 16px' }}>
             <Link to="/student/help" style={{
               display: 'flex', alignItems: 'center', gap: 10,
               background: '#F3F0FF', borderRadius: 12,

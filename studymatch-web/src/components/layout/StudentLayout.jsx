@@ -4,11 +4,11 @@ import StudentNavbar  from '../student/StudentNavbar'
 
 export default function StudentLayout() {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div style={{ display: 'flex', height: '100vh', background: '#F8F9FB' }}>
       <StudentSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <StudentNavbar />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
           <Outlet />
         </main>
       </div>
