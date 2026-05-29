@@ -5,6 +5,8 @@ import '../../services/api_service.dart';
 import '../../utils/app_theme.dart';
 import '../../models/models.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/shell_scope.dart';
+import '../../navigation/student_nav.dart';
 import 'user_profile_screen.dart';
 import 'messages_screen.dart';
 
@@ -24,6 +26,9 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
     int selectedDuration = 60;
+    String? selectedSubject;
+    String selectedSessionType = 'online';
+    final meetingLinkCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     bool booking = false;
 
@@ -60,6 +65,154 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 17)),
                 const SizedBox(height: 20),
+                // ── Subject ──────────────────────────────────────────────
+                const Text('Subject',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: selectedSubject != null
+                              ? AppTheme.primary
+                              : AppTheme.borderLight)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedSubject,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      borderRadius: BorderRadius.circular(12),
+                      hint: const Text('Select a subject',
+                          style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontFamily: 'Poppins',
+                              fontSize: 14)),
+                      style: const TextStyle(
+                          color: AppTheme.textDark,
+                          fontFamily: 'Poppins',
+                          fontSize: 14),
+                      items: AppConstants.subjects
+                          .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setS(() => selectedSubject = v);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // ── Session Type ─────────────────────────────────────────
+                const Text('Session Type',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ('Online', 'online'),
+                    ('In-Person', 'in_person'),
+                  ].map((entry) {
+                    final label = entry.$1;
+                    final value = entry.$2;
+                    final sel = selectedSessionType == value;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setS(() => selectedSessionType = value),
+                        child: Container(
+                          margin: EdgeInsets.only(
+                              right: value == 'online' ? 6 : 0,
+                              left: value == 'in_person' ? 6 : 0),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? AppTheme.primary.withValues(alpha: 0.08)
+                                : const Color(0xFFF5F5F8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: sel
+                                    ? AppTheme.primary
+                                    : AppTheme.borderLight),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                value == 'online'
+                                    ? Icons.video_call_outlined
+                                    : Icons.location_on_outlined,
+                                color: sel
+                                    ? AppTheme.primary
+                                    : const Color(0xFF9CA3AF),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(label,
+                                  style: TextStyle(
+                                      color: sel
+                                          ? AppTheme.primary
+                                          : const Color(0xFF9CA3AF),
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      fontWeight: sel
+                                          ? FontWeight.w600
+                                          : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                // ── Meeting Link (Online only) ────────────────────────────
+                if (selectedSessionType == 'online') ...[
+                  const Text('Meeting Link (Optional)',
+                      style: TextStyle(
+                          color: AppTheme.textBody,
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: meetingLinkCtrl,
+                    style: const TextStyle(
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins',
+                        fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Zoom, Google Meet, Teams link…',
+                      hintStyle: const TextStyle(
+                          color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+                      prefixIcon: const Icon(Icons.link_rounded,
+                          color: Color(0xFF9CA3AF), size: 20),
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F8),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppTheme.borderLight)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppTheme.borderLight)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: AppTheme.primary, width: 1.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                // ── Date and Time ──────────────────────────────────────────
                 const Text('Date',
                     style: TextStyle(
                         color: AppTheme.textBody,
@@ -245,7 +398,8 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   child: ElevatedButton(
                     onPressed: booking ||
                             selectedDate == null ||
-                            selectedTime == null
+                            selectedTime == null ||
+                            selectedSubject == null
                         ? null
                         : () async {
                             setS(() => booking = true);
@@ -262,6 +416,11 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                                   context.read<AppState>().currentUser!.id,
                               scheduledAt: dt,
                               durationMinutes: selectedDuration,
+                              subject: selectedSubject,
+                              sessionType: selectedSessionType,
+                              sessionLink: meetingLinkCtrl.text.trim().isEmpty
+                                  ? null
+                                  : meetingLinkCtrl.text.trim(),
                               notes: notesCtrl.text.trim().isEmpty
                                   ? null
                                   : notesCtrl.text.trim(),
@@ -344,7 +503,8 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new,
                         size: 18, color: AppTheme.textDark),
-                    onPressed: () => Navigator.maybePop(context),
+                    onPressed: () =>
+                        ShellScope.of(context).navigate(StudentNav.dashboard),
                   ),
                   const Expanded(
                     child: Text(
@@ -710,7 +870,7 @@ class _MatchCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 3),
                               Text(
-                                isOnline ? 'Online' : 'Offline',
+                                isOnline ? 'online' : 'Offline',
                                 style: TextStyle(
                                     color: isOnline
                                         ? AppTheme.success

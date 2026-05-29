@@ -79,6 +79,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
     int selectedDuration = 60;
+    String? selectedSubject;
+    String selectedSessionType = 'online';
+    final sessionLinkCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     bool booking = false;
 
@@ -115,6 +118,153 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 17)),
                 const SizedBox(height: 20),
+                // ── Subject ──────────────────────────────────────────────
+                const Text('Subject',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: selectedSubject != null
+                              ? AppTheme.primary
+                              : AppTheme.borderLight)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedSubject,
+                      isExpanded: true,
+                      dropdownColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      borderRadius: BorderRadius.circular(12),
+                      hint: const Text('Select a subject',
+                          style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontFamily: 'Poppins',
+                              fontSize: 14)),
+                      style: const TextStyle(
+                          color: AppTheme.textDark,
+                          fontFamily: 'Poppins',
+                          fontSize: 14),
+                      items: AppConstants.subjects
+                          .map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setS(() => selectedSubject = v);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // ── Session Type ─────────────────────────────────────────
+                const Text('Session Type',
+                    style: TextStyle(
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ('Online', 'online'),
+                    ('In-Person', 'in_person'),
+                  ].map((entry) {
+                    final label = entry.$1;
+                    final value = entry.$2;
+                    final sel = selectedSessionType == value;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setS(() => selectedSessionType = value),
+                        child: Container(
+                          margin: EdgeInsets.only(
+                              right: label == 'Online' ? 6 : 0,
+                              left: label == 'In-Person' ? 6 : 0),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? AppTheme.primary.withValues(alpha: 0.08)
+                                : const Color(0xFFF5F5F8),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: sel
+                                    ? AppTheme.primary
+                                    : AppTheme.borderLight),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                value == 'online'
+                                    ? Icons.video_call_outlined
+                                    : Icons.location_on_outlined,
+                                color: sel
+                                    ? AppTheme.primary
+                                    : const Color(0xFF9CA3AF),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(label,
+                                  style: TextStyle(
+                                      color: sel
+                                          ? AppTheme.primary
+                                          : const Color(0xFF9CA3AF),
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      fontWeight: sel
+                                          ? FontWeight.w600
+                                          : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                // ── Meeting Link (Online only) ────────────────────────────
+                if (selectedSessionType == 'online') ...[
+                  const Text('Meeting Link (Optional)',
+                      style: TextStyle(
+                          color: AppTheme.textBody,
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: sessionLinkCtrl,
+                    style: const TextStyle(
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins',
+                        fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Zoom, Google Meet, Teams link…',
+                      hintStyle: const TextStyle(
+                          color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+                      prefixIcon: const Icon(Icons.link_rounded,
+                          color: Color(0xFF9CA3AF), size: 20),
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F8),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppTheme.borderLight)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppTheme.borderLight)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: AppTheme.primary, width: 1.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 const Text('Date',
                     style: TextStyle(
                         color: AppTheme.textBody,
@@ -300,7 +450,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: ElevatedButton(
                     onPressed: booking ||
                             selectedDate == null ||
-                            selectedTime == null
+                            selectedTime == null ||
+                            selectedSubject == null
                         ? null
                         : () async {
                             setS(() => booking = true);
@@ -317,6 +468,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                   context.read<AppState>().currentUser!.id,
                               scheduledAt: dt,
                               durationMinutes: selectedDuration,
+                              subject: selectedSubject,
+                              sessionType: selectedSessionType,
+                              sessionLink: sessionLinkCtrl.text.trim().isEmpty
+                                  ? null
+                                  : sessionLinkCtrl.text.trim(),
                               notes: notesCtrl.text.trim().isEmpty
                                   ? null
                                   : notesCtrl.text.trim(),
@@ -673,16 +829,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Container(
-            height: 280,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppTheme.primary, AppTheme.primaryDark],
-              ),
-            ),
-          ),
+          // Container(
+          //   height: 280,
+          //   decoration: const BoxDecoration(
+          //     gradient: LinearGradient(
+          //       begin: Alignment.topLeft,
+          //       end: Alignment.bottomRight,
+          //       colors: [AppTheme.primary, AppTheme.primaryDark],
+          //     ),
+          //   ),
+          // ),
           SafeArea(
             child: CustomScrollView(
               slivers: [
@@ -694,13 +850,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios_new,
-                              color: AppTheme.textSecondary, size: 18),
+                              color: AppTheme.textDark, size: 18),
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Expanded(
                           child: Text('Profile',
                               style: TextStyle(
-                                  color: AppTheme.textPrimary,
+                                  color: AppTheme.textDark,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,
                                   fontFamily: 'Poppins')),
@@ -758,7 +914,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
                       Text(widget.user.email,
                           style: const TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: AppTheme.textBody,
                               fontFamily: 'Poppins',
                               fontSize: 13)),
                       const SizedBox(height: 10),
@@ -1007,8 +1163,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
 
                       // ── Action buttons ────────────────────────────────────────────────
-                      if (me != null && me.id != widget.user.id) ...[
-                        const SizedBox(height: 8),
+                      if (me!.role != 'tutor') ...[
+                        // const SizedBox(height: 8),
 
                         // Match request status / send button
                         if (isMatched)

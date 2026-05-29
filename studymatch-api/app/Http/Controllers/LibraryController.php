@@ -53,74 +53,24 @@ class LibraryController extends Controller
         $this->applyScope($query, $request, $user);
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
-
-<<<<<<< HEAD
-        // Mobile sends subject as a plain name string (not an ID)
-        if ($request->filled('subject') && !$request->filled('subject_id')) {
-            $query->whereHas('subject', fn ($q) => $q->where('name', 'LIKE', "%{$request->subject}%"));
-        }
-
-        if ($request->filled('search')) {
-            $query->where('title', 'LIKE', "%{$request->search}%");
-        }
-=======
         $perPage   = min((int) $request->get('per_page', 50), 100);
         $paginator = $query->paginate($perPage);
->>>>>>> 9c4a0e7 (jeoffrey final)
 
         $favoriteIds = ResourceFavorite::where('user_id', $user->id)
             ->whereIn('resource_id', collect($paginator->items())->pluck('id'))
             ->pluck('resource_id')
             ->all();
-
-<<<<<<< HEAD
-        $paginator = $query->latest()->paginate(20);
-
-        // Append mobile-friendly aliases to each item without breaking web clients
-        $paginator->setCollection(
-            $paginator->getCollection()->map(fn ($r) => array_merge($r->toArray(), [
-                'uploaderName' => $r->uploader?->name ?? 'Unknown',
-                'subjectName'  => $r->subject?->name ?? '',
-                'fileUrl'      => $r->file_path ? Storage::url($r->file_path) : null,
-                'uploadedAt'   => $r->created_at?->toIso8601String() ?? '',
-            ]))
-        );
-
-=======
         $paginator->getCollection()->transform(function (Resource $resource) use ($favoriteIds) {
             return $this->formatResource($resource, $favoriteIds);
         });
 
->>>>>>> 9c4a0e7 (jeoffrey final)
+
         return response()->json($paginator);
     }
 
     public function store(Request $request)
     {
         $request->validate([
-<<<<<<< HEAD
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'subject_id'  => 'nullable|exists:subjects,id',
-            'subject'     => 'nullable|string|max:255',
-            'file'        => 'required|file|max:51200', // 50 MB max
-        ]);
-
-        // Resolve subject_id from name when mobile sends a plain string
-        $subjectId = $request->subject_id;
-        if (!$subjectId && $request->filled('subject')) {
-            $subjectId = \App\Models\Subject::where('name', 'LIKE', "%{$request->subject}%")
-                ->value('id');
-        }
-
-        $file = $request->file('file');
-        $path = $file->store('library', 'public');
-
-        $resource = Resource::create([
-            'uploader_id'  => $request->user()->id,
-            'subject_id'   => $subjectId,
-            'title'        => $request->title,
-=======
             'title'       => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
             'subject_id'  => 'nullable|exists:subjects,id',
@@ -143,7 +93,6 @@ class LibraryController extends Controller
             'subject_id'   => $request->subject_id,
             'folder_id'    => $request->folder_id,
             'title'        => $title,
->>>>>>> 9c4a0e7 (jeoffrey final)
             'description'  => $request->description,
             'file_path'    => $path,
             'file_name'    => $file->getClientOriginalName(),
