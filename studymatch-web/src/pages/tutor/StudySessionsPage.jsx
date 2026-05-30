@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getSessions, acceptSession, declineSession, cancelSession,
-  rescheduleSession, completeSession,
+  rescheduleSession, completeSession, requestSessionWithStudent,
 } from '../../api/sessions'
+import { getMatchRequests } from '../../api/matchRequests'
+import { getSubjects } from '../../api/subjects'
 import {
   SessionCard, SessionDetailsModal, RescheduleModal, InteractiveCalendar,
 } from '../../components/sessions/SessionShared'
@@ -13,7 +15,122 @@ import {
 } from '../../utils/sessionUtils'
 import {
   Calendar, Clock, Users, Star, Loader2, ChevronLeft, ChevronRight, Search,
+  CalendarPlus, X,
 } from 'lucide-react'
+
+/* ─── new session modal ──────────────────────────────────────── */
+
+function NewSessionModal({ onClose, onScheduled }) {
+  const [matchedStudents, setMatchedStudents] = useState([])
+  const [subjects, setSubjects]   = useState([])
+  const [saving,   setSaving]     = useState(false)
+  const [error,    setError]      = useState('')
+  const [form, setForm] = useState({
+    student_user_id: '', scheduled_at: '', duration_minutes: 60,
+    subject_id: '', session_type: 'online', notes: '',
+  })
+
+  useEffect(() => {
+    Promise.allSettled([getMatchRequests(), getSubjects()]).then(([mRes, sRes]) => {
+      if (mRes.status === 'fulfilled') {
+        const list = mRes.value?.data || mRes.value || []
+        setMatchedStudents((Array.isArray(list) ? list : []).filter(u => u.role === 'student' || !u.role))
+      }
+      if (sRes.status === 'fulfilled') {
+        const list = sRes.value?.data || sRes.value || []
+        setSubjects(Array.isArray(list) ? list : [])
+      }
+    })
+  }, [])
+
+  const handleSubmit = async () => {
+    if (!form.student_user_id) { setError('Please select a student.'); return }
+    if (!form.scheduled_at)    { setError('Please set a date and time.'); return }
+    if (new Date(form.scheduled_at) <= new Date()) { setError('Scheduled time must be in the future.'); return }
+    setSaving(true); setError('')
+    try {
+      await requestSessionWithStudent({
+        student_user_id:  form.student_user_id,
+        subject_id:       form.subject_id || undefined,
+        scheduled_at:     form.scheduled_at,
+        duration_minutes: form.duration_minutes,
+        session_type:     form.session_type,
+        notes:            form.notes || undefined,
+      })
+      onScheduled?.()
+      onClose()
+    } catch {
+      setError('Failed to schedule session. Please try again.')
+    } finally { setSaving(false) }
+  }
+
+  const inp = { width: '100%', padding: '9px 12px', border: '1.5px solid #E5E7EB', borderRadius: 9, fontSize: 13.5, fontFamily: 'DM Sans, sans-serif', outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: 'white', borderRadius: 20, padding: '28px 28px', width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,.15)', fontFamily: 'DM Sans, sans-serif' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#1E1B4B' }}>Schedule New Session</div>
+            <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>Book a session with one of your students</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={18} color="#9CA3AF" /></button>
+        </div>
+
+        {error && <div style={{ padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, fontSize: 13, color: '#EF4444', marginBottom: 14 }}>{error}</div>}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Student <span style={{ color: '#EF4444' }}>*</span></label>
+            <select style={inp} value={form.student_user_id} onChange={e => setForm(p => ({ ...p, student_user_id: e.target.value }))}>
+              <option value="">— Select a student —</option>
+              {matchedStudents.map(s => <option key={s.id} value={s.id}>{s.fullName || s.name}</option>)}
+            </select>
+            {matchedStudents.length === 0 && <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>No matched students yet. Accept a request first.</div>}
+          </div>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Date & Time <span style={{ color: '#EF4444' }}>*</span></label>
+            <input type="datetime-local" style={inp} value={form.scheduled_at} onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))} min={new Date(Date.now() + 60000).toISOString().slice(0, 16)} />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Duration</label>
+              <select style={inp} value={form.duration_minutes} onChange={e => setForm(p => ({ ...p, duration_minutes: Number(e.target.value) }))}>
+                {[30, 60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Type</label>
+              <select style={inp} value={form.session_type} onChange={e => setForm(p => ({ ...p, session_type: e.target.value }))}>
+                <option value="online">Online</option>
+                <option value="in_person">In Person</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Subject</label>
+            <select style={inp} value={form.subject_id} onChange={e => setForm(p => ({ ...p, subject_id: e.target.value }))}>
+              <option value="">— Any subject —</option>
+              {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Notes (optional)</label>
+            <textarea style={{ ...inp, resize: 'vertical' }} rows={3} placeholder="Topics to cover, reminders…" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', border: '1.5px solid #E5E7EB', borderRadius: 10, background: 'white', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 10, background: '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+            {saving ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CalendarPlus size={15} />}
+            {saving ? 'Scheduling…' : 'Schedule Session'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function TutorStudySessionsPage() {
   const today = new Date()
@@ -27,6 +144,7 @@ export default function TutorStudySessionsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [todayOnly, setTodayOnly] = useState(false)
   const [calDate, setCalDate] = useState({ year: today.getFullYear(), month: today.getMonth(), day: today.getDate() })
+  const [showNewSession, setShowNewSession] = useState(false)
 
   useEffect(() => {
     getSessions()
@@ -131,12 +249,26 @@ export default function TutorStudySessionsPage() {
         <RescheduleModal session={rescheduleTarget} saving={rescheduleSaving}
           onClose={() => setRescheduleTarget(null)} onSave={handleReschedule} />
       )}
+      {showNewSession && (
+        <NewSessionModal
+          onClose={() => setShowNewSession(false)}
+          onScheduled={() => {
+            setShowNewSession(false)
+            getSessions().then(data => setSessions(Array.isArray(data?.data) ? data.data : [])).catch(() => {})
+          }}
+        />
+      )}
 
       <div className="tss-wrap">
         <div className="tss-main">
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px' }}>Study Sessions</h1>
-            <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Manage your upcoming tutoring sessions and session history.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px' }}>Study Sessions</h1>
+              <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Manage your upcoming tutoring sessions and session history.</p>
+            </div>
+            <button onClick={() => setShowNewSession(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              <CalendarPlus size={15} /> New Session
+            </button>
           </div>
 
           <div style={{ borderBottom: '1px solid #F0F0F4', display: 'flex', gap: 16, overflowX: 'auto' }}>

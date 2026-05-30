@@ -245,7 +245,7 @@ export default function StudentMessagesPage() {
 
   const isAnnouncementsActive = activeId === ANNOUNCEMENTS_ID
   const activeConv   = convs.find(c => (c.partner_id || c.id) === activeId)
-  const partnerName  = isAnnouncementsActive ? 'Announcements' : (activeConv?.partner_name || activeConv?.name || 'User')
+  const partnerName  = isAnnouncementsActive ? 'Study Match' : (activeConv?.partner_name || activeConv?.name || 'User')
   const partnerColor = isAnnouncementsActive ? '#7C3AED' : getColor(activeId)
 
   const startCall = (mode) => {
@@ -311,13 +311,13 @@ export default function StudentMessagesPage() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: '#1E1B4B' }}>Announcements</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: '#1E1B4B' }}>Study Match</span>
                     {annUnread > 0 && (
                       <span style={{ background: '#7C3AED', color: 'white', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{annUnread}</span>
                     )}
                   </div>
                   <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    {announcements.length > 0 ? announcements[0]?.title || 'View announcements' : 'No announcements'}
+                    {announcements.length > 0 ? announcements[0]?.title || 'View messages' : 'No messages yet'}
                   </span>
                 </div>
               </div>
@@ -376,8 +376,8 @@ export default function StudentMessagesPage() {
                     <Megaphone size={18} color="#7C3AED" />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Announcements</div>
-                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>Official updates from StudyMatch — read only</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Study Match</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>Official updates and announcements — read only</div>
                   </div>
                 </div>
 
@@ -385,7 +385,7 @@ export default function StudentMessagesPage() {
                   {announcements.length === 0 ? (
                     <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 40 }}>
                       <Megaphone size={28} color="#DDD6FE" style={{ marginBottom: 10, display: 'block', margin: '0 auto 10px' }} />
-                      No announcements yet.
+                      No messages from Study Match yet.
                     </div>
                   ) : [...announcements].reverse().map(ann => {
                     const isLong    = (ann.content || '').length > 200
@@ -436,7 +436,7 @@ export default function StudentMessagesPage() {
 
                           {/* Footer */}
                           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#9CA3AF' }}>
-                            <span>StudyMatch</span>
+                            <span>Study Match</span>
                             <span>·</span>
                             <span>{postedAt ? new Date(postedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
                             <span style={{ marginLeft: 'auto', padding: '1px 8px', borderRadius: 20, background: '#F3F0FF', color: '#7C3AED', fontWeight: 700, fontSize: 10 }}>
@@ -455,7 +455,12 @@ export default function StudentMessagesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: '#F3F0FF', border: '1px solid #DDD6FE', borderRadius: 10 }}>
                     <Megaphone size={15} color="#7C3AED" />
                     <span style={{ fontSize: 13, color: '#6B7280', fontStyle: 'italic' }}>
-                      Announcements are broadcast-only. You cannot reply to this channel.
+                      Messages from Study Match are broadcast-only — you cannot reply here.
+                      To contact support, email{' '}
+                    <a href="mailto:studymatch.admin@gmail.com"
+                      style={{ color: '#7C3AED', fontWeight: 700, fontStyle: 'normal', textDecoration: 'none' }}>
+                      studymatch.admin@gmail.com
+                    </a>
                     </span>
                   </div>
                 </div>

@@ -138,6 +138,22 @@ class AdminUserController extends Controller
         return response()->json(['message' => 'User unsuspended.']);
     }
 
+    // POST /admin/users/{id}/verify-email — admin override: mark email as verified
+    public function verifyEmail(int $id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->email_verified_at) {
+            return response()->json(['message' => 'Email is already verified.']);
+        }
+
+        $user->update(['email_verified_at' => now()]);
+
+        AuditLog::record('update', 'users', "Admin manually verified email for {$user->name} ({$user->email})", ['user_id' => $id]);
+
+        return response()->json(['message' => 'Email verified successfully.', 'user' => $user->fresh()]);
+    }
+
     public function pendingTutors()
     {
         $tutors = Tutor::with(['user', 'strongSubjects.subject'])

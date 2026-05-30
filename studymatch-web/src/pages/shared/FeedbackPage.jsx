@@ -63,17 +63,12 @@ export default function FeedbackPage() {
       const res  = await getMatchRequests()
       const list = res?.data || res || []
       const arr  = Array.isArray(list) ? list : []
-      // Keep accepted matches; extract the other party's name/id
+      // API returns already-accepted formatted user objects with fullName/id
       const tutorList = arr
-        .filter(r => r.status === 'accepted')
-        .map(r => {
-          const tutor = r.tutor ?? r.tutor_user ?? r.other_user
-          const name  = tutor?.user?.name ?? tutor?.name ?? r.tutor_name ?? null
-          const id    = tutor?.id ?? r.tutor_id ?? null
-          return name ? { id, name } : null
-        })
-        .filter(Boolean)
-        .filter((t, i, a) => a.findIndex(x => x.name === t.name) === i) // dedupe
+        .filter(r => r.role === 'tutor')
+        .map(r => ({ id: r.id, name: r.fullName ?? r.name }))
+        .filter(t => t.id && t.name)
+        .filter((t, i, a) => a.findIndex(x => x.id === t.id) === i) // dedupe
       setTutors(tutorList)
     } catch {}
     finally { setLoadingExtra(false) }

@@ -16,6 +16,8 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\AdminUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -148,11 +150,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/users', [AdminController::class, 'users']);
     Route::post('/admin/users/{id}/suspend', [AdminController::class, 'suspendUser']);
     Route::post('/admin/users/{id}/unsuspend', [AdminController::class, 'unsuspendUser']);
+    Route::post('/admin/users/{id}/verify-email', [AdminUserController::class, 'verifyEmail']);
     Route::get('/admin/tutors/pending', [TutorController::class, 'adminPending']);
     Route::post('/admin/tutors/{id}/approve', [TutorController::class, 'adminApprove']);
     Route::post('/admin/tutors/{id}/reject', [TutorController::class, 'adminReject']);
     Route::get('/admin/complaints', [ComplaintController::class, 'adminIndex']);
     Route::put('/admin/complaints/{id}', [ComplaintController::class, 'adminUpdate']);
+
+    // Admin notifications (inbox + send DM to users)
+    Route::get('/admin/notifications',             [AdminNotificationController::class, 'index']);
+    Route::get('/admin/notifications/sent',        [AdminNotificationController::class, 'sent']);
+    Route::post('/admin/notifications/send',       [AdminNotificationController::class, 'send']);
+    Route::get('/admin/notifications/unread-count',[AdminNotificationController::class, 'unreadCount']);
+    Route::put('/admin/notifications/mark-all-read',[AdminNotificationController::class, 'markAllRead']);
+    Route::put('/admin/notifications/{id}/read',   [AdminNotificationController::class, 'markRead']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);

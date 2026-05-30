@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ReactECharts from 'echarts-for-react'
-import { Users, CalendarClock, ShieldCheck, Flag } from 'lucide-react'
+import { Users, CalendarClock, ShieldCheck, Flag, AlertTriangle, ArrowRight } from 'lucide-react'
 import {
   getOverview,
   getSessionTrends,
@@ -190,6 +190,26 @@ export default function DashboardPage() {
           Welcome back. Here is what is happening on StudyMatch today.
         </p>
       </div>
+
+      {/* Pending tutor approvals banner */}
+      {stats?.users?.pending_tutor_approval > 0 && (
+        <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 14, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#FFEDD5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <AlertTriangle size={18} color="#F97316" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#92400E', fontFamily: "'DM Sans', sans-serif" }}>
+              {stats.users.pending_tutor_approval} tutor application{stats.users.pending_tutor_approval !== 1 ? 's' : ''} awaiting review
+            </div>
+            <div style={{ fontSize: 12.5, color: '#B45309', marginTop: 2, fontFamily: "'DM Sans', sans-serif" }}>
+              Review and approve or reject pending tutor verifications.
+            </div>
+          </div>
+          <NavLink to="/tutors" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#F97316', color: 'white', borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+            Review Now <ArrowRight size={13} />
+          </NavLink>
+        </div>
+      )}
 
       {/* Primary KPI row */}
       <div className="grid grid-cols-4 gap-4">

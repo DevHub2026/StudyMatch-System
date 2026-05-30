@@ -21,6 +21,9 @@ export const suspendUser = (id) =>
 export const unsuspendUser = (id) =>
   api.post(`/admin/users/${id}/unsuspend`)
 
+export const verifyUserEmail = (id) =>
+  api.post(`/admin/users/${id}/verify-email`)
+
 export const getPendingTutors = (params) =>
   api.get('/admin/tutors/pending', { params })
 

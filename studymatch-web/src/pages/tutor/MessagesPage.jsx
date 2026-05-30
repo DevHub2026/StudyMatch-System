@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getConversations, getConversation, sendMessage, sendFile } from '../../api/chat'
-import { getMatchRequests } from '../../api/matchRequests'
+import { getMatchRequests, cancelMatchRequest } from '../../api/matchRequests'
 import { getAnnouncements } from '../../api/announcements'
+import { getSessions, completeSession } from '../../api/sessions'
 import { getUser } from '../../store/authStore'
 import {
   Search, Video, Phone, MoreVertical, Paperclip,
   Image, FileText, Smile, Send, Users, MessageSquare,
   Share2, Megaphone, LayoutTemplate, ChevronRight,
   ChevronDown, ChevronUp,
-  Loader2, Calendar,
+  Loader2, Calendar, CheckSquare, UserMinus, X,
 } from 'lucide-react'
 
 const COLORS = ['#EC4899','#7C3AED','#10B981','#6366F1','#F59E0B','#EF4444']
@@ -18,9 +19,30 @@ const getInitials = (name = '') => name.split(' ').map(w => w[0]).join('').slice
 
 const ANNOUNCEMENTS_ID = '__announcements__'
 
+const MESSAGE_TEMPLATES = [
+  "Hi! Ready to start our session? 👋",
+  "I'll be a few minutes late, please wait.",
+  "Let's review what we covered last time.",
+  "Do you have any questions before we begin?",
+  "Great session! See you next time. 🎉",
+  "Please check the resource I just shared.",
+]
+
+const STATUS_COLORS = {
+  scheduled: { bg: '#F0FDF4', color: '#10B981', label: 'Scheduled' },
+  pending:   { bg: '#FEF9C3', color: '#CA8A04', label: 'Pending' },
+  completed: { bg: '#F3F4F6', color: '#6B7280', label: 'Completed' },
+  cancelled: { bg: '#FEF2F2', color: '#EF4444', label: 'Cancelled' },
+}
+
 function formatTime(ts) {
   if (!ts) return ''
   return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+function formatSessionDate(ts) {
+  if (!ts) return '—'
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
 function Avatar({ name = '', color = '#7C3AED', size = 42, online, isGroup }) {
@@ -33,12 +55,6 @@ function Avatar({ name = '', color = '#7C3AED', size = 42, online, isGroup }) {
     </div>
   )
 }
-
-const QUICK_ACTIONS = [
-  { icon: MessageSquare, label: 'Start a New Conversation', color: '#7C3AED', bg: '#F3F0FF' },
-  { icon: Share2,        label: 'Share a Resource',         color: '#6366F1', bg: '#EEF2FF' },
-  { icon: LayoutTemplate,label: 'Message Templates',        color: '#10B981', bg: '#F0FDF4' },
-]
 
 function buildMeetUrl(meId, partnerId, mode = 'video') {
   const a = Number(meId || 0)
@@ -66,6 +82,7 @@ export default function TutorMessagesPage() {
   const bottomRef    = useRef(null)
   const prevCountRef = useRef(0)
   const fileRef      = useRef(null)
+  const searchRef    = useRef(null)
   const [showEmoji,   setShowEmoji]    = useState(false)
   const [sendingFile, setSendingFile]  = useState(false)
 
@@ -73,6 +90,18 @@ export default function TutorMessagesPage() {
   const [announcements, setAnnouncements] = useState([])
   const [expandedAnn,   setExpandedAnn]   = useState(null)
   const [annUnread,     setAnnUnread]     = useState(0)
+
+  // 3-dot menu
+  const [showMenu,        setShowMenu]        = useState(false)
+  const [finishingSession, setFinishingSession] = useState(false)
+  const [endingMatch,     setEndingMatch]     = useState(false)
+
+  // Active sessions for current partner
+  const [partnerSessions,  setPartnerSessions]  = useState([])
+  const [loadingSessions,  setLoadingSessions]  = useState(false)
+
+  // Message templates
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const EMOJIS = ['😀','😂','😊','❤️','👍','🙏','🔥','✨','🎉','😢','😮','🤔','👏','💪','🥳','😎','🤩','😅','🫡','💯']
 
@@ -88,7 +117,58 @@ export default function TutorMessagesPage() {
     finally { setSendingFile(false) }
   }
 
-  const openFilePicker = (accept) => { if (fileRef.current) { fileRef.current.accept = accept; fileRef.current.click() } }
+  const openFilePicker = (accept) => {
+    if (!activeId || activeId === ANNOUNCEMENTS_ID) return
+    if (fileRef.current) { fileRef.current.accept = accept; fileRef.current.click() }
+  }
+
+  // Fetch sessions for current conversation partner
+  const fetchPartnerSessions = async (partnerId) => {
+    if (!partnerId || partnerId === ANNOUNCEMENTS_ID) { setPartnerSessions([]); return }
+    setLoadingSessions(true)
+    try {
+      const res = await getSessions()
+      const all = res?.data || res || []
+      const filtered = (Array.isArray(all) ? all : [])
+        .filter(s => String(s.studentUserId || s.student?.user?.id) === String(partnerId))
+        .sort((a, b) => new Date(b.scheduled_at || b.scheduledAt) - new Date(a.scheduled_at || a.scheduledAt))
+      setPartnerSessions(filtered)
+    } catch {
+      setPartnerSessions([])
+    } finally {
+      setLoadingSessions(false)
+    }
+  }
+
+  const activeSession = partnerSessions.find(s => s.status === 'scheduled') || partnerSessions.find(s => s.status === 'pending')
+
+  const handleFinishSession = async (sessionId) => {
+    const target = sessionId
+      ? partnerSessions.find(s => String(s.id) === String(sessionId))
+      : activeSession
+    if (!target) return
+    setFinishingSession(true)
+    setShowMenu(false)
+    try {
+      await completeSession(target.id)
+      await fetchPartnerSessions(activeId)
+    } catch {}
+    finally { setFinishingSession(false) }
+  }
+
+  const handleEndMatch = async () => {
+    if (!activeId || activeId === ANNOUNCEMENTS_ID) return
+    if (!window.confirm('End this match? The student will need to send a new request to work with you again.')) return
+    setEndingMatch(true)
+    setShowMenu(false)
+    try {
+      await cancelMatchRequest(activeId)
+      setConvs(p => p.filter(c => (c.partner_id || c.id) !== activeId))
+      setActiveId(ANNOUNCEMENTS_ID)
+      setPartnerSessions([])
+    } catch {}
+    finally { setEndingMatch(false) }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -150,7 +230,6 @@ export default function TutorMessagesPage() {
         if (partnerId) {
           setActiveId(Number(partnerId))
         }
-        // else stays on ANNOUNCEMENTS_ID (default)
       } catch {}
       finally { setLoadingConvs(false) }
     }
@@ -160,6 +239,9 @@ export default function TutorMessagesPage() {
   useEffect(() => {
     if (!activeId || activeId === ANNOUNCEMENTS_ID) return
     prevCountRef.current = 0
+    setShowMenu(false)
+    setShowTemplates(false)
+    fetchPartnerSessions(activeId)
 
     const fetchMsgs = async (initial = false) => {
       if (initial) { setLoadingMsgs(true); setMessages([]) }
@@ -236,13 +318,18 @@ export default function TutorMessagesPage() {
         .msgs-area { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
         .msgs-area::-webkit-scrollbar { width: 3px; }
         .msgs-area::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 3px; }
+        .menu-item { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px; border: none; background: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 600; width: 100%; text-align: left; transition: background .12s; }
+        .menu-item:hover { background: #F8F9FB; }
+        .menu-item.danger:hover { background: #FEF2F2; color: #EF4444 !important; }
         .q-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #F8F9FB; cursor: pointer; }
         .q-row:last-child { border-bottom: none; }
         .q-row:hover .q-lbl { color: #7C3AED; }
+        .tpl-btn { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; border: none; background: none; cursor: pointer; font-size: 13px; color: #374151; font-family: 'DM Sans', sans-serif; transition: background .12s; }
+        .tpl-btn:hover { background: #F3F0FF; color: #7C3AED; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      <div style={{ color: '#1E1B4B' }}>
+      <div className="tm-wrap" style={{ color: '#1E1B4B' }}>
         <div style={{ marginBottom: 16 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Messages</h1>
           <p style={{ fontSize: 13, color: '#9CA3AF' }}>Communicate with your students, share resources, and stay connected.</p>
@@ -254,7 +341,7 @@ export default function TutorMessagesPage() {
             <div style={{ padding: '14px 14px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8F9FB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '8px 12px' }}>
                 <Search size={13} color="#9CA3AF" />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search conversations..."
+                <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search conversations..."
                   style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, background: 'transparent', color: '#374151' }} />
               </div>
             </div>
@@ -361,16 +448,13 @@ export default function TutorMessagesPage() {
                               <span style={{ fontSize: 10, fontWeight: 700, background: '#F59E0B22', color: '#F59E0B', border: '1px solid #F59E0B44', borderRadius: 20, padding: '1px 7px' }}>Pinned</span>
                             )}
                           </div>
-
                           <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.65 }}>{preview}</div>
-
                           {isLong && (
                             <button onClick={() => setExpandedAnn(isExpanded ? null : ann.id)}
                               style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED', fontWeight: 700, fontSize: 12.5, fontFamily: 'inherit', padding: 0 }}>
                               {isExpanded ? <><ChevronUp size={13} /> Show less</> : <><ChevronDown size={13} /> View full announcement</>}
                             </button>
                           )}
-
                           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#9CA3AF' }}>
                             <span>StudyMatch</span>
                             <span>·</span>
@@ -388,17 +472,28 @@ export default function TutorMessagesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: '#F3F0FF', border: '1px solid #DDD6FE', borderRadius: 10 }}>
                     <Megaphone size={15} color="#7C3AED" />
                     <span style={{ fontSize: 13, color: '#6B7280', fontStyle: 'italic' }}>
-                      Announcements are broadcast-only. You cannot reply to this channel.
+                      Announcements are broadcast-only — you cannot reply here.
+                      To contact support, email{' '}
+                      <a href="mailto:studymatch.admin@gmail.com"
+                        style={{ color: '#7C3AED', fontWeight: 700, fontStyle: 'normal', textDecoration: 'none' }}>
+                        studymatch.admin@gmail.com
+                      </a>
                     </span>
                   </div>
                 </div>
               </>
             ) : (
               <>
+                {/* Chat header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #F0F0F4' }}>
                   <Avatar name={partnerName} color={partnerColor} size={42} online={activeConv?.is_online} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>{partnerName}</div>
+                    {activeSession && (
+                      <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>
+                        ● Active session · {formatSessionDate(activeSession.scheduled_at || activeSession.scheduledAt)}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" title="Video call" onClick={() => startCall('video')}
@@ -409,10 +504,45 @@ export default function TutorMessagesPage() {
                       style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                       <Phone size={15} color="#6B7280" />
                     </button>
-                    <button type="button" title="More"
-                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <MoreVertical size={15} color="#6B7280" />
-                    </button>
+
+                    {/* 3-dot menu */}
+                    <div style={{ position: 'relative' }}>
+                      <button type="button" title="More options" onClick={() => setShowMenu(p => !p)}
+                        style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: showMenu ? '#F3F0FF' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <MoreVertical size={15} color={showMenu ? '#7C3AED' : '#6B7280'} />
+                      </button>
+
+                      {showMenu && (
+                        <>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowMenu(false)} />
+                          <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,.1)', zIndex: 100, minWidth: 200 }}>
+                            <button
+                              className="menu-item"
+                              onClick={() => handleFinishSession()}
+                              disabled={!activeSession || finishingSession}
+                              style={{ color: activeSession ? '#10B981' : '#9CA3AF', opacity: (!activeSession || finishingSession) ? 0.6 : 1 }}
+                            >
+                              {finishingSession
+                                ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                                : <CheckSquare size={15} />}
+                              {finishingSession ? 'Finishing…' : activeSession ? 'Finish Session' : 'No Active Session'}
+                            </button>
+                            <div style={{ height: 1, background: '#F0F0F4', margin: '4px 0' }} />
+                            <button
+                              className="menu-item danger"
+                              onClick={handleEndMatch}
+                              disabled={endingMatch}
+                              style={{ color: '#EF4444', opacity: endingMatch ? 0.6 : 1 }}
+                            >
+                              {endingMatch
+                                ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                                : <UserMinus size={15} />}
+                              {endingMatch ? 'Ending…' : 'End Match'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -461,10 +591,8 @@ export default function TutorMessagesPage() {
 
                 <div style={{ padding: '12px 16px', borderTop: '1px solid #F0F0F4', position: 'relative' }}>
                   <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={handleFileSelect} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8F9FB', border: '1px solid #E5E7EB', borderRadius: 12, padding: '10px 14px', marginBottom: 8 }}>
-                    <input placeholder="Type a message..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#374151', background: 'transparent' }} />
-                  </div>
+
+                  {/* Emoji picker */}
                   {showEmoji && (
                     <div style={{ position: 'absolute', bottom: 90, left: 16, background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 10, display: 'flex', flexWrap: 'wrap', gap: 4, width: 220, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 10 }}>
                       {EMOJIS.map(e => (
@@ -476,6 +604,24 @@ export default function TutorMessagesPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* Template picker */}
+                  {showTemplates && (
+                    <div style={{ position: 'absolute', bottom: 90, right: 16, background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 8, boxShadow: '0 4px 16px rgba(0,0,0,.1)', zIndex: 10, minWidth: 240 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, padding: '0 4px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Message Templates</span>
+                        <button onClick={() => setShowTemplates(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}><X size={13} color="#9CA3AF" /></button>
+                      </div>
+                      {MESSAGE_TEMPLATES.map(t => (
+                        <button key={t} className="tpl-btn" onClick={() => { setInput(t); setShowTemplates(false) }}>{t}</button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8F9FB', border: '1px solid #E5E7EB', borderRadius: 12, padding: '10px 14px', marginBottom: 8 }}>
+                    <input placeholder="Type a message..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                      style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: '#374151', background: 'transparent' }} />
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', gap: 12 }}>
                       <button onClick={() => openFilePicker('*/*')} title="Attach file" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><Paperclip size={18} color="#9CA3AF" /></button>
@@ -494,22 +640,78 @@ export default function TutorMessagesPage() {
 
           {/* Right panel */}
           <div className="tm-right">
+            {/* Active Sessions */}
             <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '18px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 14 }}>Active Sessions</div>
-              <div style={{ padding: '12px 0', textAlign: 'center' }}>
-                <Calendar size={24} color="#DDD6FE" style={{ margin: '0 auto 8px', display: 'block' }} />
-                <div style={{ fontSize: 13, color: '#9CA3AF' }}>No active sessions</div>
-              </div>
+              {loadingSessions ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+                  <Loader2 size={20} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : !activeConv || isAnnouncementsActive ? (
+                <div style={{ padding: '12px 0', textAlign: 'center' }}>
+                  <Calendar size={24} color="#DDD6FE" style={{ margin: '0 auto 8px', display: 'block' }} />
+                  <div style={{ fontSize: 13, color: '#9CA3AF' }}>Select a conversation</div>
+                </div>
+              ) : partnerSessions.length === 0 ? (
+                <div style={{ padding: '12px 0', textAlign: 'center' }}>
+                  <Calendar size={24} color="#DDD6FE" style={{ margin: '0 auto 8px', display: 'block' }} />
+                  <div style={{ fontSize: 13, color: '#9CA3AF' }}>No sessions with {partnerName}</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {partnerSessions.slice(0, 3).map(s => {
+                    const st = STATUS_COLORS[s.status] || STATUS_COLORS.pending
+                    const isActive = s.status === 'scheduled' || s.status === 'pending'
+                    return (
+                      <div key={s.id} style={{ background: '#F8F9FB', borderRadius: 10, padding: '10px 12px', border: `1px solid ${isActive ? '#DDD6FE' : '#F0F0F4'}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, borderRadius: 20, padding: '2px 8px' }}>{st.label}</span>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: '#374151', fontWeight: 600, marginBottom: 4 }}>
+                          {formatSessionDate(s.scheduled_at || s.scheduledAt)}
+                        </div>
+                        {s.subject?.name && <div style={{ fontSize: 12, color: '#9CA3AF' }}>{s.subject.name}</div>}
+                        {isActive && (
+                          <button
+                            onClick={() => handleFinishSession(s.id)}
+                            disabled={finishingSession}
+                            style={{ marginTop: 8, width: '100%', padding: '6px', background: '#10B981', color: 'white', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, fontFamily: 'inherit', opacity: finishingSession ? 0.6 : 1 }}
+                          >
+                            {finishingSession ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckSquare size={12} />}
+                            Finish Session
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* Quick Actions */}
             <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '18px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 10 }}>Quick Actions</div>
-              {QUICK_ACTIONS.map(({ icon: Icon, label, color, bg }) => (
-                <div key={label} className="q-row">
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={15} color={color} /></div>
-                  <span className="q-lbl" style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: '#1E1B4B' }}>{label}</span>
-                  <ChevronRight size={14} color="#D1D5DB" />
-                </div>
-              ))}
+
+              {/* Start a New Conversation */}
+              <div className="q-row" onClick={() => { setActiveId(ANNOUNCEMENTS_ID); setSearch(''); setTimeout(() => searchRef.current?.focus(), 100) }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F3F0FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MessageSquare size={15} color="#7C3AED" /></div>
+                <span className="q-lbl" style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: '#1E1B4B' }}>Start a New Conversation</span>
+                <ChevronRight size={14} color="#D1D5DB" />
+              </div>
+
+              {/* Share a Resource */}
+              <div className="q-row" onClick={() => openFilePicker('*/*')} style={{ opacity: (!activeConv || isAnnouncementsActive) ? 0.5 : 1, cursor: (!activeConv || isAnnouncementsActive) ? 'default' : 'pointer' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Share2 size={15} color="#6366F1" /></div>
+                <span className="q-lbl" style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: '#1E1B4B' }}>Share a Resource</span>
+                <ChevronRight size={14} color="#D1D5DB" />
+              </div>
+
+              {/* Message Templates */}
+              <div className="q-row" onClick={() => { if (!activeConv || isAnnouncementsActive) return; setShowTemplates(p => !p) }} style={{ opacity: (!activeConv || isAnnouncementsActive) ? 0.5 : 1, cursor: (!activeConv || isAnnouncementsActive) ? 'default' : 'pointer' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LayoutTemplate size={15} color="#10B981" /></div>
+                <span className="q-lbl" style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: '#1E1B4B' }}>Message Templates</span>
+                <ChevronRight size={14} color="#D1D5DB" />
+              </div>
             </div>
           </div>
         </div>
