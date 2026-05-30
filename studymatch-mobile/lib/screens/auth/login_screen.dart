@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
-import '../../widgets/shared_widgets.dart';
 import '../../services/app_state.dart';
 import 'signup_screen.dart';
 
@@ -16,7 +15,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
-  bool _obscurePass = true;
+  bool _obscure = true;
+  bool _remember = false;
+  String _selectedRole = 'student'; // 'student' or 'tutor'
 
   @override
   void dispose() {
@@ -25,156 +26,243 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    final error = await context.read<AppState>().signIn(
-          email: _emailCtrl.text.trim(),
-          password: _passCtrl.text,
-        );
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppTheme.error),
+  void _login() async {
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => _loading = true);
+  final error = await context.read<AppState>().signIn(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
       );
-    } else {
-      Navigator.of(context).pop();
-    }
-  }
-
-  void _forgotPassword() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.surfaceLight,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => const _ForgotPasswordSheet(),
+  if (!mounted) return;
+  setState(() => _loading = false);
+  if (error != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error), backgroundColor: Colors.redAccent),
     );
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0F0F1A),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      color: Color(0xFF1A1A2E)),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
+
+                // Logo
                 Center(
                   child: Column(
                     children: [
                       Container(
-                        width: 64,
-                        height: 64,
+                        width: 56, height: 56,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                               colors: [AppTheme.primary, AppTheme.accent]),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(Icons.school_rounded,
-                            color: Colors.white, size: 34),
+                            color: Colors.white, size: 30),
                       ),
-                      const SizedBox(height: 16),
-                      const Text('Welcome Back',
+                      const SizedBox(height: 12),
+                      RichText(
+                        text: const TextSpan(
                           style: TextStyle(
-                              color: Color(0xFF1A1A2E),
-                              fontSize: 28,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins')),
-                      const SizedBox(height: 6),
-                      const Text('Sign in to continue your learning journey',
+                              fontFamily: 'Poppins'),
+                          children: [
+                            TextSpan(text: 'Study',
+                                style: TextStyle(color: Colors.white)),
+                            TextSpan(text: 'Match',
+                                style: TextStyle(color: AppTheme.primaryLight)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('LEARNING PLATFORM',
                           style: TextStyle(
                               color: Color(0xFF6B7280),
-                              fontSize: 14,
+                              fontSize: 11,
+                              letterSpacing: 2,
                               fontFamily: 'Poppins')),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
-                const _FieldLabel('Email'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(
-                      color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
-                  validator: (v) => (v == null || !v.contains('@'))
-                      ? 'Enter a valid email'
-                      : null,
-                  decoration: lightInputDecoration(
-                      hint: 'your@email.com', icon: Icons.email_outlined),
-                ),
-                const SizedBox(height: 20),
-                const _FieldLabel('Password'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _passCtrl,
-                  obscureText: _obscurePass,
-                  style: const TextStyle(
-                      color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
-                  validator: (v) => (v == null || v.length < 6)
-                      ? 'Password must be at least 6 characters'
-                      : null,
-                  decoration: lightInputDecoration(
-                    hint: '••••••••',
-                    icon: Icons.lock_outline,
-                  ).copyWith(
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _obscurePass
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: const Color(0xFF9CA3AF),
-                          size: 20),
-                      onPressed: () =>
-                          setState(() => _obscurePass = !_obscurePass),
+
+                const SizedBox(height: 36),
+
+                const Text('Welcome back',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins')),
+                const SizedBox(height: 4),
+                const Text('Sign in to your StudyMatch account',
+                    style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
+                        fontFamily: 'Poppins')),
+
+                const SizedBox(height: 28),
+
+                // Role selector
+                const Text('Sign in as',
+                    style: TextStyle(
+                        color: Color(0xFF9CA3AF),
+                        fontSize: 13,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _RoleCard(
+                        icon: Icons.school_rounded,
+                        label: 'Student',
+                        sublabel: 'Find tutors & study partners',
+                        selected: _selectedRole == 'student',
+                        onTap: () => setState(() => _selectedRole = 'student'),
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _RoleCard(
+                        icon: Icons.co_present_rounded,
+                        label: 'Tutor',
+                        sublabel: 'Teach & help students',
+                        selected: _selectedRole == 'tutor',
+                        onTap: () => setState(() => _selectedRole = 'tutor'),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Email
+                _DarkField(
+                  controller: _emailCtrl,
+                  hint: 'you@example.com',
+                  label: 'Email',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Enter a valid email' : null,
+                ),
+                const SizedBox(height: 14),
+
+                // Password
+                _DarkField(
+                  controller: _passCtrl,
+                  hint: '••••••••',
+                  label: 'Password',
+                  icon: Icons.lock_outline,
+                  obscureText: _obscure,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFF6B7280), size: 20),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  ),
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Enter your password' : null,
+                ),
+
+                const SizedBox(height: 14),
+
+                // Remember me + Forgot password
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 20, height: 20,
+                          child: Checkbox(
+                            value: _remember,
+                            onChanged: (v) =>
+                                setState(() => _remember = v ?? false),
+                            activeColor: AppTheme.primary,
+                            checkColor: Colors.white,
+                            side: const BorderSide(color: Color(0xFF374151)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Remember me',
+                            style: TextStyle(
+                                color: Color(0xFF9CA3AF),
+                                fontSize: 13,
+                                fontFamily: 'Poppins')),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                      child: Text('Forgot password?',
+                          style: TextStyle(
+                              color: AppTheme.primaryLight,
+                              fontSize: 13,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 28),
+
+                // Sign in button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: _loading
+                        ? const SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Sign in',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Poppins')),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _forgotPassword,
-                    child: const Text('Forgot Password?',
-                        style: TextStyle(
-                            color: AppTheme.primaryLight,
-                            fontFamily: 'Poppins')),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GradientButton(
-                  text: 'Sign In',
-                  onPressed: _signIn,
-                  isLoading: _loading,
-                ),
-                const SizedBox(height: 40),
+
+                const SizedBox(height: 24),
+
                 Center(
                   child: TextButton(
-                    onPressed: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SignupScreen()),
-                    ),
-                    child: const Text.rich(TextSpan(
+                    onPressed: () => Navigator.pushReplacement(context,
+                        MaterialPageRoute(
+                            builder: (_) => const SignupScreen())),
+                    child: Text.rich(TextSpan(
                       text: "Don't have an account? ",
-                      style: TextStyle(
-                          color: Color(0xFF6B7280), fontFamily: 'Poppins'),
+                      style: const TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontFamily: 'Poppins',
+                          fontSize: 13),
                       children: [
-                        TextSpan(
-                            text: 'Sign Up',
+                        TextSpan(text: 'Create Account',
                             style: TextStyle(
                                 color: AppTheme.primaryLight,
                                 fontWeight: FontWeight.w600)),
@@ -192,261 +280,165 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// ── Shared light-theme input helpers ─────────────────────────────────────────
+// ── Role card ───────────────────────────────────────────────────────────────
+class _RoleCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final bool selected;
+  final VoidCallback onTap;
 
-InputDecoration lightInputDecoration({required String hint, IconData? icon}) {
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(
-        color: Color(0xFF9CA3AF), fontFamily: 'Poppins', fontSize: 14),
-    prefixIcon: icon != null
-        ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
-        : null,
-    filled: true,
-    fillColor: const Color(0xFFF5F5F8),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
-    enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
-    focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5)),
-    errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.error)),
-    focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppTheme.error, width: 1.5)),
-  );
-}
-
-class _FieldLabel extends StatelessWidget {
-  final String text;
-  const _FieldLabel(this.text);
-  @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(
-            color: Color(0xFF374151),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Poppins'),
-      );
-}
-
-// ── Forgot Password Bottom Sheet ──────────────────────────────────────────────
-class _ForgotPasswordSheet extends StatefulWidget {
-  const _ForgotPasswordSheet();
-  @override
-  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
-}
-
-class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
-  final _emailCtrl = TextEditingController();
-  bool _sending = false;
-  bool _sent = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = 'Please enter a valid email address.');
-      return;
-    }
-    setState(() {
-      _sending = true;
-      _error = null;
-    });
-    try {
-      final result = await context.read<AppState>().forgotPassword(email);
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          if (result['success'] == true) {
-            _sent = true;
-          } else {
-            _error = result['message'] as String? ?? 'Something went wrong.';
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          _error = 'Network error: $e';
-        });
-      }
-    }
-  }
+  const _RoleCard({
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8E8EF),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.12)
+              : const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppTheme.primary : const Color(0xFF1F2937),
+            width: selected ? 1.5 : 1,
           ),
-          const SizedBox(height: 20),
-          Center(
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border:
-                    Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-              ),
-              child: const Icon(Icons.lock_reset_rounded,
-                  color: AppTheme.primary, size: 30),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Center(
-            child: Text('Forgot Password?',
-                style: TextStyle(
-                    color: Color(0xFF1A1A2E),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins')),
-          ),
-          const SizedBox(height: 8),
-          const Center(
-            child: Text("Enter your email and we'll send you a reset link.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontFamily: 'Poppins',
-                    fontSize: 13)),
-          ),
-          const SizedBox(height: 24),
-          if (_sent) ...[
+        ),
+        child: Row(
+          children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              width: 36, height: 36,
               decoration: BoxDecoration(
-                color: AppTheme.success.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: AppTheme.success.withValues(alpha: 0.25)),
+                color: selected
+                    ? AppTheme.primary.withValues(alpha: 0.2)
+                    : const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Icon(icon,
+                  color: selected ? AppTheme.primaryLight
+                      : const Color(0xFF6B7280),
+                  size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline,
-                      color: AppTheme.success, size: 22),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Reset link sent! Check your inbox and follow the instructions.',
+                  Text(label,
                       style: TextStyle(
-                          color: AppTheme.success,
-                          fontFamily: 'Poppins',
-                          fontSize: 13),
-                    ),
-                  ),
+                          color: selected ? Colors.white
+                              : const Color(0xFF9CA3AF),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Poppins')),
+                  Text(sublabel,
+                      style: const TextStyle(
+                          color: Color(0xFF4B5563),
+                          fontSize: 10,
+                          fontFamily: 'Poppins')),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Done',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white)),
-              ),
-            ),
-          ] else ...[
-            if (_error != null) ...[
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.error.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: AppTheme.error.withValues(alpha: 0.25)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: AppTheme.error, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_error!,
-                          style: const TextStyle(
-                              color: AppTheme.error,
-                              fontFamily: 'Poppins',
-                              fontSize: 12)),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            const _FieldLabel('Email Address'),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(
-                  color: Color(0xFF1A1A2E), fontFamily: 'Poppins'),
-              decoration: lightInputDecoration(
-                  hint: 'your@email.com', icon: Icons.email_outlined),
-            ),
-            const SizedBox(height: 20),
-            GradientButton(
-              text: 'Send Reset Link',
-              onPressed: _send,
-              isLoading: _sending,
-              icon: Icons.send_rounded,
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel',
-                    style: TextStyle(
-                        color: Color(0xFF9CA3AF), fontFamily: 'Poppins')),
-              ),
-            ),
+            if (selected)
+              Icon(Icons.radio_button_checked,
+                  color: AppTheme.primary, size: 16)
+            else
+              const Icon(Icons.radio_button_unchecked,
+                  color: Color(0xFF374151), size: 16),
           ],
-        ],
+        ),
       ),
+    );
+  }
+}
+
+// ── Dark input field ────────────────────────────────────────────────────────
+class _DarkField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final String label;
+  final IconData icon;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+
+  const _DarkField({
+    required this.controller,
+    required this.hint,
+    required this.label,
+    required this.icon,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.keyboardType,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: Color(0xFF9CA3AF),
+                fontSize: 13,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: const TextStyle(
+              color: Colors.white, fontFamily: 'Poppins', fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+                color: Color(0xFF4B5563), fontFamily: 'Poppins', fontSize: 14),
+            prefixIcon: Icon(icon, color: const Color(0xFF6B7280), size: 20),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: const Color(0xFF1A1A2E),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF1F2937)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF1F2937)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+            errorStyle: const TextStyle(
+                color: Colors.redAccent,
+                fontFamily: 'Poppins',
+                fontSize: 11),
+          ),
+        ),
+      ],
     );
   }
 }

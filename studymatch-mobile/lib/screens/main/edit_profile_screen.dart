@@ -233,7 +233,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       'school': _schoolCtrl.text.trim(),
       'bio': _bioCtrl.text.trim(),
-      'topic': _selectedTopic,
       'dateOfBirth': _dob?.toIso8601String(),
       'gender': _selectedGender,
       // For students: send 'program' (degree text) and keep 'department' for compatibility.
@@ -247,7 +246,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       'strengths': _selectedStrengths.toList(),
       'weaknesses': _selectedWeaknesses.toList(),
       'learningStyles': _selectedLearningStyles.toList(),
-      'studyStyles': _selectedStudyStyles.toList(),
       'availability': avail,
     };
 
@@ -617,96 +615,90 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildAcademicDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_isTutor) ...[
-          _fieldLabel('College Degree'),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _degreeCtrl,
-            style: _inputTextStyle,
-            decoration: InputDecoration(
-              hintText: 'e.g. BS Computer Science',
-              hintStyle: const TextStyle(
-                  color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
-              prefixIcon: const Icon(Icons.workspace_premium_outlined,
-                  color: Color(0xFF9CA3AF), size: 20),
-              filled: true,
-              fillColor: const Color(0xFFF5F5F8),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderLight)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderLight)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppTheme.primary, width: 1.5)),
-            ),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (_isTutor) ...[
+        _fieldLabel('College Degree'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _degreeCtrl,
+          style: _inputTextStyle,
+          decoration: InputDecoration(
+            hintText: 'e.g. BS Computer Science',
+            hintStyle: const TextStyle(
+                color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+            prefixIcon: const Icon(Icons.workspace_premium_outlined,
+                color: Color(0xFF9CA3AF), size: 20),
+            filled: true,
+            fillColor: const Color(0xFFF5F5F8),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppTheme.primary, width: 1.5)),
           ),
-        ] else ...[
-          _fieldLabel('Program'),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _programCtrl,
-            style: _inputTextStyle,
-            decoration: InputDecoration(
-              hintText: 'e.g. BS Computer Science',
-              hintStyle: const TextStyle(
-                  color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
-              prefixIcon: const Icon(Icons.school_outlined,
-                  color: Color(0xFF9CA3AF), size: 20),
-              filled: true,
-              fillColor: const Color(0xFFF5F5F8),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderLight)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.borderLight)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppTheme.primary, width: 1.5)),
-            ),
+        ),
+      ] else ...[
+        _fieldLabel('Program'),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _programCtrl,
+          style: _inputTextStyle,
+          decoration: InputDecoration(
+            hintText: 'e.g. BS Computer Science',
+            hintStyle: const TextStyle(
+                color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+            prefixIcon: const Icon(Icons.school_outlined,
+                color: Color(0xFF9CA3AF), size: 20),
+            filled: true,
+            fillColor: const Color(0xFFF5F5F8),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.borderLight)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    const BorderSide(color: AppTheme.primary, width: 1.5)),
           ),
-          const SizedBox(height: 14),
-          _fieldLabel('College Department'),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _deptList
-                .map((d) => _LightChip(
-                      label: d,
-                      selected: _selectedDepartment == d,
-                      onTap: () => setState(() => _selectedDepartment =
-                          _selectedDepartment == d ? null : d),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 14),
-          _DropdownField(
-            label: 'Year Level',
-            hint: 'Select year level',
-            value: _selectedYearLevel,
-            items: const ['1st', '2nd', '3rd', '4th', '5th'],
-            onChanged: (v) => setState(() => _selectedYearLevel = v),
-          ),
-        ],
-        const SizedBox(height: 16),
+        ),
+        const SizedBox(height: 14),
+        _fieldLabel('College Department'),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _deptList
+              .map((d) => _LightChip(
+                    label: d,
+                    selected: _selectedDepartment == d,
+                    onTap: () => setState(() => _selectedDepartment =
+                        _selectedDepartment == d ? null : d),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 14),
         _DropdownField(
-          label: 'Strand / Track (Optional)',
-          hint: 'Select strand or track',
-          value: _selectedTopic,
-          items: const ['STEM', 'ABM', 'HUMSS', 'GAS', 'TVL'],
-          onChanged: (v) => setState(() => _selectedTopic = v),
+          label: 'Year Level',
+          hint: 'Select year level',
+          value: _selectedYearLevel,
+          items: const ['1st', '2nd', '3rd', '4th', '5th'],
+          onChanged: (v) => setState(() => _selectedYearLevel = v),
         ),
       ],
-    );
-  }
+      // Strand/Track removed
+    ],
+  );
+}
+
 
   Widget _buildSubjects() {
     return Column(
@@ -792,48 +784,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildStudyStyle() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionLabel('LEARNING STYLE'),
-        const SizedBox(height: 10),
-        ...[
-          ('Visual', Icons.visibility_outlined),
-          ('Auditory', Icons.headphones_outlined),
-          ('Kinesthetic', Icons.sports_handball_outlined),
-          ('Reading/Writing', Icons.menu_book_outlined),
-        ].map((pair) => _StyleOptionTile(
-              icon: pair.$2,
-              label: pair.$1,
-              selected: _selectedLearningStyles.contains(pair.$1),
-              onTap: () => setState(() =>
-                  _selectedLearningStyles.contains(pair.$1)
-                      ? _selectedLearningStyles.remove(pair.$1)
-                      : _selectedLearningStyles.add(pair.$1)),
-            )),
-        const SizedBox(height: 20),
-        _sectionLabel('STUDY FORMAT'),
-        const SizedBox(height: 10),
-        Row(
-          children: ['Group', 'Individual']
-              .map((s) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: s == 'Group' ? 8 : 0),
-                      child: _LightChip(
-                        label: s,
-                        selected: _selectedStudyStyles.contains(s),
-                        onTap: () => setState(() =>
-                            _selectedStudyStyles.contains(s)
-                                ? _selectedStudyStyles.remove(s)
-                                : _selectedStudyStyles.add(s)),
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
-      ],
-    );
-  }
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _sectionLabel('LEARNING STYLE'),
+      const SizedBox(height: 10),
+      ...[
+        ('Visual', Icons.visibility_outlined),
+        ('Auditory', Icons.headphones_outlined),
+        ('Kinesthetic', Icons.sports_handball_outlined),
+        ('Reading/Writing', Icons.menu_book_outlined),
+      ].map((pair) => _StyleOptionTile(
+            icon: pair.$2,
+            label: pair.$1,
+            selected: _selectedLearningStyles.contains(pair.$1),
+            onTap: () => setState(() =>
+                _selectedLearningStyles.contains(pair.$1)
+                    ? _selectedLearningStyles.remove(pair.$1)
+                    : _selectedLearningStyles.add(pair.$1)),
+          )),
+      // Study Format removed
+    ],
+  );
+}
 
   Widget _buildAvailability() {
     return Column(

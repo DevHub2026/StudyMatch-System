@@ -9,11 +9,13 @@ import 'login_screen.dart';
 class OtpVerificationScreen extends StatefulWidget {
   final String email;
   final String name;
+  final String role;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
     required this.name,
+    required this.role,
   });
 
   @override
@@ -136,10 +138,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       if (data['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email verified! Please sign in.'),
+            content: Text('Email verified! Setting up your account...'),
             backgroundColor: Colors.green,
           ),
         );
+        // Both students and tutors go to login after OTP.
+        // Tutors already completed full registration in SignupScreen.
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (_) => false,
@@ -206,7 +210,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ),
               const SizedBox(height: 24),
 
-              // Header
+              // ── Header ──────────────────────────────────────────────────
               Center(
                 child: Column(
                   children: [
@@ -266,7 +270,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
               const SizedBox(height: 48),
 
-              // OTP Boxes
+              // ── OTP Boxes ────────────────────────────────────────────────
               AnimatedBuilder(
                 animation: _shakeAnim,
                 builder: (context, child) {
@@ -336,7 +340,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                 ),
               ),
 
-              // Error message
+              // ── Error message ────────────────────────────────────────────
               if (_errorMsg != null) ...[
                 const SizedBox(height: 16),
                 Center(
@@ -381,7 +385,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
               const SizedBox(height: 24),
 
-              // Resend
+              // ── Resend ───────────────────────────────────────────────────
               Center(
                 child: _secondsLeft > 0
                     ? Text(

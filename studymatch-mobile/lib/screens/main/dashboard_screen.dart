@@ -15,8 +15,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  get unread => null;
-
   void _showNotificationsSheet(BuildContext context, AppState state) {
     showModalBottomSheet(
       context: context,
@@ -47,15 +45,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final state = context.watch<AppState>();
     final user = state.currentUser;
     final firstName = user?.fullName.split(' ').first ?? 'Student';
-    final initials = user?.fullName.isNotEmpty == true
-        ? user!.fullName
-            .trim()
-            .split(' ')
-            .map((w) => w[0])
-            .take(2)
-            .join()
-            .toUpperCase()
-        : 'S';
 
     final activeMatches = state.matchedUsers.length;
     final unreadNotifs = state.unreadNotificationCount;
@@ -148,84 +137,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _SectionCard(
-                            title: 'Study Streak',
-                            compact: true,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.local_fire_department,
-                                        color: AppTheme.warning, size: 26),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      '0',
-                                      style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.textDark,
-                                        fontFamily: 'Poppins',
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Flexible(
-                                      child: Text(
-                                        'days in a row',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textMuted,
-                                          fontFamily: 'Poppins',
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                    // ── Study Streak (full width now, Subjects removed) ──
+                    _SectionCard(
+                      title: 'Study Streak',
+                      compact: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.local_fire_department,
+                                  color: AppTheme.warning, size: 26),
+                              const SizedBox(width: 8),
+                              const Text(
+                                '0',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.textDark,
+                                  fontFamily: 'Poppins',
                                 ),
-                                const SizedBox(height: 10),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      'M',
-                                      'T',
-                                      'W',
-                                      'T',
-                                      'F',
-                                      'S',
-                                      'S'
-                                    ]
-                                        .map((d) => Padding(
-                                              padding: const EdgeInsets.only(
-                                                  right: 6),
-                                              child: _StreakDot(label: d),
-                                            ))
-                                        .toList(),
-                                  ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'days in a row',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                  fontFamily: 'Poppins',
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _SectionCard(
-                            title: 'Subjects',
-                            compact: true,
-                            child: _EmptyInline(
-                              icon: Icons.menu_book_rounded,
-                              title: 'No subjects yet',
-                              subtitle: '+ Add subjects',
-                              compact: true,
-                              onTap: () => ShellScope.of(context)
-                                  .navigate(StudentNav.mySubjects),
-                            ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                                .map((d) => _StreakDot(label: d))
+                                .toList(),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 14),
                     _SectionCard(
@@ -284,6 +236,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero Banner
+// ─────────────────────────────────────────────────────────────────────────────
 class _HeroBanner extends StatelessWidget {
   const _HeroBanner();
 
@@ -369,6 +324,9 @@ class _HeroBanner extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Stats Grid
+// ─────────────────────────────────────────────────────────────────────────────
 class _StatsGrid extends StatelessWidget {
   final int activeMatches;
   final int pendingRequests;
@@ -397,28 +355,31 @@ class _StatsGrid extends StatelessWidget {
         onTap: () => ShellScope.of(context).navigate(StudentNav.myMatches),
       ),
       _StatItem(
-          icon: Icons.pending_actions_rounded,
-          color: AppTheme.warning,
-          value: '$pendingRequests',
-          label: 'Pending Requests',
-          sub: 'View requests →',
-          onTap: () =>
-              ShellScope.of(context).navigate(StudentNav.studySessions)),
+        icon: Icons.pending_actions_rounded,
+        color: AppTheme.warning,
+        value: '$pendingRequests',
+        label: 'Pending Requests',
+        sub: 'View requests →',
+        onTap: () =>
+            ShellScope.of(context).navigate(StudentNav.studySessions),
+      ),
       _StatItem(
-          icon: Icons.schedule_rounded,
-          color: AppTheme.primary,
-          value: '$upcomingSessions',
-          label: 'Upcoming Sessions',
-          sub: 'View sessions →',
-          onTap: () =>
-              ShellScope.of(context).navigate(StudentNav.studySessions)),
+        icon: Icons.schedule_rounded,
+        color: AppTheme.primary,
+        value: '$upcomingSessions',
+        label: 'Upcoming Sessions',
+        sub: 'View sessions →',
+        onTap: () =>
+            ShellScope.of(context).navigate(StudentNav.studySessions),
+      ),
       _StatItem(
         icon: Icons.notifications_active_rounded,
         color: AppTheme.error,
         value: '$notifications',
         label: 'Notifications',
         sub: 'View all →',
-        onTap: () => ShellScope.of(context).navigate(StudentNav.notifications),
+        onTap: () =>
+            ShellScope.of(context).navigate(StudentNav.notifications),
       ),
     ];
 
@@ -534,6 +495,9 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Section Card
+// ─────────────────────────────────────────────────────────────────────────────
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
@@ -575,6 +539,9 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty Inline
+// ─────────────────────────────────────────────────────────────────────────────
 class _EmptyInline extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -629,6 +596,9 @@ class _EmptyInline extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Streak Dot
+// ─────────────────────────────────────────────────────────────────────────────
 class _StreakDot extends StatelessWidget {
   final String label;
   const _StreakDot({required this.label});
@@ -638,14 +608,14 @@ class _StreakDot extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 24,
-          height: 24,
+          width: 28,
+          height: 28,
           decoration: const BoxDecoration(
             color: Color(0xFFF3F4F6),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.bolt_rounded,
-              size: 12, color: Color(0xFFD1D5DB)),
+              size: 14, color: Color(0xFFD1D5DB)),
         ),
         const SizedBox(height: 4),
         Text(
@@ -657,8 +627,10 @@ class _StreakDot extends StatelessWidget {
     );
   }
 }
-// ── Notifications bottom sheet ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications Bottom Sheet
+// ─────────────────────────────────────────────────────────────────────────────
 class _NotificationsSheet extends StatelessWidget {
   final AppState state;
   const _NotificationsSheet({required this.state});
@@ -768,16 +740,20 @@ class _NotificationsSheet extends StatelessWidget {
             Expanded(
               child: notifs.isEmpty
                   ? const Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.notifications_none_rounded,
-                          size: 48, color: Color(0xFFD1D5DB)),
-                      SizedBox(height: 12),
-                      Text('No notifications yet',
-                          style: TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 14,
-                              fontFamily: 'Poppins')),
-                    ]))
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.notifications_none_rounded,
+                              size: 48, color: Color(0xFFD1D5DB)),
+                          SizedBox(height: 12),
+                          Text('No notifications yet',
+                              style: TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontSize: 14,
+                                  fontFamily: 'Poppins')),
+                        ],
+                      ),
+                    )
                   : ListView.separated(
                       controller: controller,
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -844,11 +820,12 @@ class _NotificationsSheet extends StatelessWidget {
                                     if (!n.isRead) ...[
                                       const SizedBox(height: 4),
                                       Container(
-                                          width: 7,
-                                          height: 7,
-                                          decoration: const BoxDecoration(
-                                              color: Color(0xFF7C3AED),
-                                              shape: BoxShape.circle)),
+                                        width: 7,
+                                        height: 7,
+                                        decoration: const BoxDecoration(
+                                            color: Color(0xFF7C3AED),
+                                            shape: BoxShape.circle),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -856,7 +833,8 @@ class _NotificationsSheet extends StatelessWidget {
                             ),
                           ),
                         );
-                      }),
+                      },
+                    ),
             ),
           ],
         ),

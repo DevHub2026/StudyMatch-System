@@ -195,16 +195,7 @@ class ProfileScreen extends StatelessWidget {
       ]);
     }
 
-    if (user.studyStyles.isNotEmpty) {
-      widgets.addAll([
-        _LightSection(
-          title: 'Study Format',
-          child: _TagWrap(user.studyStyles, AppTheme.warning),
-        ),
-        const SizedBox(height: 10),
-      ]);
-    }
-
+   
     if (user.availability.isNotEmpty) {
       widgets.addAll([
         _LightSection(

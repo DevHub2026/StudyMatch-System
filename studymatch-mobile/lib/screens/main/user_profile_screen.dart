@@ -1141,14 +1141,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         const SizedBox(height: 12),
                       ],
 
-                      if (widget.user.studyStyles.isNotEmpty) ...[
-                        _Section(
-                            title: '👥 Study Format',
-                            child: _chips(
-                                widget.user.studyStyles, AppTheme.warning)),
-                        const SizedBox(height: 12),
-                      ],
-
                       // ── Reviews section (tutors only) ─────────────────────
                       if (isTutor) ...[
                         _ReviewsSection(

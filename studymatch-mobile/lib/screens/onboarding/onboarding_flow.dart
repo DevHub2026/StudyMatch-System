@@ -10,52 +10,36 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  // Step 0 — Role
-  String? _role;
-
-  // Step 1 — Basic Info
+  // Step 0 — Basic Info
   final _bioCtrl = TextEditingController();
   final _degreeCtrl = TextEditingController();
   String? _gender;
   DateTime? _dob;
   String? _department;
 
-  // Step 2 — Subjects
+  // Step 1 — Subjects
   final Set<String> _subjects = {};
   final Set<String> _strengths = {};
   final Set<String> _weaknesses = {};
 
-  // Step 3 — Schedule
+  // Step 2 — Schedule
   final Set<String> _days = {};
   final Set<String> _timeBlocks = {};
 
-  // Step 4 — Study Style
+  // Step 3 — Study Style
   final Set<String> _learningStyles = {};
   final Set<String> _studyStyles = {};
 
   bool _saving = false;
 
   static const _subjectList = [
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'English',
-    'Computer Science',
-    'History',
-    'Economics',
-    'Statistics',
-    'Filipino',
+    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English',
+    'Computer Science', 'History', 'Economics', 'Statistics', 'Filipino',
   ];
   static const _deptList = ['CET', 'CTE', 'CCJ', 'CAS', 'CBE', 'COAHS'];
   static const _dayList = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday'
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+    'Friday', 'Saturday', 'Sunday',
   ];
   static const _timeList = [
     'Morning (6am-12pm)',
@@ -64,19 +48,30 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     'Night (9pm-6am)',
   ];
   static const _learnStyles = [
-    ('👁️', 'Visual', 'Learn through diagrams & charts'),
-    ('🎧', 'Auditory', 'Learn through listening & discussion'),
-    ('📖', 'Reading', 'Learn through reading & writing'),
+    ('👁️', 'Visual',      'Learn through diagrams & charts'),
+    ('🎧', 'Auditory',    'Learn through listening & discussion'),
+    ('📖', 'Reading',     'Learn through reading & writing'),
     ('🤚', 'Kinesthetic', 'Learn through practice & doing'),
   ];
   static const _studyFmts = [
-    ('👥', 'Group', 'Learn better with others'),
+    ('👥', 'Group',      'Learn better with others'),
     ('🧘', 'Individual', 'Learn better alone'),
   ];
 
-  bool get _isTutor => _role == 'tutor';
+  // Role comes from the already-registered user — no step needed
+  bool get _isTutor =>
+      context.read<AppState>().currentUser?.role == 'tutor';
 
-  static const int _totalSteps = 5;
+  // 4 steps now (role removed)
+  static const int _totalSteps = 4;
+
+  static const _stepIcons     = ['🎓', '📖', '📅', '✨'];
+  static const _stepTitles    = [
+    'Basic Information',
+    'Your Subjects',
+    'Study Schedule',
+    'Study Style',
+  ];
 
   @override
   void dispose() {
@@ -87,44 +82,34 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Future<void> _next() async {
     final state = context.read<AppState>();
-    final step = state.onboardingStep;
+    final step  = state.onboardingStep;
 
     if (step == 0) {
-      if (_role == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please select your role to continue'),
-          backgroundColor: AppTheme.error,
-        ));
-        return;
-      }
-      state.updateUserProfile({'role': _role});
+      state.updateUserProfile({
+        'gender':      _gender,
+        'dateOfBirth': _dob?.toIso8601String(),
+        'department':  _isTutor ? _degreeCtrl.text.trim() : _department,
+        'bio':         _bioCtrl.text.trim(),
+      });
       state.nextOnboardingStep();
     } else if (step == 1) {
       state.updateUserProfile({
-        'gender': _gender,
-        'dateOfBirth': _dob?.toIso8601String(),
-        'department': _isTutor ? _degreeCtrl.text.trim() : _department,
-        'bio': _bioCtrl.text.trim(),
-      });
-      state.nextOnboardingStep();
-    } else if (step == 2) {
-      state.updateUserProfile({
-        'subjects': _subjects.toList(),
-        'strengths': _strengths.toList(),
+        'subjects':   _subjects.toList(),
+        'strengths':  _strengths.toList(),
         'weaknesses': _weaknesses.toList(),
       });
       state.nextOnboardingStep();
-    } else if (step == 3) {
+    } else if (step == 2) {
       final avail = <String, List<String>>{};
       for (final d in _days) {
         avail[d] = _timeBlocks.toList();
       }
       state.updateUserProfile({'availability': avail});
       state.nextOnboardingStep();
-    } else if (step == 4) {
+    } else if (step == 3) {
       state.updateUserProfile({
         'learningStyles': _learningStyles.toList(),
-        'studyStyles': _studyStyles.toList(),
+        'studyStyles':    _studyStyles.toList(),
       });
       setState(() => _saving = true);
       await state.completeOnboarding();
@@ -134,34 +119,98 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   void _back() => context.read<AppState>().previousOnboardingStep();
 
+  String _stepSubtitle(int step) {
+    return [
+      'Tell us about your academic background',
+      _isTutor
+          ? 'Select subjects you can teach and your expertise'
+          : 'Select subjects you study and where you need help',
+      _isTutor
+          ? 'When are you available to tutor?'
+          : 'When are you available to study?',
+      'How do you prefer to learn?',
+    ][step];
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final step = state.onboardingStep;
+    final step  = state.onboardingStep;
 
     return Scaffold(
       backgroundColor: AppTheme.surfaceLight,
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 32),
-
-            // Step icon
-            Text(
-              ['🎭', '🎓', '📖', '📅', '✨'][step],
-              style: const TextStyle(fontSize: 48),
+            // ── Top bar with back button ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
+              child: Row(
+                children: [
+                  // Back button: step 0 goes to login/back, rest go to prev step
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new,
+                        color: Color(0xFF1A1A2E), size: 18),
+                    onPressed: step == 0
+                        ? () => Navigator.of(context).pop()
+                        : _back,
+                    tooltip: step == 0 ? 'Back' : 'Previous step',
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Profile Setup',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A2E),
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                  // Role badge (read-only, from signup)
+                  Consumer<AppState>(
+                    builder: (_, s, __) {
+                      final isTutor = s.currentUser?.role == 'tutor';
+                      final color = isTutor
+                          ? AppTheme.success
+                          : const Color(0xFF3B82F6);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: color.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          isTutor ? '🏫 Tutor' : '🎓 Student',
+                          style: TextStyle(
+                            color: color,
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
+
             const SizedBox(height: 16),
 
-            // Title
+            // ── Step icon ────────────────────────────────────────────────
             Text(
-              [
-                'Who are you?',
-                'Basic Information',
-                'Your Subjects',
-                'Study Schedule',
-                'Study Style'
-              ][step],
+              _stepIcons[step],
+              style: const TextStyle(fontSize: 48),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Title ────────────────────────────────────────────────────
+            Text(
+              _stepTitles[step],
               style: const TextStyle(
                 color: Color(0xFF1A1A2E),
                 fontSize: 24,
@@ -171,41 +220,45 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
             const SizedBox(height: 6),
 
-            // Subtitle
-            Text(
-              _stepSubtitle(step),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 13,
-                fontFamily: 'Poppins',
+            // ── Subtitle ─────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _stepSubtitle(step),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 13,
+                  fontFamily: 'Poppins',
+                ),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Progress bar
+            // ── Progress bar ─────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Row(
                 children: List.generate(
-                    _totalSteps,
-                    (i) => Expanded(
-                          child: Container(
-                            height: 4,
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            decoration: BoxDecoration(
-                              color: i <= step
-                                  ? AppTheme.primary
-                                  : const Color(0xFFE8E8EF),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        )),
+                  _totalSteps,
+                  (i) => Expanded(
+                    child: Container(
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: i <= step
+                            ? AppTheme.primary
+                            : const Color(0xFFE8E8EF),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // Step content
+            // ── Step content ─────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -229,7 +282,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
             const SizedBox(height: 16),
 
-            // Navigation buttons
+            // ── Navigation buttons ────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: Row(
@@ -291,115 +344,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  String _stepSubtitle(int step) {
-    return [
-      'Choose your role in StudyMatch',
-      'Tell us about your academic background',
-      _isTutor
-          ? 'Select subjects you can teach and your expertise'
-          : 'Select subjects you study and where you need help',
-      _isTutor
-          ? 'When are you available to tutor?'
-          : 'When are you available to study?',
-      'How do you prefer to learn?',
-    ][step];
-  }
-
   Widget _buildStep(int step) {
     switch (step) {
-      case 0:
-        return _buildRoleSelection();
-      case 1:
-        return _buildBasicInfo();
-      case 2:
-        return _isTutor ? _buildTutorSubjects() : _buildStudentSubjects();
-      case 3:
-        return _buildSchedule();
-      case 4:
-        return _buildStudyStyle();
-      default:
-        return const SizedBox();
+      case 0:  return _buildBasicInfo();
+      case 1:  return _isTutor ? _buildTutorSubjects() : _buildStudentSubjects();
+      case 2:  return _buildSchedule();
+      case 3:  return _buildStudyStyle();
+      default: return const SizedBox();
     }
   }
 
-  // ── Step 0 — Role Selection ───────────────────────────────────────────────
-  Widget _buildRoleSelection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label('Select your role'),
-        const SizedBox(height: 8),
-        const Text(
-          'Your role determines how you are matched with others. You can always update this later from your profile.',
-          style: TextStyle(
-              color: Color(0xFF9CA3AF),
-              fontSize: 12,
-              fontFamily: 'Poppins',
-              height: 1.5),
-        ),
-        const SizedBox(height: 20),
-        _RoleCard(
-          emoji: '🎓',
-          title: 'Student',
-          subtitle:
-              'I want to find study partners and tutors to help me with difficult subjects.',
-          badge: 'Learner',
-          badgeColor: const Color(0xFF3B82F6),
-          features: const [
-            '📚 Get matched with tutors in your weak subjects',
-            '👥 Find study partners at your level',
-            '📈 Track your learning progress',
-          ],
-          selected: _role == 'student',
-          onTap: () => setState(() => _role = 'student'),
-        ),
-        const SizedBox(height: 16),
-        _RoleCard(
-          emoji: '🏫',
-          title: 'Tutor',
-          subtitle:
-              'I want to help other students by sharing my knowledge in my strong subjects.',
-          badge: 'Educator',
-          badgeColor: AppTheme.success,
-          features: const [
-            '💪 Get matched with students who need your expertise',
-            '⭐ Build your reputation with ratings',
-            '🤝 Grow your tutoring network',
-          ],
-          selected: _role == 'tutor',
-          onTap: () => setState(() => _role = 'tutor'),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
-          ),
-          child: const Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('💡', style: TextStyle(fontSize: 16)),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Students are matched with tutors whose strong subjects overlap with the student\'s weak subjects — so everyone finds the right partner.',
-                  style: TextStyle(
-                      color: Color(0xFF6B7280),
-                      fontSize: 12,
-                      fontFamily: 'Poppins',
-                      height: 1.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Step 1 — Basic Info ───────────────────────────────────────────────────
+  // ── Step 0 — Basic Info ───────────────────────────────────────────────────
   Widget _buildBasicInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,10 +373,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     value: _gender,
                     hint: 'Select gender',
                     items: const [
-                      'Male',
-                      'Female',
-                      'Non-Binary',
-                      'Prefer not to say'
+                      'Male', 'Female', 'Non-Binary', 'Prefer not to say'
                     ],
                     onChanged: (v) => setState(() => _gender = v),
                   ),
@@ -542,7 +494,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  // ── Step 2 — Subjects: Student ────────────────────────────────────────────
+  // ── Step 1 — Subjects: Student ────────────────────────────────────────────
   Widget _buildStudentSubjects() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,8 +508,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           runSpacing: 8,
           children: _subjectList
               .map((s) => _chip(
-                    s,
-                    _subjects.contains(s),
+                    s, _subjects.contains(s),
                     () => setState(() => _subjects.contains(s)
                         ? _subjects.remove(s)
                         : _subjects.add(s)),
@@ -568,17 +519,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _label('😅 Subjects you need help with'),
         const SizedBox(height: 6),
         const Text(
-            'Tutors strong in these subjects will be prioritised in your matches',
-            style: TextStyle(
-                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
+          'Tutors strong in these subjects will be prioritised in your matches',
+          style: TextStyle(
+              color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins'),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: _subjectList
               .map((s) => _chip(
-                    s,
-                    _weaknesses.contains(s),
+                    s, _weaknesses.contains(s),
                     () => setState(() => _weaknesses.contains(s)
                         ? _weaknesses.remove(s)
                         : _weaknesses.add(s)),
@@ -590,7 +541,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  // ── Step 2 — Subjects: Tutor ──────────────────────────────────────────────
+  // ── Step 1 — Subjects: Tutor ──────────────────────────────────────────────
   Widget _buildTutorSubjects() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,8 +555,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           runSpacing: 8,
           children: _subjectList
               .map((s) => _chip(
-                    s,
-                    _subjects.contains(s),
+                    s, _subjects.contains(s),
                     () => setState(() => _subjects.contains(s)
                         ? _subjects.remove(s)
                         : _subjects.add(s)),
@@ -616,17 +566,17 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         _label('💪 Subjects you can tutor (your expertise)'),
         const SizedBox(height: 6),
         const Text(
-            'Students who are weak in these subjects will be matched with you',
-            style: TextStyle(
-                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
+          'Students who are weak in these subjects will be matched with you',
+          style: TextStyle(
+              color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins'),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: _subjectList
               .map((s) => _chip(
-                    s,
-                    _strengths.contains(s),
+                    s, _strengths.contains(s),
                     () => setState(() => _strengths.contains(s)
                         ? _strengths.remove(s)
                         : _strengths.add(s)),
@@ -637,17 +587,18 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         const SizedBox(height: 24),
         _label('📖 Subjects you\'re still learning (Optional)'),
         const SizedBox(height: 6),
-        const Text('Helps find peer study partners for these subjects',
-            style: TextStyle(
-                color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins')),
+        const Text(
+          'Helps find peer study partners for these subjects',
+          style: TextStyle(
+              color: Color(0xFF9CA3AF), fontSize: 11, fontFamily: 'Poppins'),
+        ),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: _subjectList
               .map((s) => _chip(
-                    s,
-                    _weaknesses.contains(s),
+                    s, _weaknesses.contains(s),
                     () => setState(() => _weaknesses.contains(s)
                         ? _weaknesses.remove(s)
                         : _weaknesses.add(s)),
@@ -659,7 +610,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  // ── Step 3 — Schedule ─────────────────────────────────────────────────────
+  // ── Step 2 — Schedule ─────────────────────────────────────────────────────
   Widget _buildSchedule() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,8 +624,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           runSpacing: 8,
           children: _dayList
               .map((d) => _chip(
-                    d,
-                    _days.contains(d),
+                    d, _days.contains(d),
                     () => setState(() =>
                         _days.contains(d) ? _days.remove(d) : _days.add(d)),
                   ))
@@ -688,8 +638,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           runSpacing: 8,
           children: _timeList
               .map((t) => _chip(
-                    t,
-                    _timeBlocks.contains(t),
+                    t, _timeBlocks.contains(t),
                     () => setState(() => _timeBlocks.contains(t)
                         ? _timeBlocks.remove(t)
                         : _timeBlocks.add(t)),
@@ -700,7 +649,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  // ── Step 4 — Study Style ──────────────────────────────────────────────────
+  // ── Step 3 — Study Style ──────────────────────────────────────────────────
   Widget _buildStudyStyle() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,18 +669,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           childAspectRatio: 1.2,
           children: [
             ..._learnStyles.map((s) => _styleCard(
-                  s.$1,
-                  s.$2,
-                  s.$3,
+                  s.$1, s.$2, s.$3,
                   _learningStyles.contains(s.$2),
                   () => setState(() => _learningStyles.contains(s.$2)
                       ? _learningStyles.remove(s.$2)
                       : _learningStyles.add(s.$2)),
                 )),
             ..._studyFmts.map((s) => _styleCard(
-                  s.$1,
-                  s.$2,
-                  s.$3,
+                  s.$1, s.$2, s.$3,
                   _studyStyles.contains(s.$2),
                   () => setState(() => _studyStyles.contains(s.$2)
                       ? _studyStyles.remove(s.$2)
@@ -743,9 +688,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  // ── Role badge ────────────────────────────────────────────────────────────
+  // ── Role badge (read-only, pulled from registered user) ───────────────────
   Widget _roleBadge() {
-    final color = _isTutor ? AppTheme.success : const Color(0xFF3B82F6);
+    final isTutor = context.read<AppState>().currentUser?.role == 'tutor';
+    final color = isTutor ? AppTheme.success : const Color(0xFF3B82F6);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -756,14 +702,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_isTutor ? '🏫' : '🎓', style: const TextStyle(fontSize: 16)),
+          Text(isTutor ? '🏫' : '🎓', style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 8),
           Text(
-            _isTutor
+            isTutor
                 ? 'Tutor — setting up your teaching profile'
                 : 'Student — setting up your learning profile',
             style: TextStyle(
-              color: _isTutor ? AppTheme.success : const Color(0xFF3B82F6),
+              color: color,
               fontSize: 12,
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w500,
@@ -797,8 +743,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             const SizedBox(height: 8),
             Text(label,
                 style: TextStyle(
-                    color:
-                        selected ? AppTheme.primary : const Color(0xFF1A1A2E),
+                    color: selected ? AppTheme.primary : const Color(0xFF1A1A2E),
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Poppins',
                     fontSize: 13)),
@@ -834,8 +779,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             color: Color(0xFF1A1A2E), fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              const TextStyle(color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
+          hintStyle: const TextStyle(
+              color: Color(0xFF9CA3AF), fontFamily: 'Poppins'),
           prefixIcon: icon != null
               ? Icon(icon, color: const Color(0xFF9CA3AF), size: 20)
               : null,
@@ -853,11 +798,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         ),
       );
 
-  Widget _dropdown(
-          {required String? value,
-          required String hint,
-          required List<String> items,
-          required ValueChanged<String?> onChanged}) =>
+  Widget _dropdown({
+    required String? value,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) =>
       Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -915,136 +861,4 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               )),
         ),
       );
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// Role Card Widget
-// ═════════════════════════════════════════════════════════════════════════════
-class _RoleCard extends StatelessWidget {
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final String badge;
-  final Color badgeColor;
-  final List<String> features;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.badge,
-    required this.badgeColor,
-    required this.features,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppTheme.primary.withValues(alpha: 0.06)
-              : const Color(0xFFF8F8FA),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: selected ? AppTheme.primary : const Color(0xFFE8E8EF),
-              width: selected ? 2 : 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(emoji, style: const TextStyle(fontSize: 32)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(title,
-                              style: TextStyle(
-                                  color: selected
-                                      ? AppTheme.primary
-                                      : const Color(0xFF1A1A2E),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  fontFamily: 'Poppins')),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: badgeColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: badgeColor.withValues(alpha: 0.3)),
-                            ),
-                            child: Text(badge,
-                                style: TextStyle(
-                                    color: badgeColor,
-                                    fontSize: 10,
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(subtitle,
-                          style: const TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 12,
-                              fontFamily: 'Poppins',
-                              height: 1.4)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected ? AppTheme.primary : Colors.transparent,
-                    border: Border.all(
-                        color: selected
-                            ? AppTheme.primary
-                            : const Color(0xFFD1D5DB),
-                        width: 2),
-                  ),
-                  child: selected
-                      ? const Icon(Icons.check, color: Colors.white, size: 14)
-                      : null,
-                ),
-              ],
-            ),
-            if (selected) ...[
-              const SizedBox(height: 14),
-              const Divider(color: Color(0xFFE8E8EF), height: 1),
-              const SizedBox(height: 12),
-              ...features.map((f) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(f,
-                        style: const TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 12,
-                            fontFamily: 'Poppins',
-                            height: 1.4)),
-                  )),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -15,9 +15,6 @@ import 'profile_screen.dart';
 import 'my_matches_screen.dart';
 import 'placeholder_screen.dart';
 import 'settings_screen.dart';
-import 'help_center_screen.dart';
-import 'complaints_screen.dart';
-import 'my_subjects_screen.dart';
 import 'find_students_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -59,46 +56,36 @@ class _MainShellState extends State<MainShell> {
 
   Widget _screenFor(StudentNav nav, {bool isTutor = false}) {
     return switch (nav) {
-      StudentNav.dashboard => const DashboardScreen(),
-      StudentNav.findTutors =>
-        isTutor ? const FindStudentsScreen() : const MatchScreen(),
-      StudentNav.myMatches => const MyMatchesScreen(),
+      StudentNav.dashboard     => const DashboardScreen(),
+      StudentNav.findTutors    => isTutor ? const FindStudentsScreen() : const MatchScreen(),
+      StudentNav.myMatches     => const MyMatchesScreen(),
       StudentNav.studySessions => const SessionsScreen(),
-      StudentNav.mySubjects => const PlaceholderScreen(
-          title: 'My Subjects',
-          message:
-              'Manage your subjects from the web app or complete profile setup.',
-          icon: Icons.bookmark_rounded,
-        ),
-      StudentNav.messages => const MessagesScreen(),
+      StudentNav.messages      => const MessagesScreen(),
       StudentNav.notifications => const NotificationsScreen(),
-      StudentNav.assignments => const PlaceholderScreen(
-          title: 'Assignments',
-          icon: Icons.assignment_rounded,
-        ),
-      StudentNav.schedule => const PlaceholderScreen(
+      StudentNav.schedule      => const PlaceholderScreen(
           title: 'My Schedule',
           icon: Icons.calendar_today_rounded,
         ),
-      StudentNav.resources => const ResourcesScreen(),
-      StudentNav.profile => const ProfileScreen(),
-      StudentNav.settings => const SettingsScreen(),
-      StudentNav.help => const PlaceholderScreen(
+      StudentNav.resources     => const ResourcesScreen(),
+      StudentNav.profile       => const ProfileScreen(),
+      StudentNav.settings      => const SettingsScreen(),
+      StudentNav.help          => const PlaceholderScreen(
           title: 'Help Center',
           message: 'Get support and browse help articles.',
           icon: Icons.help_rounded,
         ),
-      // TODO: Handle this case.
-      StudentNav.complaints => throw UnimplementedError(),
-      // TODO: Handle this case.
-      StudentNav.feedback => throw UnimplementedError(),
+      StudentNav.complaints    => throw UnimplementedError(),
+      StudentNav.feedback      => throw UnimplementedError(),
+      // These are no longer in the sidebar but kept in the enum for compatibility
+     
+      
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final unread = state.unreadMessageCount;
+    final state   = context.watch<AppState>();
+    final unread  = state.unreadMessageCount;
     final isTutor = state.currentUser?.role == 'tutor';
 
     return ShellScope(
@@ -130,9 +117,7 @@ class _MainShellState extends State<MainShell> {
             unselectedItemColor: AppTheme.textMuted,
             type: BottomNavigationBarType.fixed,
             selectedLabelStyle: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 11,
-                fontWeight: FontWeight.w600),
+                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
             unselectedLabelStyle:
                 const TextStyle(fontFamily: 'Poppins', fontSize: 11),
             items: [
