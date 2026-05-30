@@ -95,8 +95,12 @@ class _SessionsScreenState extends State<SessionsScreen>
                           color: const Color(0xFFF0F0F4),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.notifications_outlined,
-                            color: AppTheme.textDark, size: 18),
+                        child: IconButton(
+                          icon: const Icon(Icons.notifications_outlined,
+                              color: AppTheme.textDark),
+                          onPressed: () => ShellScope.of(context)
+                              .navigate(StudentNav.notifications),
+                        ),
                       ),
                       if (unread > 0)
                         Positioned(

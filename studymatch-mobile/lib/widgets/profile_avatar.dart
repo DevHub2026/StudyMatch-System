@@ -22,7 +22,7 @@ class ProfileAvatar extends StatelessWidget {
     this.borderColor,
     this.borderWidth = 0,
     this.gradientStart = const Color(0xFF6C63FF),
-    this.gradientEnd   = const Color(0xFFa78bfa),
+    this.gradientEnd = const Color(0xFFa78bfa),
   });
 
   String? get _safeUrl {
@@ -80,7 +80,7 @@ class ProfileAvatar extends StatelessWidget {
                 loadingBuilder: (_, child, progress) {
                   if (progress == null) return child;
                   return Container(
-                    color: gradientStart.withOpacity(0.2),
+                    color: gradientStart.withValues(alpha: 0.2),
                     child: Center(
                       child: SizedBox(
                         width: size * 0.3,

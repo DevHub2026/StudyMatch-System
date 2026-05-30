@@ -71,14 +71,20 @@ class UserModel {
         availability: _toAvailabilityMap(json['availability']),
         strengths: _toStringList(json['strengths']),
         weaknesses: _toStringList(json['weaknesses']),
-        onboardingComplete: json['onboardingComplete'] as bool? ?? false,
+        onboardingComplete: _parseBool(json['onboardingComplete'] ??
+            json['profile_completed'] ??
+            json['complete_profile'] ??
+            json['completeProfile']),
       );
 
   // ── Safe list parser — handles null, List, and unexpected types ──────────
   static List<String> _toStringList(dynamic val) {
     if (val == null) return [];
     if (val is List) {
-      return val.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList();
+      return val
+          .map((e) => e?.toString() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
     return [];
   }
@@ -91,13 +97,26 @@ class UserModel {
         (k, v) => MapEntry(
           k.toString(),
           v is List
-              ? v.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty).toList()
+              ? v
+                  .map((e) => e?.toString() ?? '')
+                  .where((e) => e.isNotEmpty)
+                  .toList()
               : <String>[],
         ),
       );
     } catch (_) {
       return {};
     }
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    }
+    return false;
   }
 
   Map<String, dynamic> toJson() => {
@@ -125,7 +144,7 @@ class UserModel {
         'onboardingComplete': onboardingComplete,
       };
 
-  bool get isTutor   => role == 'tutor';
+  bool get isTutor => role == 'tutor';
   bool get isStudent => role == 'student';
 
   String get roleLabel => isTutor ? 'Tutor' : 'Student';
@@ -191,9 +210,9 @@ class RealUser {
         compatibilityScore: (json['compatibilityScore'] as num?)?.toInt() ?? 0,
       );
 
-  String get initials  => fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
-  bool   get isTutor   => role == 'tutor';
-  bool   get isStudent => role == 'student';
+  String get initials => fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+  bool get isTutor => role == 'tutor';
+  bool get isStudent => role == 'student';
   String get roleLabel => isTutor ? 'Tutor' : 'Student';
   String get roleEmoji => isTutor ? '🏫' : '🎓';
 }
@@ -249,8 +268,11 @@ class DBResource {
       uploaderName: uploaderName,
       // API returns 'fileUrl' (Storage::url) or falls back to download path
       fileUrl: json['fileUrl'] as String?,
-      fileType: json['file_type'] as String? ?? json['fileType'] as String? ?? 'application/octet-stream',
-      uploadedAt: json['uploadedAt'] as String? ?? json['created_at'] as String? ?? '',
+      fileType: json['file_type'] as String? ??
+          json['fileType'] as String? ??
+          'application/octet-stream',
+      uploadedAt:
+          json['uploadedAt'] as String? ?? json['created_at'] as String? ?? '',
     );
   }
 }
@@ -297,12 +319,18 @@ class StudySession {
         createdAt: json['createdAt'] as String? ?? '',
       );
 
-  bool get isPending   => status == 'pending';
+  bool get isPending => status == 'pending';
   bool get isScheduled => status == 'scheduled';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
-  bool get isUpcoming  => isPending || isScheduled;
-  bool get isPast      => isCompleted || isCancelled;
+  bool get isUpcoming => isPending || isScheduled;
+  bool get isPast => isCompleted || isCancelled;
+
+  String? get topic => null;
+
+  String? get partnerName => null;
+
+  DateTime? get scheduledTime => null;
 
   String otherName(String myUserId) =>
       myUserId == tutorUserId ? studentName : tutorName;
@@ -343,10 +371,11 @@ class Conversation {
     required this.lastActivity,
   });
 
-  Message? get lastMessage  => messages.isNotEmpty ? messages.last : null;
-  int      get unreadCount  =>
+  Message? get lastMessage => messages.isNotEmpty ? messages.last : null;
+  int get unreadCount =>
       messages.where((m) => !m.isRead && m.senderId != 'current_user').length;
 }
+
 // ═════════════════════════════════════════════════════════════════════════════
 // NotificationItem
 // ═════════════════════════════════════════════════════════════════════════════
@@ -368,11 +397,11 @@ class NotificationItem {
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> j) => NotificationItem(
-        id:        (j['id'] as num).toInt(),
-        type:      j['type'] as String? ?? 'system',
-        title:     j['title'] as String? ?? '',
-        message:   j['message'] as String? ?? '',
-        isRead:    j['is_read'] == true || j['is_read'] == 1,
+        id: (j['id'] as num).toInt(),
+        type: j['type'] as String? ?? 'system',
+        title: j['title'] as String? ?? '',
+        message: j['message'] as String? ?? '',
+        isRead: j['is_read'] == true || j['is_read'] == 1,
         createdAt: j['created_at'] != null
             ? DateTime.tryParse(j['created_at'] as String) ?? DateTime.now()
             : DateTime.now(),

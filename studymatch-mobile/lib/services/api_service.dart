@@ -189,6 +189,14 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // static Future<Map<String, dynamic>> deleteAccount() async {
+  //   final res = await http.delete(
+  //     Uri.parse('$_base/profile'),
+  //     headers: _jsonHeaders,
+  //   );
+  //   return jsonDecode(res.body) as Map<String, dynamic>;
+  // }
+
   static Future<Map<String, dynamic>> getProfile() async {
     try {
       final res = await http.get(
@@ -556,7 +564,8 @@ class ApiService {
         queryParameters: {'page': '$page'},
       );
       final res = await http.get(uri, headers: _jsonHeaders);
-      if (res.statusCode == 200) return jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200)
+        return jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {}
     return {'data': [], 'total': 0};
   }
@@ -614,7 +623,8 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getSubjects() async {
     try {
-      final res = await http.get(Uri.parse('$_base/subjects'), headers: _jsonHeaders);
+      final res =
+          await http.get(Uri.parse('$_base/subjects'), headers: _jsonHeaders);
       final data = jsonDecode(res.body);
       final list = data is List ? data : (data['data'] as List? ?? []);
       return list.cast<Map<String, dynamic>>();
@@ -625,7 +635,8 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getWeakSubjects() async {
     try {
-      final res = await http.get(Uri.parse('$_base/weak-subjects'), headers: _jsonHeaders);
+      final res = await http.get(Uri.parse('$_base/weak-subjects'),
+          headers: _jsonHeaders);
       final data = jsonDecode(res.body);
       final list = data is List ? data : (data['data'] as List? ?? []);
       return list.cast<Map<String, dynamic>>();
@@ -642,7 +653,8 @@ class ApiService {
       final res = await http.post(
         Uri.parse('$_base/weak-subjects'),
         headers: _jsonHeaders,
-        body: jsonEncode({'subject_id': subjectId, 'difficulty_level': difficultyLevel}),
+        body: jsonEncode(
+            {'subject_id': subjectId, 'difficulty_level': difficultyLevel}),
       );
       return jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
@@ -664,7 +676,8 @@ class ApiService {
 
   // ── Students (for tutor discovery) ───────────────────────────────────────
 
-  static Future<List<Map<String, dynamic>>> getStudents({String? search}) async {
+  static Future<List<Map<String, dynamic>>> getStudents(
+      {String? search}) async {
     final params = <String, String>{};
     if (search != null && search.isNotEmpty) params['search'] = search;
     try {
@@ -699,7 +712,9 @@ class ApiService {
         }),
       );
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return res.statusCode == 201 ? {'success': true, ...body} : {'success': false, ...body};
+      return res.statusCode == 201
+          ? {'success': true, ...body}
+          : {'success': false, ...body};
     } catch (_) {
       return {'success': false, 'message': 'Network error'};
     }
@@ -707,7 +722,8 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getMyComplaints() async {
     try {
-      final res = await http.get(Uri.parse('$_base/complaints'), headers: _jsonHeaders);
+      final res =
+          await http.get(Uri.parse('$_base/complaints'), headers: _jsonHeaders);
       final data = jsonDecode(res.body);
       final list = data is List ? data : (data['data'] as List? ?? []);
       return list.cast<Map<String, dynamic>>();
@@ -744,7 +760,8 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getMyFeedback() async {
     try {
-      final res = await http.get(Uri.parse('$_base/feedback/my-feedback'), headers: _jsonHeaders);
+      final res = await http.get(Uri.parse('$_base/feedback/my-feedback'),
+          headers: _jsonHeaders);
       final data = jsonDecode(res.body);
       final list = data is List ? data : (data['data'] as List? ?? []);
       return list.cast<Map<String, dynamic>>();
@@ -783,7 +800,8 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getMyTickets() async {
     try {
-      final res = await http.get(Uri.parse('$_base/help-center'), headers: _jsonHeaders);
+      final res = await http.get(Uri.parse('$_base/help-center'),
+          headers: _jsonHeaders);
       final data = jsonDecode(res.body);
       final list = data is List ? data : (data['data'] as List? ?? []);
       return list.cast<Map<String, dynamic>>();
@@ -793,7 +811,6 @@ class ApiService {
   }
 
   // ── Delete Account ────────────────────────────────────────────────────────
-
   static Future<Map<String, dynamic>> deleteAccount(String password) async {
     try {
       final res = await http.delete(
@@ -802,7 +819,9 @@ class ApiService {
         body: jsonEncode({'password': password}),
       );
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return res.statusCode == 200 ? {'success': true, ...body} : {'success': false, ...body};
+      return res.statusCode == 200
+          ? {'success': true, ...body}
+          : {'success': false, ...body};
     } catch (_) {
       return {'success': false, 'message': 'Network error'};
     }
@@ -826,7 +845,9 @@ class ApiService {
         body: jsonEncode(body),
       );
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
-      return res.statusCode == 200 ? {'success': true, ...decoded} : {'success': false, ...decoded};
+      return res.statusCode == 200
+          ? {'success': true, ...decoded}
+          : {'success': false, ...decoded};
     } catch (_) {
       return {'success': false, 'message': 'Network error'};
     }
@@ -841,7 +862,9 @@ class ApiService {
         headers: _jsonHeaders,
       );
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return res.statusCode == 200 ? {'success': true, ...body} : {'success': false, ...body};
+      return res.statusCode == 200
+          ? {'success': true, ...body}
+          : {'success': false, ...body};
     } catch (_) {
       return {'success': false, 'message': 'Network error'};
     }

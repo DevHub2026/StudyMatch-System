@@ -8,6 +8,7 @@ import '../../widgets/student_drawer.dart';
 import 'dashboard_screen.dart';
 import 'match_screen.dart';
 import 'messages_screen.dart';
+import 'notifications_screen.dart';
 import 'sessions_screen.dart';
 import 'resources_screen.dart';
 import 'profile_screen.dart';
@@ -58,22 +59,39 @@ class _MainShellState extends State<MainShell> {
 
   Widget _screenFor(StudentNav nav, {bool isTutor = false}) {
     return switch (nav) {
-      StudentNav.dashboard    => const DashboardScreen(),
-      StudentNav.findTutors   => isTutor ? const FindStudentsScreen() : const MatchScreen(),
-      StudentNav.myMatches    => const MyMatchesScreen(),
+      StudentNav.dashboard => const DashboardScreen(),
+      StudentNav.findTutors =>
+        isTutor ? const FindStudentsScreen() : const MatchScreen(),
+      StudentNav.myMatches => const MyMatchesScreen(),
       StudentNav.studySessions => const SessionsScreen(),
-      StudentNav.mySubjects   => const MySubjectsScreen(),
-      StudentNav.messages     => const MessagesScreen(),
-      StudentNav.assignments  => const PlaceholderScreen(
-          title: 'Assignments', icon: Icons.assignment_rounded),
-      StudentNav.schedule     => const PlaceholderScreen(
-          title: 'My Schedule', icon: Icons.calendar_today_rounded),
-      StudentNav.resources    => const ResourcesScreen(),
-      StudentNav.profile      => const ProfileScreen(),
-      StudentNav.settings     => const SettingsScreen(),
-      StudentNav.help         => const HelpCenterScreen(),
-      StudentNav.complaints   => const ComplaintsScreen(),
-      StudentNav.feedback     => const SettingsScreen(),
+      StudentNav.mySubjects => const PlaceholderScreen(
+          title: 'My Subjects',
+          message:
+              'Manage your subjects from the web app or complete profile setup.',
+          icon: Icons.bookmark_rounded,
+        ),
+      StudentNav.messages => const MessagesScreen(),
+      StudentNav.notifications => const NotificationsScreen(),
+      StudentNav.assignments => const PlaceholderScreen(
+          title: 'Assignments',
+          icon: Icons.assignment_rounded,
+        ),
+      StudentNav.schedule => const PlaceholderScreen(
+          title: 'My Schedule',
+          icon: Icons.calendar_today_rounded,
+        ),
+      StudentNav.resources => const ResourcesScreen(),
+      StudentNav.profile => const ProfileScreen(),
+      StudentNav.settings => const SettingsScreen(),
+      StudentNav.help => const PlaceholderScreen(
+          title: 'Help Center',
+          message: 'Get support and browse help articles.',
+          icon: Icons.help_rounded,
+        ),
+      // TODO: Handle this case.
+      StudentNav.complaints => throw UnimplementedError(),
+      // TODO: Handle this case.
+      StudentNav.feedback => throw UnimplementedError(),
     };
   }
 

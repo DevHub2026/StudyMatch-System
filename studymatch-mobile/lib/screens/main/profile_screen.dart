@@ -73,7 +73,8 @@ class ProfileScreen extends StatelessWidget {
                             child: const Icon(Icons.notifications_outlined,
                                 color: AppTheme.textDark, size: 20),
                           ),
-                          onPressed: () {},
+                          onPressed: () => ShellScope.of(context)
+                              .navigate(StudentNav.notifications),
                         ),
                         if (unread > 0)
                           Positioned(

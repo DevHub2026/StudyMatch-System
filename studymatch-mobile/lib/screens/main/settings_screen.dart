@@ -128,9 +128,8 @@ class SettingsScreen extends StatelessWidget {
                       _SettingsTile(
                         icon: Icons.delete_outline_rounded,
                         label: 'Delete Account',
-                        danger: true,
-                        onTap: () => _showDeleteAccountDialog(
-                            context, context.read<AppState>()),
+                        subtitle: 'Permanently remove your StudyMatch account',
+                        onTap: () => _confirmDeleteAccount(context, state),
                       ),
                     ],
                   ),
@@ -170,8 +169,10 @@ class SettingsScreen extends StatelessWidget {
                       _SettingsTile(
                         icon: Icons.help_outline_rounded,
                         label: 'Help & Support',
-                        onTap: () => Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => const HelpCenterScreen())),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const HelpCenterScreen())),
                       ),
                       _SettingsTile(
                         icon: Icons.chat_bubble_outline_rounded,
@@ -452,6 +453,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ── Delete Account confirm ───────────────────────────────────────────────
+  void _confirmDeleteAccount(BuildContext context, AppState state) {
+    _showDeleteAccountDialog(context, state);
+  }
+
   // ── Sign Out confirm ──────────────────────────────────────────────────────
   void _confirmSignOut(BuildContext context, AppState state) {
     showDialog(
@@ -579,7 +585,10 @@ class _SettingsTile extends StatelessWidget {
                   fontSize: 12))
           : null,
       trailing: Icon(Icons.chevron_right_rounded,
-          color: danger ? AppTheme.error.withValues(alpha: 0.5) : AppTheme.textMuted, size: 20),
+          color: danger
+              ? AppTheme.error.withValues(alpha: 0.5)
+              : AppTheme.textMuted,
+          size: 20),
       onTap: onTap,
     );
   }
@@ -969,9 +978,24 @@ class _AppearanceSheet extends StatefulWidget {
 
 class _AppearanceSheetState extends State<_AppearanceSheet> {
   static const _options = [
-    (ThemeMode.light,  Icons.wb_sunny_outlined,      'Light Mode',     'Classic bright interface'),
-    (ThemeMode.dark,   Icons.dark_mode_outlined,      'Dark Mode',      'Easy on the eyes at night'),
-    (ThemeMode.system, Icons.phone_android_outlined,  'System Default', 'Follows your device setting'),
+    (
+      ThemeMode.light,
+      Icons.wb_sunny_outlined,
+      'Light Mode',
+      'Classic bright interface'
+    ),
+    (
+      ThemeMode.dark,
+      Icons.dark_mode_outlined,
+      'Dark Mode',
+      'Easy on the eyes at night'
+    ),
+    (
+      ThemeMode.system,
+      Icons.phone_android_outlined,
+      'System Default',
+      'Follows your device setting'
+    ),
   ];
 
   @override
@@ -995,7 +1019,9 @@ class _AppearanceSheetState extends State<_AppearanceSheet> {
           const SizedBox(height: 4),
           const Text('Choose how StudyMatch looks on your device.',
               style: TextStyle(
-                  color: AppTheme.textMuted, fontFamily: 'Poppins', fontSize: 13)),
+                  color: AppTheme.textMuted,
+                  fontFamily: 'Poppins',
+                  fontSize: 13)),
           const SizedBox(height: 20),
           for (final opt in _options) ...[
             _AppearanceOption(
@@ -1341,9 +1367,9 @@ class _DeleteAccountSheet extends StatefulWidget {
 }
 
 class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
-  final _pwCtrl   = TextEditingController();
-  bool _obscure   = true;
-  bool _deleting  = false;
+  final _pwCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _deleting = false;
   String? _error;
 
   @override
@@ -1358,7 +1384,10 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
       setState(() => _error = 'Please enter your password.');
       return;
     }
-    setState(() { _deleting = true; _error = null; });
+    setState(() {
+      _deleting = true;
+      _error = null;
+    });
     final res = await ApiService.deleteAccount(pw);
     if (!mounted) return;
     if (res['success'] == true) {
@@ -1376,7 +1405,9 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
+        left: 24,
+        right: 24,
+        top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 32,
       ),
       child: Column(
@@ -1388,18 +1419,23 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
           Row(
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppTheme.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 20),
+                child: const Icon(Icons.delete_outline_rounded,
+                    color: AppTheme.error, size: 20),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text('Delete Account',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark, fontFamily: 'Poppins')),
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins')),
               ),
             ],
           ),
@@ -1413,8 +1449,11 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
             ),
             child: const Text(
               'This action is permanent and cannot be undone. All your data including sessions, messages, and matches will be deleted.',
-              style: TextStyle(fontSize: 13, color: AppTheme.error,
-                  fontFamily: 'Poppins', height: 1.5),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.error,
+                  fontFamily: 'Poppins',
+                  height: 1.5),
             ),
           ),
           const SizedBox(height: 20),
@@ -1423,29 +1462,40 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
             const SizedBox(height: 12),
           ],
           const Text('Confirm your password',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
-                  color: Color(0xFF374151), fontFamily: 'Poppins')),
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF374151),
+                  fontFamily: 'Poppins')),
           const SizedBox(height: 8),
           TextField(
             controller: _pwCtrl,
             obscureText: _obscure,
-            style: const TextStyle(color: AppTheme.textDark, fontFamily: 'Poppins'),
+            style: const TextStyle(
+                color: AppTheme.textDark, fontFamily: 'Poppins'),
             decoration: InputDecoration(
               hintText: 'Enter your password',
-              hintStyle: const TextStyle(color: AppTheme.textMuted, fontFamily: 'Poppins'),
-              filled: true, fillColor: const Color(0xFFF5F5F8),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              hintStyle: const TextStyle(
+                  color: AppTheme.textMuted, fontFamily: 'Poppins'),
+              filled: true,
+              fillColor: const Color(0xFFF5F5F8),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               suffixIcon: IconButton(
                 icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
                     color: AppTheme.textMuted, size: 20),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Color(0xFFE8E8EF))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppTheme.error, width: 1.5)),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppTheme.error, width: 1.5)),
             ),
           ),
           const SizedBox(height: 24),
@@ -1457,10 +1507,13 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppTheme.borderLight),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Cancel',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
                           color: AppTheme.textBody)),
                 ),
               ),
@@ -1470,15 +1523,22 @@ class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
                   onPressed: _deleting ? null : _delete,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.error,
-                    disabledBackgroundColor: AppTheme.error.withValues(alpha: 0.5),
+                    disabledBackgroundColor:
+                        AppTheme.error.withValues(alpha: 0.5),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _deleting
-                      ? const SizedBox(width: 20, height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
                       : const Text('Delete Account',
-                          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
                               color: Colors.white)),
                 ),
               ),

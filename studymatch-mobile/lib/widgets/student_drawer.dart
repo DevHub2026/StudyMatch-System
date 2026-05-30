@@ -23,7 +23,13 @@ class _StudentDrawerState extends State<StudentDrawer> {
     final unread = state.unreadMessageCount;
 
     final initials = user?.fullName.isNotEmpty == true
-        ? user!.fullName.trim().split(' ').map((e) => e[0]).take(2).join().toUpperCase()
+        ? user!.fullName
+            .trim()
+            .split(' ')
+            .map((e) => e[0])
+            .take(2)
+            .join()
+            .toUpperCase()
         : 'SM';
 
     return Drawer(
@@ -44,7 +50,8 @@ class _StudentDrawerState extends State<StudentDrawer> {
                       color: AppTheme.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 22),
+                    child: const Icon(Icons.school_rounded,
+                        color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 10),
                   const Expanded(
@@ -58,13 +65,16 @@ class _StudentDrawerState extends State<StudentDrawer> {
                         ),
                         children: [
                           TextSpan(text: 'Study'),
-                          TextSpan(text: 'Match', style: TextStyle(color: AppTheme.primary)),
+                          TextSpan(
+                              text: 'Match',
+                              style: TextStyle(color: AppTheme.primary)),
                         ],
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppTheme.textMuted),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -83,7 +93,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: AppTheme.primary.withOpacity(0.15),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
                       child: Text(
                         initials,
                         style: const TextStyle(
@@ -148,9 +158,12 @@ class _StudentDrawerState extends State<StudentDrawer> {
                     ),
                   ),
                   if (_settingsOpen) ...[
-                    _SubNav('Account Settings', () => scope.navigate(StudentNav.settings)),
-                    _SubNav('Notification Settings', () => scope.navigate(StudentNav.settings)),
-                    _SubNav('Privacy & Security', () => scope.navigate(StudentNav.settings)),
+                    _SubNav('Account Settings',
+                        () => scope.navigate(StudentNav.settings)),
+                    _SubNav('Notification Settings',
+                        () => scope.navigate(StudentNav.settings)),
+                    _SubNav('Privacy & Security',
+                        () => scope.navigate(StudentNav.settings)),
                   ],
                 ],
               ),
@@ -164,10 +177,12 @@ class _StudentDrawerState extends State<StudentDrawer> {
                   onTap: () => scope.navigate(StudentNav.help),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     child: Row(
                       children: [
-                        Icon(Icons.help_outline_rounded, color: AppTheme.primary, size: 20),
+                        Icon(Icons.help_outline_rounded,
+                            color: AppTheme.primary, size: 20),
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Column(
@@ -193,7 +208,8 @@ class _StudentDrawerState extends State<StudentDrawer> {
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, color: AppTheme.primary, size: 20),
+                        Icon(Icons.chevron_right_rounded,
+                            color: AppTheme.primary, size: 20),
                       ],
                     ),
                   ),
@@ -255,7 +271,8 @@ class _NavTile extends StatelessWidget {
                 ),
                 if (badge != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.primary,
                       borderRadius: BorderRadius.circular(10),

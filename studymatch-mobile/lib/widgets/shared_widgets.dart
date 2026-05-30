@@ -34,7 +34,7 @@ class GradientButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primary.withOpacity(0.4),
+              color: AppTheme.primary.withValues(alpha: 0.4),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -45,8 +45,8 @@ class GradientButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: isLoading
               ? const SizedBox(
@@ -135,19 +135,15 @@ class _AppTextFieldState extends State<AppTextField> {
           decoration: InputDecoration(
             hintText: widget.hint,
             prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon,
-                    color: AppTheme.textMuted, size: 20)
+                ? Icon(widget.prefixIcon, color: AppTheme.textMuted, size: 20)
                 : null,
             suffixIcon: widget.obscureText
                 ? IconButton(
                     icon: Icon(
-                        _obscure
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscure ? Icons.visibility_off : Icons.visibility,
                         color: AppTheme.textMuted,
                         size: 20),
-                    onPressed: () =>
-                        setState(() => _obscure = !_obscure),
+                    onPressed: () => setState(() => _obscure = !_obscure),
                   )
                 : widget.suffix,
           ),
@@ -181,7 +177,9 @@ class SelectableChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? (selectedColor != null ? color.withOpacity(0.15) : AppTheme.chipSelected)
+              ? (selectedColor != null
+                  ? color.withValues(alpha: 0.15)
+                  : AppTheme.chipSelected)
               : AppTheme.chipBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -218,10 +216,9 @@ class OnboardingProgressBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Step ${current + 1} of $total',
-                style: const TextStyle(
-                    color: AppTheme.textMuted, fontSize: 12)),
-            Text(
-                '${((current + 1) / total * 100).toInt()}% complete',
+                style:
+                    const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+            Text('${((current + 1) / total * 100).toInt()}% complete',
                 style: const TextStyle(
                     color: AppTheme.primaryLight,
                     fontSize: 12,
@@ -234,8 +231,7 @@ class OnboardingProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: (current + 1) / total,
             backgroundColor: AppTheme.divider,
-            valueColor: const AlwaysStoppedAnimation<Color>(
-                AppTheme.primary),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
             minHeight: 4,
           ),
         ),
@@ -259,8 +255,7 @@ class UserAvatar extends StatelessWidget {
     this.showOnline = false,
   });
 
-  String get _name =>
-      user?.fullName ?? realUser?.fullName ?? 'User';
+  String get _name => user?.fullName ?? realUser?.fullName ?? 'User';
 
   @override
   Widget build(BuildContext context) {
@@ -284,8 +279,7 @@ class UserAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppTheme.success,
                 shape: BoxShape.circle,
-                border:
-                    Border.all(color: AppTheme.bgDark, width: 2),
+                border: Border.all(color: AppTheme.bgDark, width: 2),
               ),
             ),
           ),
@@ -300,10 +294,7 @@ class SectionHeader extends StatelessWidget {
   final VoidCallback? onAction;
 
   const SectionHeader(
-      {super.key,
-      required this.title,
-      this.actionText,
-      this.onAction});
+      {super.key, required this.title, this.actionText, this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -352,12 +343,12 @@ class AppCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: withGlow
-                  ? AppTheme.primary.withOpacity(0.4)
+                  ? AppTheme.primary.withValues(alpha: 0.4)
                   : AppTheme.divider),
           boxShadow: withGlow
               ? [
                   BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.1),
+                      color: AppTheme.primary.withValues(alpha: 0.1),
                       blurRadius: 12,
                       spreadRadius: 2)
                 ]

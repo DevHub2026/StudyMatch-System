@@ -15,6 +15,8 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  get unread => null;
+
   void _showNotificationsSheet(BuildContext context, AppState state) {
     showModalBottomSheet(
       context: context,
@@ -77,7 +79,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             IconButton(
                               icon: const Icon(Icons.notifications_outlined,
                                   color: AppTheme.textDark),
-                              onPressed: () => _showNotificationsSheet(context, state),
+                              onPressed: () => ShellScope.of(context)
+                                  .navigate(StudentNav.notifications),
                             ),
                             if (unreadNotifs > 0)
                               Positioned(
@@ -130,8 +133,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 16),
                     _StatsGrid(
                       activeMatches: activeMatches,
-                      pendingRequests: 0,
-                      upcomingSessions: 0,
+                      pendingRequests: state.pendingMatchUsers.length,
+                      upcomingSessions: state.sessions.length,
                       notifications: unreadNotifs,
                     ),
                     const SizedBox(height: 20),
@@ -217,6 +220,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               title: 'No subjects yet',
                               subtitle: '+ Add subjects',
                               compact: true,
+                              onTap: () => ShellScope.of(context)
+                                  .navigate(StudentNav.mySubjects),
                             ),
                           ),
                         ),
@@ -389,27 +394,31 @@ class _StatsGrid extends StatelessWidget {
         value: '$activeMatches',
         label: 'Active Matches',
         sub: 'View matches →',
+        onTap: () => ShellScope.of(context).navigate(StudentNav.myMatches),
       ),
       _StatItem(
-        icon: Icons.pending_actions_rounded,
-        color: AppTheme.warning,
-        value: '$pendingRequests',
-        label: 'Pending Requests',
-        sub: 'View requests →',
-      ),
+          icon: Icons.pending_actions_rounded,
+          color: AppTheme.warning,
+          value: '$pendingRequests',
+          label: 'Pending Requests',
+          sub: 'View requests →',
+          onTap: () =>
+              ShellScope.of(context).navigate(StudentNav.studySessions)),
       _StatItem(
-        icon: Icons.schedule_rounded,
-        color: AppTheme.primary,
-        value: '$upcomingSessions',
-        label: 'Upcoming Sessions',
-        sub: 'View sessions →',
-      ),
+          icon: Icons.schedule_rounded,
+          color: AppTheme.primary,
+          value: '$upcomingSessions',
+          label: 'Upcoming Sessions',
+          sub: 'View sessions →',
+          onTap: () =>
+              ShellScope.of(context).navigate(StudentNav.studySessions)),
       _StatItem(
         icon: Icons.notifications_active_rounded,
         color: AppTheme.error,
         value: '$notifications',
         label: 'Notifications',
         sub: 'View all →',
+        onTap: () => ShellScope.of(context).navigate(StudentNav.notifications),
       ),
     ];
 
@@ -434,6 +443,7 @@ class _StatItem {
   final String value;
   final String label;
   final String sub;
+  final VoidCallback? onTap;
 
   const _StatItem({
     required this.icon,
@@ -441,6 +451,7 @@ class _StatItem {
     required this.value,
     required this.label,
     required this.sub,
+    this.onTap,
   });
 }
 
@@ -450,66 +461,74 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: item.onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: item.color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(item.icon, color: item.color, size: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.borderLight),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.value,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
-                    color: AppTheme.textDark,
-                    fontFamily: 'Poppins',
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: item.color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textBody,
-                    fontFamily: 'Poppins',
-                  ),
+                child: Icon(item.icon, color: item.color, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.value,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        color: AppTheme.textDark,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textBody,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    Text(
+                      item.sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppTheme.textMuted,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  item.sub,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppTheme.textMuted,
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -561,41 +580,51 @@ class _EmptyInline extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool compact;
+  final VoidCallback? onTap;
 
   const _EmptyInline({
     required this.icon,
     required this.title,
     required this.subtitle,
     this.compact = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, size: compact ? 28 : 36, color: AppTheme.primary),
-        SizedBox(height: compact ? 8 : 12),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: compact ? 12 : 14,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textDark,
-            fontFamily: 'Poppins',
-          ),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: [
+            Icon(icon, size: compact ? 28 : 36, color: AppTheme.primary),
+            SizedBox(height: compact ? 8 : 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: compact ? 12 : 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: compact ? 11 : 12,
+                color: AppTheme.textMuted,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: compact ? 11 : 12,
-            color: AppTheme.textMuted,
-            fontFamily: 'Poppins',
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -636,35 +665,43 @@ class _NotificationsSheet extends StatelessWidget {
 
   IconData _iconFor(String type) {
     switch (type) {
-      case 'match_request': return Icons.handshake_outlined;
-      case 'session':       return Icons.calendar_today_outlined;
-      case 'announcement':  return Icons.campaign_outlined;
-      default:              return Icons.notifications_outlined;
+      case 'match_request':
+        return Icons.handshake_outlined;
+      case 'session':
+        return Icons.calendar_today_outlined;
+      case 'announcement':
+        return Icons.campaign_outlined;
+      default:
+        return Icons.notifications_outlined;
     }
   }
 
   Color _colorFor(String type) {
     switch (type) {
-      case 'match_request': return const Color(0xFF10B981);
-      case 'session':       return const Color(0xFFF59E0B);
-      case 'announcement':  return const Color(0xFF7C3AED);
-      default:              return const Color(0xFF6B7280);
+      case 'match_request':
+        return const Color(0xFF10B981);
+      case 'session':
+        return const Color(0xFFF59E0B);
+      case 'announcement':
+        return const Color(0xFF7C3AED);
+      default:
+        return const Color(0xFF6B7280);
     }
   }
 
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inHours   < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays    < 1) return '${diff.inHours}h ago';
-    if (diff.inDays    < 7) return '${diff.inDays}d ago';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${dt.month}/${dt.day}';
   }
 
   @override
   Widget build(BuildContext context) {
     final notifs = state.notifications;
-    final unread = state.unreadNotificationCount;
+    final unreadNotifs = state.unreadNotificationCount;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -678,7 +715,8 @@ class _NotificationsSheet extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               margin: const EdgeInsets.only(top: 12, bottom: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFFE5E7EB),
@@ -690,26 +728,38 @@ class _NotificationsSheet extends StatelessWidget {
               child: Row(
                 children: [
                   const Text('Notifications',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E1B4B), fontFamily: 'Poppins')),
-                  if (unread > 0) ...[
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E1B4B),
+                          fontFamily: 'Poppins')),
+                  if (unreadNotifs > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: const Color(0xFF7C3AED),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED),
                           borderRadius: BorderRadius.circular(10)),
-                      child: Text('$unread',
-                          style: const TextStyle(color: Colors.white,
-                              fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: Text('$unreadNotifs',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                   const Spacer(),
-                  if (unread > 0)
+                  if (unreadNotifs > 0)
                     TextButton(
-                      onPressed: () { state.markAllNotificationsRead(); Navigator.pop(context); },
+                      onPressed: () {
+                        state.markAllNotificationsRead();
+                        Navigator.pop(context);
+                      },
                       child: const Text('Mark all read',
-                          style: TextStyle(color: Color(0xFF7C3AED),
-                              fontSize: 13, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              color: Color(0xFF7C3AED),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
                     ),
                 ],
               ),
@@ -719,50 +769,67 @@ class _NotificationsSheet extends StatelessWidget {
               child: notifs.isEmpty
                   ? const Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.notifications_none_rounded, size: 48, color: Color(0xFFD1D5DB)),
-                        SizedBox(height: 12),
-                        Text('No notifications yet',
-                            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14, fontFamily: 'Poppins')),
-                      ]))
+                      Icon(Icons.notifications_none_rounded,
+                          size: 48, color: Color(0xFFD1D5DB)),
+                      SizedBox(height: 12),
+                      Text('No notifications yet',
+                          style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 14,
+                              fontFamily: 'Poppins')),
+                    ]))
                   : ListView.separated(
                       controller: controller,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: notifs.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, indent: 72),
                       itemBuilder: (_, i) {
                         final n = notifs[i];
                         final col = _colorFor(n.type);
                         return InkWell(
                           onTap: () => state.markNotificationRead(n.id),
                           child: Container(
-                            color: n.isRead ? Colors.white : const Color(0xFFFAFAFF),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            color: n.isRead
+                                ? Colors.white
+                                : const Color(0xFFFAFAFF),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 42, height: 42,
+                                  width: 42,
+                                  height: 42,
                                   decoration: BoxDecoration(
                                     color: col.withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Icon(_iconFor(n.type), color: col, size: 20),
+                                  child: Icon(_iconFor(n.type),
+                                      color: col, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(n.title,
                                           style: TextStyle(
                                               fontSize: 13.5,
-                                              fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700,
-                                              color: const Color(0xFF1E1B4B), fontFamily: 'Poppins')),
+                                              fontWeight: n.isRead
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w700,
+                                              color: const Color(0xFF1E1B4B),
+                                              fontFamily: 'Poppins')),
                                       const SizedBox(height: 2),
                                       Text(n.message,
-                                          style: const TextStyle(fontSize: 12.5,
-                                              color: Color(0xFF6B7280), fontFamily: 'Poppins'),
-                                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          style: const TextStyle(
+                                              fontSize: 12.5,
+                                              color: Color(0xFF6B7280),
+                                              fontFamily: 'Poppins'),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
                                     ],
                                   ),
                                 ),
@@ -771,12 +838,17 @@ class _NotificationsSheet extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(_timeAgo(n.createdAt),
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF9CA3AF))),
                                     if (!n.isRead) ...[
                                       const SizedBox(height: 4),
-                                      Container(width: 7, height: 7,
+                                      Container(
+                                          width: 7,
+                                          height: 7,
                                           decoration: const BoxDecoration(
-                                              color: Color(0xFF7C3AED), shape: BoxShape.circle)),
+                                              color: Color(0xFF7C3AED),
+                                              shape: BoxShape.circle)),
                                     ],
                                   ],
                                 ),
