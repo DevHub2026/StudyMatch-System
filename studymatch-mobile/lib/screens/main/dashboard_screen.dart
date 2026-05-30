@@ -67,31 +67,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             IconButton(
                               icon: const Icon(Icons.notifications_outlined,
                                   color: AppTheme.textDark),
-                              onPressed: () => ShellScope.of(context)
-                                  .navigate(StudentNav.notifications),
+                              onPressed: () {},
                             ),
-                            if (unread > 0)
-                              Positioned(
-                                right: 10,
-                                top: 10,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: AppTheme.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                      minWidth: 16, minHeight: 16),
-                                  child: Text(
-                                    unread > 9 ? '9+' : '$unread',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold),
-                                  ),
+                            Positioned(
+                              right: 10,
+                              top: 10,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                    minWidth: 16, minHeight: 16),
+                                child: const Text(
+                                  '3',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
+                            ),
                           ],
                         ),
                         UserAvatar(user: user, radius: 18),
@@ -121,8 +119,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 16),
                     _StatsGrid(
                       activeMatches: activeMatches,
-                      pendingRequests: state.pendingMatchUsers.length,
-                      upcomingSessions: state.sessions.length,
+                      pendingRequests: 0,
+                      upcomingSessions: 0,
                       notifications: unread,
                     ),
                     const SizedBox(height: 20),
@@ -208,8 +206,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               title: 'No subjects yet',
                               subtitle: '+ Add subjects',
                               compact: true,
-                              onTap: () => ShellScope.of(context)
-                                  .navigate(StudentNav.mySubjects),
                             ),
                           ),
                         ),
@@ -382,31 +378,27 @@ class _StatsGrid extends StatelessWidget {
         value: '$activeMatches',
         label: 'Active Matches',
         sub: 'View matches →',
-        onTap: () => ShellScope.of(context).navigate(StudentNav.myMatches),
       ),
       _StatItem(
-          icon: Icons.pending_actions_rounded,
-          color: AppTheme.warning,
-          value: '$pendingRequests',
-          label: 'Pending Requests',
-          sub: 'View requests →',
-          onTap: () =>
-              ShellScope.of(context).navigate(StudentNav.studySessions)),
+        icon: Icons.pending_actions_rounded,
+        color: AppTheme.warning,
+        value: '$pendingRequests',
+        label: 'Pending Requests',
+        sub: 'View requests →',
+      ),
       _StatItem(
-          icon: Icons.schedule_rounded,
-          color: AppTheme.primary,
-          value: '$upcomingSessions',
-          label: 'Upcoming Sessions',
-          sub: 'View sessions →',
-          onTap: () =>
-              ShellScope.of(context).navigate(StudentNav.studySessions)),
+        icon: Icons.schedule_rounded,
+        color: AppTheme.primary,
+        value: '$upcomingSessions',
+        label: 'Upcoming Sessions',
+        sub: 'View sessions →',
+      ),
       _StatItem(
         icon: Icons.notifications_active_rounded,
         color: AppTheme.error,
         value: '$notifications',
         label: 'Notifications',
         sub: 'View all →',
-        onTap: () => ShellScope.of(context).navigate(StudentNav.notifications),
       ),
     ];
 
@@ -431,7 +423,6 @@ class _StatItem {
   final String value;
   final String label;
   final String sub;
-  final VoidCallback? onTap;
 
   const _StatItem({
     required this.icon,
@@ -439,7 +430,6 @@ class _StatItem {
     required this.value,
     required this.label,
     required this.sub,
-    this.onTap,
   });
 }
 
@@ -449,74 +439,66 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: item.onTap,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.borderLight),
+        border: Border.all(color: AppTheme.borderLight),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: item.color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(item.icon, color: item.color, size: 20),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: item.color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  item.value,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                    color: AppTheme.textDark,
+                    fontFamily: 'Poppins',
+                  ),
                 ),
-                child: Icon(item.icon, color: item.color, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      item.value,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                        color: AppTheme.textDark,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textBody,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    Text(
-                      item.sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppTheme.textMuted,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 2),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textBody,
+                    fontFamily: 'Poppins',
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  item.sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.textMuted,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -568,51 +550,41 @@ class _EmptyInline extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool compact;
-  final VoidCallback? onTap;
 
   const _EmptyInline({
     required this.icon,
     required this.title,
     required this.subtitle,
     this.compact = false,
-    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Column(
-          children: [
-            Icon(icon, size: compact ? 28 : 36, color: AppTheme.primary),
-            SizedBox(height: compact ? 8 : 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: compact ? 12 : 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textDark,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: compact ? 11 : 12,
-                color: AppTheme.textMuted,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ],
+    return Column(
+      children: [
+        Icon(icon, size: compact ? 28 : 36, color: AppTheme.primary),
+        SizedBox(height: compact ? 8 : 12),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: compact ? 12 : 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textDark,
+            fontFamily: 'Poppins',
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            color: AppTheme.textMuted,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ],
     );
   }
 }

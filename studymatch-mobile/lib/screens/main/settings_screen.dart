@@ -123,12 +123,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: user?.email ?? '',
                         onTap: () => _showEmailInfo(context, user?.email),
                       ),
-                      _SettingsTile(
-                        icon: Icons.delete_outline_rounded,
-                        label: 'Delete Account',
-                        subtitle: 'Permanently remove your StudyMatch account',
-                        onTap: () => _confirmDeleteAccount(context, state),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -442,55 +436,6 @@ class SettingsScreen extends StatelessWidget {
               child: const Text('Close',
                   style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Delete Account confirm ───────────────────────────────────────────────
-  void _confirmDeleteAccount(BuildContext context, AppState state) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Account',
-            style: TextStyle(
-                color: AppTheme.textDark,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.bold)),
-        content: const Text(
-          'This action will permanently delete your StudyMatch account and all associated data. Do you want to continue?',
-          style: TextStyle(color: AppTheme.textBody, fontFamily: 'Poppins'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              final snackBar = ScaffoldMessenger.of(context);
-              final error = await state.deleteAccount();
-              if (error == null) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-                snackBar.showSnackBar(const SnackBar(
-                  content: Text('Your account has been deleted.'),
-                  backgroundColor: AppTheme.success,
-                ));
-              } else {
-                snackBar.showSnackBar(SnackBar(
-                  content: Text(error),
-                  backgroundColor: AppTheme.error,
-                ));
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Delete Account',
-                style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
           ),
         ],
       ),

@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../services/api_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../utils/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import 'login_screen.dart';
@@ -22,6 +23,7 @@ class OtpVerificationScreen extends StatefulWidget {
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     with SingleTickerProviderStateMixin {
+  static const _baseUrl = 'http://localhost/StudyMatch/studymatch-api';
   static const _otpLength = 6;
   static const _resendCooldown = 60;
 
@@ -94,10 +96,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
 
     try {
-      final data = await ApiService.sendOtp(
-        email: widget.email,
-        name: widget.name,
+      final res = await http.post(
+        Uri.parse('$_baseUrl/send_otp.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': widget.email, 'name': widget.name}),
       );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (data['success'] == true) {
         setState(() => _otpSent = true);
         _startCountdown();
@@ -127,10 +131,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
 
     try {
-      final data = await ApiService.verifyOtp(
-        email: widget.email,
-        otp: _otpValue,
+      final res = await http.post(
+        Uri.parse('$_baseUrl/verify_otp.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': widget.email, 'otp': _otpValue}),
       );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (!mounted) return;
 
       if (data['success'] == true) {

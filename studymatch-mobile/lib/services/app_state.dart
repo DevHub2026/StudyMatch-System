@@ -54,45 +54,6 @@ class AppState extends ChangeNotifier {
   }
 
   // ── Session ───────────────────────────────────────────────────────────────
-  static bool _profileHasEnoughData(Map<String, dynamic>? profileData) {
-    if (profileData == null) return false;
-    final hasText =
-        (dynamic value) => value?.toString().trim().isNotEmpty == true;
-
-    bool listHasData(dynamic value) {
-      if (value is List) {
-        return value.whereType<String>().any((item) => item.trim().isNotEmpty);
-      }
-      return false;
-    }
-
-    bool availabilityHasData(dynamic value) {
-      if (value is Map) {
-        return value.values.any((v) {
-          if (v is List) {
-            return v.whereType<String>().any((item) => item.trim().isNotEmpty);
-          }
-          return false;
-        });
-      }
-      return false;
-    }
-
-    return hasText(profileData['school']) ||
-        hasText(profileData['department']) ||
-        hasText(profileData['topic']) ||
-        hasText(profileData['yearLevel']) ||
-        hasText(profileData['gender']) ||
-        hasText(profileData['bio']) ||
-        hasText(profileData['dateOfBirth']) ||
-        listHasData(profileData['subjects']) ||
-        listHasData(profileData['strengths']) ||
-        listHasData(profileData['weaknesses']) ||
-        listHasData(profileData['learningStyles']) ||
-        listHasData(profileData['studyStyles']) ||
-        availabilityHasData(profileData['availability']);
-  }
-
   Future<void> _loadSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -118,7 +79,10 @@ class AppState extends ChangeNotifier {
               if (profileData != null) {
                 final merged = Map<String, dynamic>.from(decoded)
                   ..addAll(profileData);
-                final hasData = _profileHasEnoughData(merged);
+                final hasData =
+                    (merged['school']?.toString().isNotEmpty == true) ||
+                        (merged['department']?.toString().isNotEmpty == true) ||
+                        ((merged['subjects'] as List?)?.isNotEmpty == true);
                 if (hasData) {
                   merged['onboardingComplete'] = true;
                   _currentUser = UserModel.fromJson(merged);
@@ -475,7 +439,10 @@ class AppState extends ChangeNotifier {
             final merged = Map<String, dynamic>.from(userJson)
               ..addAll(profileData);
             if (!user.onboardingComplete) {
-              final hasData = _profileHasEnoughData(merged);
+              final hasData =
+                  (merged['school']?.toString().isNotEmpty == true) ||
+                      (merged['department']?.toString().isNotEmpty == true) ||
+                      ((merged['subjects'] as List?)?.isNotEmpty == true);
               if (hasData) merged['onboardingComplete'] = true;
             } else {
               merged['onboardingComplete'] = true;
@@ -525,20 +492,6 @@ class AppState extends ChangeNotifier {
     _conversations.clear();
     await _clearSession();
     notifyListeners();
-  }
-
-  Future<String?> deleteAccount() async {
-    if (_currentUser == null) return 'No active account to delete.';
-    try {
-      final result = await ApiService.deleteAccount();
-      if (result['success'] == true) {
-        await signOut();
-        return null;
-      }
-      return result['message'] as String? ?? 'Account deletion failed.';
-    } catch (e) {
-      return 'Network error: $e';
-    }
   }
 
   // ── Onboarding ────────────────────────────────────────────────────────────

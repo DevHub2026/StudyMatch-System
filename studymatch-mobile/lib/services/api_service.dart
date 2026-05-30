@@ -189,14 +189,6 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> deleteAccount() async {
-    final res = await http.delete(
-      Uri.parse('$_base/profile'),
-      headers: _jsonHeaders,
-    );
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
   static Future<Map<String, dynamic>> getProfile() async {
     try {
       final res = await http.get(

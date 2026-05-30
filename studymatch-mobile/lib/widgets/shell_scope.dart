@@ -26,5 +26,6 @@ class ShellScope extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(ShellScope oldWidget) => oldWidget.current != current;
+  bool updateShouldNotify(ShellScope oldWidget) =>
+      oldWidget.current != current;
 }
