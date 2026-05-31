@@ -26,7 +26,7 @@ import MySubjectsPage    from './pages/student/MySubjectsPage'
 import StudentProfile    from './pages/student/ProfilePage'
 import StudentResources  from './pages/student/ResourcesPage'
 import StudentSchedule   from './pages/student/SchedulePage'
-import StudentSettings   from './pages/student/SettingsPage'
+import StudentSettings   from './pages/shared/SettingsPage'
 import StudentSessions   from './pages/student/StudySessionsPage'
 
 // ── Tutor pages ──
@@ -37,7 +37,7 @@ import TutorMessages         from './pages/tutor/MessagesPage'
 import TutorProfile          from './pages/tutor/ProfilePage'
 import TutorResources        from './pages/tutor/ResourcesPage'
 import TutorSchedule         from './pages/tutor/SchedulePage'
-import TutorSettings         from './pages/tutor/SettingsPage'
+import TutorSettings         from './pages/shared/SettingsPage'
 import TutorSessions         from './pages/tutor/StudySessionsPage'
 
 // ── Shared extra pages ──

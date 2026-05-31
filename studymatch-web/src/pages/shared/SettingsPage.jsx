@@ -84,8 +84,30 @@ export default function SettingsPage() {
   // ── Notifications tab (basic toggles) ─────────────────────
   const [notifToggles, setNotifToggles] = useState({ email: true, marketing: false })
 
+  // ── Privacy tab ────────────────────────────────────────────
+  const ls = (k, d) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : d } catch { return d } }
+  const [privVisibility, setPrivVisibility] = useState(() => ls('set_visibility', 'Everyone'))
+  const [privOnline,     setPrivOnline]     = useState(() => ls('set_online',     true))
+  const [privHistory,    setPrivHistory]    = useState(() => ls('set_history',    'Tutors only'))
+  useEffect(() => { localStorage.setItem('set_visibility', JSON.stringify(privVisibility)) }, [privVisibility])
+  useEffect(() => { localStorage.setItem('set_online',     JSON.stringify(privOnline))     }, [privOnline])
+  useEffect(() => { localStorage.setItem('set_history',    JSON.stringify(privHistory))    }, [privHistory])
+
+  // ── Preferences tab ────────────────────────────────────────
+  const [prefLang,     setPrefLang]     = useState(() => ls('set_lang',     'English (US)'))
+  const [prefTz,       setPrefTz]       = useState(() => ls('set_tz',       'UTC+8 (PHT)'))
+  const [prefReminder, setPrefReminder] = useState(() => ls('set_reminder', '15 minutes'))
+  const [prefSession,  setPrefSession]  = useState(() => ls('set_session',  'Online'))
+  useEffect(() => { localStorage.setItem('set_lang',     JSON.stringify(prefLang))     }, [prefLang])
+  useEffect(() => { localStorage.setItem('set_tz',       JSON.stringify(prefTz))       }, [prefTz])
+  useEffect(() => { localStorage.setItem('set_reminder', JSON.stringify(prefReminder)) }, [prefReminder])
+  useEffect(() => { localStorage.setItem('set_session',  JSON.stringify(prefSession))  }, [prefSession])
+
   // ── Appearance tab ─────────────────────────────────────────
-  const [theme, setTheme] = useState('light')
+  const [theme,       setTheme]       = useState(() => ls('set_theme', 'light'))
+  const [accentColor, setAccentColor] = useState(() => ls('set_accent', '#7C3AED'))
+  useEffect(() => { localStorage.setItem('set_theme',  JSON.stringify(theme))       }, [theme])
+  useEffect(() => { localStorage.setItem('set_accent', JSON.stringify(accentColor)) }, [accentColor])
 
   const NOTIF_ROWS = [
     { icon: Calendar,      label: 'Session Confirmations', value: 'Email' },
@@ -482,21 +504,45 @@ export default function SettingsPage() {
           {/* ── Privacy Tab ─────────────────────────────────── */}
           {activeTab === 'Privacy' && (
             <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, overflow: 'hidden' }}>
-              {[
-                { title: 'Profile Visibility', desc: 'Control who can see your profile.',         value: 'Everyone'    },
-                { title: 'Online Status',       desc: 'Show when you are online to others.',       value: 'Visible'     },
-                { title: 'Study History',       desc: 'Allow tutors to see your study history.',   value: 'Tutors only' },
-                { title: 'Data Download',       desc: 'Download a copy of all your account data.', value: ''            },
-              ].map((r, i) => (
-                <div key={i} className="set-row" style={{ cursor: 'pointer' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>{r.title}</div>
-                    <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>{r.desc}</div>
-                  </div>
-                  {r.value && <span style={{ fontSize: 13, color: '#7C3AED', fontWeight: 600 }}>{r.value}</span>}
-                  <ChevronRight size={15} color="#D1D5DB" />
+              <div className="set-row">
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>Profile Visibility</div>
+                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>Control who can see your profile.</div>
                 </div>
-              ))}
+                <select value={privVisibility} onChange={e => setPrivVisibility(e.target.value)}
+                  style={{ padding: '7px 12px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                  {['Everyone', 'Matches Only', 'Hidden'].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="set-row">
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>Online Status</div>
+                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>Show when you are online to others.</div>
+                </div>
+                <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500, marginRight: 10 }}>{privOnline ? 'Visible' : 'Hidden'}</span>
+                <Toggle on={privOnline} onClick={() => setPrivOnline(v => !v)} />
+              </div>
+              <div className="set-row">
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>{isTutor ? 'Session History' : 'Study History'}</div>
+                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>{isTutor ? 'Allow students to see your session history.' : 'Allow tutors to see your study history.'}</div>
+                </div>
+                <select value={privHistory} onChange={e => setPrivHistory(e.target.value)}
+                  style={{ padding: '7px 12px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                  {['Everyone', 'Tutors only', 'Nobody'].map(o => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="set-row">
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>Data Download</div>
+                  <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>Download a copy of all your account data.</div>
+                </div>
+                <button
+                  onClick={() => alert('Your data export request has been received. You will receive a confirmation email shortly.')}
+                  style={{ padding: '7px 16px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#374151' }}>
+                  Request Export
+                </button>
+              </div>
             </div>
           )}
 
@@ -504,18 +550,20 @@ export default function SettingsPage() {
           {activeTab === 'Preferences' && (
             <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, overflow: 'hidden' }}>
               {[
-                { title: 'Language',             desc: 'Choose your preferred language.',         value: 'English (US)' },
-                { title: 'Timezone',             desc: 'Set your local timezone for scheduling.', value: 'UTC+8 (PHT)'  },
-                { title: 'Session Reminders',    desc: 'How early to remind you before sessions.',value: '15 minutes'   },
-                { title: 'Default Session Type', desc: 'Your preferred study session format.',    value: 'Online'       },
+                { title: 'Language',          desc: 'Choose your preferred language.',          state: prefLang,     set: setPrefLang,     opts: ['English (US)', 'Filipino', 'Spanish', 'French', 'Japanese'] },
+                { title: 'Timezone',          desc: 'Set your local timezone for scheduling.',  state: prefTz,       set: setPrefTz,       opts: ['UTC+8 (PHT)', 'UTC+0 (GMT)', 'UTC+9 (JST)', 'UTC-5 (EST)', 'UTC-8 (PST)', 'UTC+1 (CET)'] },
+                { title: 'Session Reminders', desc: 'How early to remind you before sessions.', state: prefReminder, set: setPrefReminder, opts: ['5 minutes', '10 minutes', '15 minutes', '30 minutes', '1 hour'] },
+                { title: 'Default Session Type', desc: 'Your preferred study session format.',  state: prefSession,  set: setPrefSession,  opts: ['Online', 'In-Person', 'Either'] },
               ].map((r, i) => (
-                <div key={i} className="set-row" style={{ cursor: 'pointer' }}>
+                <div key={i} className="set-row">
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: '#1E1B4B' }}>{r.title}</div>
                     <div style={{ fontSize: 12.5, color: '#9CA3AF', marginTop: 2 }}>{r.desc}</div>
                   </div>
-                  <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>{r.value}</span>
-                  <ChevronRight size={15} color="#D1D5DB" />
+                  <select value={r.state} onChange={e => r.set(e.target.value)}
+                    style={{ padding: '7px 12px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
+                    {r.opts.map(o => <option key={o}>{o}</option>)}
+                  </select>
                 </div>
               ))}
             </div>
@@ -543,7 +591,7 @@ export default function SettingsPage() {
                 <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', marginBottom: 14 }}>Accent Color</div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   {['#7C3AED','#3B82F6','#14B8A6','#22C55E','#F59E0B','#EC4899','#EF4444'].map(c => (
-                    <div key={c} style={{ width: 32, height: 32, borderRadius: '50%', background: c, cursor: 'pointer', border: c === '#7C3AED' ? '3px solid white' : '3px solid transparent', outline: c === '#7C3AED' ? `2px solid ${c}` : 'none' }} />
+                    <div key={c} onClick={() => setAccentColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, cursor: 'pointer', border: accentColor === c ? '3px solid white' : '3px solid transparent', outline: accentColor === c ? `2px solid ${c}` : 'none', transition: 'outline .15s' }} />
                   ))}
                 </div>
               </div>

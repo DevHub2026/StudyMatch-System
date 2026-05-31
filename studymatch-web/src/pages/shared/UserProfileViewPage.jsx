@@ -12,6 +12,26 @@ const COLORS = ['#7C3AED','#10B981','#6366F1','#F59E0B','#EC4899','#EF4444']
 const getColor    = id => COLORS[(Number(id) || 0) % COLORS.length]
 const getInitials = (name = '') => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 
+function parseBio(raw) {
+  if (!raw) return null
+  if (typeof raw !== 'string') return String(raw)
+  if (!raw.trim().startsWith('{')) return raw
+  try {
+    const obj = JSON.parse(raw)
+    const parts = []
+    if (obj.department)  parts.push(obj.department)
+    if (obj.education)   parts.push(obj.education)
+    if (obj.experience)  parts.push(`${obj.experience} experience`)
+    if (obj.teaching_mode) parts.push(`Teaching mode: ${obj.teaching_mode}`)
+    if (Array.isArray(obj.grade_levels) && obj.grade_levels.length)
+      parts.push(`Grade levels: ${obj.grade_levels.join(', ')}`)
+    if (obj.from_time && obj.to_time) parts.push(`Available ${obj.from_time} – ${obj.to_time}`)
+    return parts.length ? parts.join(' · ') : null
+  } catch {
+    return raw
+  }
+}
+
 function Avatar({ name = '', color = '#7C3AED', avatarUrl = null, size = 80 }) {
   if (avatarUrl) {
     const full = avatarUrl.startsWith('http') ? avatarUrl : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${avatarUrl}`
@@ -167,14 +187,17 @@ export default function UserProfileViewPage() {
             {/* Right details */}
             <div style={{ flex: 1, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* About */}
-              {(profile.bio || profile.tutor?.bio || profile.student?.bio) && (
-                <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '20px 22px' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', marginBottom: 10 }}>About</div>
-                  <p style={{ fontSize: 13.5, color: '#374151', lineHeight: 1.65, margin: 0 }}>
-                    {profile.bio || profile.tutor?.bio || profile.student?.bio}
-                  </p>
-                </div>
-              )}
+              {(() => {
+                const rawBio = profile.bio || profile.tutor?.bio || profile.student?.bio
+                const bio    = parseBio(rawBio)
+                if (!bio) return null
+                return (
+                  <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '20px 22px' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', marginBottom: 10 }}>About</div>
+                    <p style={{ fontSize: 13.5, color: '#374151', lineHeight: 1.65, margin: 0 }}>{bio}</p>
+                  </div>
+                )
+              })()}
 
               {/* Contact / basic info */}
               <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '20px 22px' }}>
@@ -199,8 +222,8 @@ export default function UserProfileViewPage() {
               {/* Subjects */}
               {(() => {
                 const subs = profile.role === 'tutor'
-                  ? (profile.tutor?.tutor_subjects || []).map(ts => ts.subject?.name || '').filter(Boolean)
-                  : (profile.student?.student_weak_subjects || profile.student?.weak_subjects || []).map(ws => ws.subject?.name || '').filter(Boolean)
+                  ? (profile.tutor?.strong_subjects || profile.tutor?.tutor_subjects || []).map(ts => ts.subject?.name || ts.name || '').filter(Boolean)
+                  : (profile.student?.weak_subjects || profile.student?.student_weak_subjects || []).map(ws => ws.subject?.name || ws.name || '').filter(Boolean)
                 if (subs.length === 0) return null
                 return (
                   <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '20px 22px' }}>

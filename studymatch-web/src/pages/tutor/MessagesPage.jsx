@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import QuickReportModal from '../../components/shared/QuickReportModal'
 import { getConversations, getConversation, sendMessage, sendFile } from '../../api/chat'
 import { getMatchRequests, cancelMatchRequest } from '../../api/matchRequests'
 import { getAnnouncements } from '../../api/announcements'
@@ -10,7 +11,7 @@ import {
   Image, FileText, Smile, Send, Users, MessageSquare,
   Share2, Megaphone, LayoutTemplate, ChevronRight,
   ChevronDown, ChevronUp,
-  Loader2, Calendar, CheckSquare, UserMinus, X,
+  Loader2, Calendar, CheckSquare, UserMinus, X, User, Flag,
 } from 'lucide-react'
 
 const COLORS = ['#EC4899','#7C3AED','#10B981','#6366F1','#F59E0B','#EF4444']
@@ -86,6 +87,7 @@ function buildMeetUrl(meId, partnerId, mode = 'video') {
 export default function TutorMessagesPage() {
   const me = getUser()
   const location = useLocation()
+  const navigate = useNavigate()
   const [convs,        setConvs]        = useState([])
   const [activeId,     setActiveId]     = useState(ANNOUNCEMENTS_ID)
   const [messages,     setMessages]     = useState([])
@@ -109,6 +111,7 @@ export default function TutorMessagesPage() {
 
   // 3-dot menu
   const [showMenu,        setShowMenu]        = useState(false)
+  const [reportTarget,    setReportTarget]    = useState(null)
   const [finishingSession, setFinishingSession] = useState(false)
   const [endingMatch,     setEndingMatch]     = useState(false)
 
@@ -343,6 +346,14 @@ export default function TutorMessagesPage() {
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
       `}</style>
 
+      {reportTarget && (
+        <QuickReportModal
+          reportedUserId={reportTarget.id}
+          reportedName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
+
       <div className="tm-wrap" style={{ color: '#1E1B4B' }}>
         <div style={{ marginBottom: 16 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Messages</h1>
@@ -552,6 +563,21 @@ export default function TutorMessagesPage() {
                                 ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
                                 : <UserMinus size={15} />}
                               {endingMatch ? 'Ending…' : 'End Match'}
+                            </button>
+                            <div style={{ height: 1, background: '#F0F0F4', margin: '4px 0' }} />
+                            <button className="menu-item"
+                              onClick={() => { setShowMenu(false); navigate(`/tutor/users/${activeId}/profile`) }}
+                              style={{ color: '#374151' }}>
+                              <User size={15} /> View Profile
+                            </button>
+                            <button className="menu-item"
+                              onClick={() => {
+                                setShowMenu(false)
+                                const conv = convs.find(c => (c.partner_id || c.id) === activeId)
+                                setReportTarget({ id: activeId, name: conv?.partner_name || conv?.name || 'User' })
+                              }}
+                              style={{ color: '#EF4444' }}>
+                              <Flag size={15} /> Report User
                             </button>
                           </div>
                         </>

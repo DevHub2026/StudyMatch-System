@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getConversations, getConversation, sendMessage, sendFile } from '../../api/chat'
 import { getMatchRequests } from '../../api/matchRequests'
 import { getAnnouncements } from '../../api/announcements'
 import { getUser } from '../../store/authStore'
+import QuickReportModal from '../../components/shared/QuickReportModal'
 import {
   Search, Send, Paperclip, Image, FileText,
   Smile, MoreVertical, Phone, Video, Loader2,
-  Megaphone, X, ChevronDown, ChevronUp,
+  Megaphone, X, ChevronDown, ChevronUp, User, Flag,
 } from 'lucide-react'
 
 const ANNOUNCEMENTS_ID = '__announcements__'
@@ -62,6 +63,7 @@ function buildMeetUrl(meId, partnerId, mode = 'video') {
 
 export default function StudentMessagesPage() {
   const me = getUser()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const partnerFromUrl = searchParams.get('partner')
 
@@ -78,6 +80,8 @@ export default function StudentMessagesPage() {
   const fileRef      = useRef(null)
   const [showEmoji,    setShowEmoji]    = useState(false)
   const [sendingFile,  setSendingFile]  = useState(false)
+  const [showMenu,     setShowMenu]     = useState(false)
+  const [reportTarget, setReportTarget] = useState(null)
 
   // Announcements
   const [announcements,  setAnnouncements]  = useState([])
@@ -277,6 +281,14 @@ export default function StudentMessagesPage() {
         .msg-input-field { flex: 1; border: none; outline: none; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #374151; background: transparent; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      {reportTarget && (
+        <QuickReportModal
+          reportedUserId={reportTarget.id}
+          reportedName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
 
       <div className="mp-wrap">
         {/* Header */}
@@ -482,10 +494,36 @@ export default function StudentMessagesPage() {
                       style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                       <Phone size={15} color="#6B7280" />
                     </button>
-                    <button type="button" title="More"
-                      style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                      <MoreVertical size={15} color="#6B7280" />
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                      <button type="button" title="More options" onClick={() => setShowMenu(p => !p)}
+                        style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #E5E7EB', background: showMenu ? '#F3F0FF' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <MoreVertical size={15} color={showMenu ? '#7C3AED' : '#6B7280'} />
+                      </button>
+                      {showMenu && (
+                        <>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowMenu(false)} />
+                          <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,.1)', zIndex: 100, minWidth: 190 }}>
+                            <button onClick={() => { setShowMenu(false); navigate(`/student/users/${activeId}/profile`) }}
+                              style={{ width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, fontWeight: 600, color: '#374151', borderRadius: 8, fontFamily: 'inherit' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#F8F9FB'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                              <User size={15} color="#6B7280" /> View Profile
+                            </button>
+                            <div style={{ height: 1, background: '#F0F0F4', margin: '4px 0' }} />
+                            <button onClick={() => {
+                              setShowMenu(false)
+                              const conv = convs.find(c => (c.partner_id || c.id) === activeId)
+                              setReportTarget({ id: activeId, name: conv?.partner_name || conv?.name || 'User' })
+                            }}
+                              style={{ width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, fontWeight: 600, color: '#EF4444', borderRadius: 8, fontFamily: 'inherit' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                              <Flag size={15} color="#EF4444" /> Report User
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 

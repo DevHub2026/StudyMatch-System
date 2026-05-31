@@ -36,15 +36,17 @@ function NewSessionModal({ onClose, onScheduled }) {
       const studentMap = new Map()
 
       if (mRes.status === 'fulfilled') {
-        const list = mRes.value?.data || mRes.value || []
+        // getMatchRequests() returns full axios response; .data.data = [...users]
+        const list = mRes.value?.data?.data ?? mRes.value?.data ?? []
         ;(Array.isArray(list) ? list : [])
           .filter(u => u.role === 'student' || !u.role)
           .forEach(u => { if (u.id) studentMap.set(String(u.id), { id: u.id, fullName: u.fullName || u.name }) })
       }
 
-      // Also include students from completed sessions (previous students)
+      // Also include students from past/completed sessions (previous students)
       if (sessRes.status === 'fulfilled') {
-        const sessList = sessRes.value?.data || sessRes.value || []
+        // getSessions() returns response.data = {success, data: [...]}
+        const sessList = sessRes.value?.data ?? sessRes.value ?? []
         ;(Array.isArray(sessList) ? sessList : [])
           .filter(s => s.status === 'completed' || s.status === 'scheduled' || s.status === 'cancelled')
           .forEach(s => {
