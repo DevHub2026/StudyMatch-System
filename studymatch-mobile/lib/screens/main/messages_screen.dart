@@ -99,20 +99,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             fontSize: 22,
                             fontFamily: 'Poppins')),
                   ),
-                  IconButton(
-                    icon: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F0F4),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.edit_outlined,
-                          color: AppTheme.textDark, size: 18),
-                    ),
-                    tooltip: 'New Message',
-                    onPressed: () => _showNewMessageSheet(context, state),
-                  ),
+                  // IconButton(
+                  //   icon: Container(
+                  //     width: 36,
+                  //     height: 36,
+                  //     decoration: BoxDecoration(
+                  //       color: const Color(0xFFF0F0F4),
+                  //       borderRadius: BorderRadius.circular(10),
+                  //     ),
+                  //     child: const Icon(Icons.edit_outlined,
+                  //         color: AppTheme.textDark, size: 18),
+                  //   ),
+                  //   tooltip: 'New Message',
+                  //   onPressed: () => _showNewMessageSheet(context, state),
+                  // ),
                 ],
               ),
             ),
