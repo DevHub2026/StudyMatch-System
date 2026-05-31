@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:studymatch/screens/auth/login_screen.dart';
 import 'services/app_state.dart';
 import 'utils/app_theme.dart';
 import 'screens/landing_screen.dart';
@@ -9,7 +10,8 @@ import 'screens/main/main_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -48,11 +50,11 @@ class AppRouter extends StatelessWidget {
     final state = context.watch<AppState>();
     switch (state.authState) {
       case AuthState.unauthenticated:
-        return const LandingScreen();
+        return const LoginScreen();
       case AuthState.onboarding:
         return const OnboardingFlow();
       case AuthState.authenticated:
-        return const MainShell();
+        return const LandingScreen();
     }
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:studymatch/screens/main/dashboard_screen.dart';
+import 'package:studymatch/screens/main/main_shell.dart';
 import '../utils/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'auth/login_screen.dart';
@@ -93,32 +95,10 @@ class LandingScreen extends StatelessWidget {
                   text: 'Shared academic resources'),
               const Spacer(),
               GradientButton(
-                text: 'Join Now Free',
+                text: 'Let\'s get Started',
                 onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SignupScreen())),
+                    MaterialPageRoute(builder: (_) => const MainShell())),
                 icon: Icons.arrow_forward_rounded,
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen())),
-                  child: const Text.rich(
-                    TextSpan(
-                      text: 'Already have an account? ',
-                      style: TextStyle(
-                          color: Color(0xFF6B7280), fontFamily: 'Poppins'),
-                      children: [
-                        TextSpan(
-                          text: 'Sign In',
-                          style: TextStyle(
-                              color: AppTheme.primaryLight,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
             ],

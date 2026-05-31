@@ -4,6 +4,7 @@ import '../navigation/student_nav.dart';
 import '../services/app_state.dart';
 import '../utils/app_theme.dart';
 import 'shell_scope.dart';
+import '../screens/main/help_center_screen.dart';
 
 class StudentDrawer extends StatefulWidget {
   const StudentDrawer({super.key});
@@ -13,7 +14,7 @@ class StudentDrawer extends StatefulWidget {
 }
 
 class _StudentDrawerState extends State<StudentDrawer> {
-  bool _settingsOpen = false;
+  // bool _settingsOpen = false;
 
   @override
   Widget build(BuildContext context) {
@@ -150,21 +151,9 @@ class _StudentDrawerState extends State<StudentDrawer> {
                   _NavTile(
                     dest: StudentNav.settings,
                     selected: scope.current == StudentNav.settings,
-                    onTap: () => setState(() => _settingsOpen = !_settingsOpen),
-                    trailing: Icon(
-                      _settingsOpen ? Icons.expand_less : Icons.expand_more,
-                      color: AppTheme.textMuted,
-                      size: 20,
-                    ),
+                    onTap: () =>
+                        setState(() => scope.navigate(StudentNav.settings)),
                   ),
-                  if (_settingsOpen) ...[
-                    _SubNav('Account Settings',
-                        () => scope.navigate(StudentNav.settings)),
-                    _SubNav('Notification Settings',
-                        () => scope.navigate(StudentNav.settings)),
-                    _SubNav('Privacy & Security',
-                        () => scope.navigate(StudentNav.settings)),
-                  ],
                 ],
               ),
             ),
@@ -174,7 +163,10 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 color: const Color(0xFFF3F0FF),
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
-                  onTap: () => scope.navigate(StudentNav.help),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const HelpCenterScreen())),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(

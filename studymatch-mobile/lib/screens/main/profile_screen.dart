@@ -81,7 +81,8 @@ class ProfileScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const NotificationsPlaceholder()),
+                                    builder: (_) =>
+                                        const NotificationsPlaceholder()),
                               );
                             }
                           },
@@ -273,8 +274,8 @@ class ProfileScreen extends StatelessWidget {
                 icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Edit Profile',
                     style: TextStyle(fontFamily: 'Poppins')),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
               ),
             ],
           ),
@@ -719,12 +720,11 @@ class _NavLinks extends StatelessWidget {
         'Resources',
         () => shell?.navigate(StudentNav.resources),
       ),
-      _NavLinkData(Icons.show_chart_rounded, 'Activity', () {}),
       _NavLinkData(
         Icons.settings_outlined,
         'Settings',
-        () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SettingsScreen())),
+        () => Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
       ),
     ];
 
