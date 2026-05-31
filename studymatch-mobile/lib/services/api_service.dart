@@ -621,6 +621,19 @@ class ApiService {
 
   // ── Subjects ──────────────────────────────────────────────────────────────
 
+  static Future<Map<String, dynamic>> getStudyOverview() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$_base/study-overview'),
+        headers: _jsonHeaders,
+      );
+      if (res.statusCode != 200) return {};
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return {};
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getSubjects() async {
     try {
       final res =
@@ -725,7 +738,13 @@ class ApiService {
       final res =
           await http.get(Uri.parse('$_base/complaints'), headers: _jsonHeaders);
       final data = jsonDecode(res.body);
-      final list = data is List ? data : (data['data'] as List? ?? []);
+      // Backend returns {"complaints": [...]}.
+      // Fall back to "data" key and bare-list shapes for resilience.
+      final List list = data is List
+          ? data
+          : (data['complaints'] as List? ??
+              data['data'] as List? ??
+              []);
       return list.cast<Map<String, dynamic>>();
     } catch (_) {
       return [];

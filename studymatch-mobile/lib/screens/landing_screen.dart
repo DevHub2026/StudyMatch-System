@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:studymatch/screens/main/dashboard_screen.dart';
-import 'package:studymatch/screens/main/main_shell.dart';
+import 'package:provider/provider.dart';
+import '../services/app_state.dart';
 import '../utils/app_theme.dart';
 import '../widgets/shared_widgets.dart';
-import 'auth/login_screen.dart';
-import 'auth/signup_screen.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -96,8 +94,8 @@ class LandingScreen extends StatelessWidget {
               const Spacer(),
               GradientButton(
                 text: 'Let\'s get Started',
-                onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const MainShell())),
+                onPressed: () =>
+                    context.read<AppState>().markLandingSeen(),
                 icon: Icons.arrow_forward_rounded,
               ),
               const SizedBox(height: 16),

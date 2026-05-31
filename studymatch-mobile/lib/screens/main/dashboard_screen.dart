@@ -23,12 +23,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return 'Good evening';
   }
 
+  /// Renders the Mon–Sun dot row from the weekDays list returned by the API
+  /// (or computed client-side). Falls back to 7 static inactive dots when no
+  /// data is available yet.
+  Widget _buildWeekDots(List<Map<String, dynamic>> weekDays) {
+    if (weekDays.isEmpty) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: const ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+            .map((d) => _StreakDot(label: d))
+            .toList(),
+      );
+    }
+
+    final todayStr = () {
+      final n = DateTime.now();
+      return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+    }();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: weekDays.map((d) {
+        final fullLabel = (d['label'] as String?) ?? '';
+        // Backend returns 3-letter labels ('Mon', 'Tue', …); show only initial.
+        final shortLabel =
+            fullLabel.isNotEmpty ? fullLabel[0].toUpperCase() : '';
+        return _StreakDot(
+          label: shortLabel,
+          active: d['active'] == true,
+          isToday: d['date'] == todayStr,
+        );
+      }).toList(),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().loadConversations();
-      context.read<AppState>().fetchNotifications();
+      final s = context.read<AppState>();
+      s.loadConversations();
+      s.fetchNotifications();
+      s.loadStudyStreak();
     });
   }
 
@@ -143,32 +179,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.local_fire_department,
-                                  color: AppTheme.warning, size: 26),
+                              Icon(
+                                Icons.local_fire_department,
+                                color: state.streakDays > 0
+                                    ? AppTheme.warning
+                                    : AppTheme.textMuted,
+                                size: 26,
+                              ),
                               const SizedBox(width: 8),
-                              const Text('0',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.textDark,
-                                    fontFamily: 'Poppins',
-                                  )),
+                              Text(
+                                '${state.streakDays}',
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.textDark,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              const Text('days in a row',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textMuted,
-                                    fontFamily: 'Poppins',
-                                  )),
+                              const Text(
+                                'days in a row',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                                .map((d) => _StreakDot(label: d))
-                                .toList(),
-                          ),
+                          _buildWeekDots(state.weekDays),
                         ],
                       ),
                     ),
@@ -576,28 +616,62 @@ class _EmptyInline extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _StreakDot extends StatelessWidget {
   final String label;
-  const _StreakDot({required this.label});
+  final bool active;
+  final bool isToday;
+
+  const _StreakDot({
+    required this.label,
+    this.active = false,
+    this.isToday = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // active  → amber fire colour
+    // isToday → primary blue outline (so the current day is always obvious)
+    // inactive → neutral grey
+    final Color dotColor;
+    final Color iconColor;
+    final BoxBorder? border;
+
+    if (active) {
+      dotColor  = AppTheme.warning.withValues(alpha: 0.15);
+      iconColor = AppTheme.warning;
+      border    = isToday
+          ? Border.all(color: AppTheme.warning, width: 1.5)
+          : null;
+    } else if (isToday) {
+      dotColor  = AppTheme.primary.withValues(alpha: 0.1);
+      iconColor = AppTheme.primary;
+      border    = Border.all(color: AppTheme.primary, width: 1.5);
+    } else {
+      dotColor  = const Color(0xFFF3F4F6);
+      iconColor = const Color(0xFFD1D5DB);
+      border    = null;
+    }
+
     return Column(
       children: [
         Container(
           width: 28,
           height: 28,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF3F4F6),
+          decoration: BoxDecoration(
+            color: dotColor,
             shape: BoxShape.circle,
+            border: border,
           ),
-          child: const Icon(Icons.bolt_rounded,
-              size: 14, color: Color(0xFFD1D5DB)),
+          child: Icon(Icons.bolt_rounded, size: 14, color: iconColor),
         ),
         const SizedBox(height: 4),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 9,
-                color: AppTheme.textMuted,
-                fontFamily: 'Poppins')),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontFamily: 'Poppins',
+            color: active ? AppTheme.textDark : AppTheme.textMuted,
+            fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+          ),
+        ),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
@@ -7,9 +8,6 @@ import '../../widgets/shared_widgets.dart';
 import '../../navigation/student_nav.dart';
 import '../../widgets/shell_scope.dart';
 import '../../models/models.dart';
-// import '../../models/user.dart';
-// import '../../models/conversation.dart';
-// import '../../models/study_session.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -19,6 +17,29 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh all notification data immediately when the screen opens,
+    // then continue refreshing every 30 seconds while it stays visible.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+    _refreshTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _refresh());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    await context.read<AppState>().refreshNotifications();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -26,9 +47,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final pendingMatches = state.pendingMatchUsers;
     final upcomingSessions = state.sessions;
     final conversations = state.conversations;
+    final apiNotifications = state.notifications;
 
-    final hasNotifications =
-        unread > 0 || pendingMatches.isNotEmpty || upcomingSessions.isNotEmpty;
+    final hasNotifications = unread > 0 ||
+        pendingMatches.isNotEmpty ||
+        upcomingSessions.isNotEmpty ||
+        apiNotifications.isNotEmpty;
 
     return ColoredBox(
       color: AppTheme.bgLight,
@@ -239,6 +263,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ),
                                   ),
                                 ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // ─── API Notifications ─────────────────────────────────────
+                        if (apiNotifications.isNotEmpty) ...[
+                          _NotificationSection(
+                            title: 'Recent Activity',
+                            subtitle:
+                                '${apiNotifications.where((n) => !n.isRead).length} unread',
+                            icon: Icons.notifications_rounded,
+                            color: const Color(0xFF8B5CF6),
+                            children: [
+                              for (int i = 0;
+                                  i < apiNotifications.take(10).length;
+                                  i++) ...[
+                                _ApiNotificationTile(
+                                  item: apiNotifications[i],
+                                  onTap: () => context
+                                      .read<AppState>()
+                                      .markNotificationRead(
+                                          apiNotifications[i].id),
+                                ),
+                                if (i < apiNotifications.take(10).length - 1)
+                                  const Divider(
+                                    height: 1,
+                                    indent: 56,
+                                    endIndent: 16,
+                                    color: Color(0xFFEEEEF4),
+                                  ),
+                              ],
                             ],
                           ),
                         ],
@@ -452,6 +508,109 @@ class _MessageNotificationTile extends StatelessWidget {
                 color: AppTheme.textMuted, size: 20),
         ],
       ),
+    );
+  }
+}
+
+// ─── API Notification Tile ─────────────────────────────────────────────────
+class _ApiNotificationTile extends StatelessWidget {
+  final NotificationItem item;
+  final VoidCallback onTap;
+
+  const _ApiNotificationTile({required this.item, required this.onTap});
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'match_request':
+        return Icons.people_alt_rounded;
+      case 'message':
+        return Icons.chat_bubble_outline_rounded;
+      case 'session':
+        return Icons.schedule_rounded;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'match_request':
+        return AppTheme.warning;
+      case 'message':
+        return AppTheme.primary;
+      case 'session':
+        return AppTheme.success;
+      default:
+        return const Color(0xFF8B5CF6);
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorForType(item.type);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(_iconForType(item.type), color: color, size: 20),
+      ),
+      title: Text(
+        item.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: item.isRead ? FontWeight.w500 : FontWeight.w700,
+          fontSize: 13,
+          color: AppTheme.textDark,
+          fontFamily: 'Poppins',
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textMuted,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _timeAgo(item.createdAt),
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      trailing: item.isRead
+          ? null
+          : Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+      onTap: onTap,
     );
   }
 }

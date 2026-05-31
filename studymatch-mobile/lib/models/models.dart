@@ -363,17 +363,18 @@ class Conversation {
   final RealUser participant;
   final List<Message> messages;
   final DateTime lastActivity;
+  final int serverUnreadCount;
 
   const Conversation({
     required this.id,
     required this.participant,
     required this.messages,
     required this.lastActivity,
+    this.serverUnreadCount = 0,
   });
 
   Message? get lastMessage => messages.isNotEmpty ? messages.last : null;
-  int get unreadCount =>
-      messages.where((m) => !m.isRead && m.senderId != 'current_user').length;
+  int get unreadCount => serverUnreadCount;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

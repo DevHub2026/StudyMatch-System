@@ -147,14 +147,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
               child: Row(
                 children: [
-                  // Back button: step 0 goes to login/back, rest go to prev step
+                  // Back button: step 0 signs out (OnboardingFlow is the root
+                  // widget — there is nothing to pop to). Subsequent steps go
+                  // to the previous onboarding step.
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new,
                         color: Color(0xFF1A1A2E), size: 18),
                     onPressed: step == 0
-                        ? () => Navigator.of(context).pop()
+                        ? () => context.read<AppState>().signOut()
                         : _back,
-                    tooltip: step == 0 ? 'Back' : 'Previous step',
+                    tooltip: step == 0 ? 'Back to login' : 'Previous step',
                   ),
                   const Expanded(
                     child: Text(
