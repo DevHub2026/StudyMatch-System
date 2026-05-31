@@ -502,6 +502,39 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ── OTP ───────────────────────────────────────────────────────────────────
+
+  /// Verifies the 6-digit OTP the user received by email.
+  /// Returns null on success, or an error message string on failure.
+  Future<String?> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final result = await ApiService.verifyOtp(email: email, otp: otp);
+      if (result['success'] == true) return null;
+      return result['message'] as String? ?? 'Verification failed';
+    } catch (e) {
+      return 'Network error: $e';
+    }
+  }
+
+  /// Re-sends an OTP to the given email address.
+  /// Uses the current user's name if available, otherwise falls back to
+  /// the email prefix so the backend can personalise the mail.
+  Future<void> resendOtp({required String email}) async {
+    try {
+      await ApiService.sendOtp(
+        email: email,
+        name: _currentUser?.fullName ??
+            email.split('@').first, // graceful fallback
+      );
+    } catch (_) {
+      // Fire-and-forget — the UI timer already handles the resend cooldown,
+      // so a silent failure here is acceptable.
+    }
+  }
+
   // ── Change Password ───────────────────────────────────────────────────────
   Future<String?> changePassword({
     required String currentPassword,

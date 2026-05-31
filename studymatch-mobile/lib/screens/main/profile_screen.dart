@@ -73,8 +73,18 @@ class ProfileScreen extends StatelessWidget {
                             child: const Icon(Icons.notifications_outlined,
                                 color: AppTheme.textDark, size: 20),
                           ),
-                          onPressed: () => ShellScope.of(context)
-                              .navigate(StudentNav.notifications),
+                          onPressed: () {
+                            final shell = ShellScope.maybeOf(context);
+                            if (shell != null) {
+                              shell.navigate(StudentNav.notifications);
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const NotificationsPlaceholder()),
+                              );
+                            }
+                          },
                         ),
                         if (unread > 0)
                           Positioned(
@@ -195,7 +205,6 @@ class ProfileScreen extends StatelessWidget {
       ]);
     }
 
-   
     if (user.availability.isNotEmpty) {
       widgets.addAll([
         _LightSection(
@@ -264,8 +273,8 @@ class ProfileScreen extends StatelessWidget {
                 icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Edit Profile',
                     style: TextStyle(fontFamily: 'Poppins')),
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary),
               ),
             ],
           ),
@@ -277,25 +286,25 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-/// Returns a human-readable bio string, or null if the bio is a JSON blob
-/// (registration data stored by the tutor onboarding flow).
+/// Fallback widget used when ShellScope is not available for notifications.
+class NotificationsPlaceholder extends StatelessWidget {
+  const NotificationsPlaceholder({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Notifications')),
+        body: const Center(child: Text('No notifications')),
+      );
+}
+
+/// Returns a human-readable bio string, or null if the bio is a JSON blob.
 String? _readableBio(String? bio) {
   if (bio == null || bio.isEmpty) return null;
   final trimmed = bio.trim();
-  // If it starts with '{' it's the JSON registration payload — not displayable as bio
   if (trimmed.startsWith('{')) {
-    // Try to extract a personal_bio key if it exists
     try {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        (RegExp(r'"personal_bio"\s*:\s*"((?:[^"\\]|\\.)*)"')
-                .firstMatch(trimmed)
-                ?.group(1) != null)
-            ? {'personal_bio': RegExp(r'"personal_bio"\s*:\s*"((?:[^"\\]|\\.)*)"')
-                .firstMatch(trimmed)!
-                .group(1)!}
-            : {},
-      );
-      final personal = data['personal_bio'] as String?;
+      final match = RegExp(r'"personal_bio"\s*:\s*"((?:[^"\\]|\\.)*)"')
+          .firstMatch(trimmed);
+      final personal = match?.group(1);
       return (personal != null && personal.isNotEmpty) ? personal : null;
     } catch (_) {
       return null;
@@ -378,7 +387,7 @@ class _ProfileInfoCard extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppTheme.primary,
                               shape: BoxShape.circle,
                             ),
@@ -493,8 +502,8 @@ class _StatsCard extends StatelessWidget {
               ),
             ),
             Container(width: 1, height: 48, color: AppTheme.borderLight),
-            Expanded(
-              child: const _StatItem(
+            const Expanded(
+              child: _StatItem(
                 icon: Icons.star_rounded,
                 iconColor: AppTheme.warning,
                 value: '0.0',
@@ -513,11 +522,12 @@ class _StatItem extends StatelessWidget {
   final Color iconColor;
   final String value;
   final String label;
-  const _StatItem(
-      {required this.icon,
-      required this.iconColor,
-      required this.value,
-      required this.label});
+  const _StatItem({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -567,8 +577,8 @@ class _MySessions extends StatelessWidget {
                       color: AppTheme.textDark,
                       fontFamily: 'Poppins')),
               TextButton(
-                onPressed: () =>
-                    ShellScope.of(context).navigate(StudentNav.studySessions),
+                onPressed: () => ShellScope.maybeOf(context)
+                    ?.navigate(StudentNav.studySessions),
                 child: const Text('View all',
                     style: TextStyle(
                         color: AppTheme.primary,
@@ -602,8 +612,8 @@ class _MySessions extends StatelessWidget {
                               fontSize: 13)),
                       const SizedBox(height: 4),
                       TextButton(
-                        onPressed: () => ShellScope.of(context)
-                            .navigate(StudentNav.findTutors),
+                        onPressed: () => ShellScope.maybeOf(context)
+                            ?.navigate(StudentNav.findTutors),
                         child: const Text('Find a tutor to get started',
                             style: TextStyle(
                                 color: AppTheme.primary,
@@ -634,11 +644,12 @@ class _SessionRow extends StatelessWidget {
   final String subject;
   final IconData icon;
   final Color iconColor;
-  const _SessionRow(
-      {required this.name,
-      required this.subject,
-      required this.icon,
-      required this.iconColor});
+  const _SessionRow({
+    required this.name,
+    required this.subject,
+    required this.icon,
+    required this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -689,21 +700,32 @@ class _NavLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shell = ShellScope.of(context);
+    final shell = ShellScope.maybeOf(context);
+
     final links = [
-      _NavLinkData(Icons.calendar_month_outlined, 'My Schedule',
-          () => shell.navigate(StudentNav.schedule)),
-      _NavLinkData(Icons.chat_bubble_outline_rounded, 'Messages',
-          () => shell.navigate(StudentNav.messages),
-          badge: unread > 0 ? (unread > 9 ? '9+' : '$unread') : null),
-      _NavLinkData(Icons.folder_outlined, 'Resources',
-          () => shell.navigate(StudentNav.resources)),
+      _NavLinkData(
+        Icons.calendar_month_outlined,
+        'My Schedule',
+        () => shell?.navigate(StudentNav.schedule),
+      ),
+      _NavLinkData(
+        Icons.chat_bubble_outline_rounded,
+        'Messages',
+        () => shell?.navigate(StudentNav.messages),
+        badge: unread > 0 ? (unread > 9 ? '9+' : '$unread') : null,
+      ),
+      _NavLinkData(
+        Icons.folder_outlined,
+        'Resources',
+        () => shell?.navigate(StudentNav.resources),
+      ),
       _NavLinkData(Icons.show_chart_rounded, 'Activity', () {}),
       _NavLinkData(
-          Icons.settings_outlined,
-          'Settings',
-          () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+        Icons.settings_outlined,
+        'Settings',
+        () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen())),
+      ),
     ];
 
     return Padding(

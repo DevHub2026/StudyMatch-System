@@ -22,6 +22,60 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
   bool _bannerDismissed = false;
   final Set<String> _favorites = {};
 
+  // ── Search & subject filter ───────────────────────────────────────────────
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedSubject; // null = no subject filter
+  bool _showSubjectFilter = false;
+
+  // All subjects drawn from AppConstants; feel free to extend.
+  static const List<String> _allSubjects = [
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'History',
+    'Statistics',
+    'English',
+    'Filipino',
+    'Social Science',
+  ];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Apply search + subject filter on top of a list of matches ────────────
+  List<RealUser> _applyFilters(List<RealUser> input) {
+    return input.where((u) {
+      // Name filter
+      final nameMatch = _searchQuery.isEmpty ||
+          u.fullName.toLowerCase().contains(_searchQuery.toLowerCase());
+
+      // Subject filter
+      final subjectMatch = _selectedSubject == null ||
+          u.subjects.any((s) =>
+              s.toLowerCase() == _selectedSubject!.toLowerCase());
+
+      return nameMatch && subjectMatch;
+    }).toList();
+  }
+
+  // ── Clear all filters ─────────────────────────────────────────────────────
+  void _clearFilters() {
+    setState(() {
+      _searchCtrl.clear();
+      _searchQuery = '';
+      _selectedSubject = null;
+      _showSubjectFilter = false;
+    });
+  }
+
+  bool get _hasActiveFilters => _searchQuery.isNotEmpty || _selectedSubject != null;
+
   void _showBookingDialog(RealUser tutor) {
     DateTime? selectedDate;
     TimeOfDay? selectedTime;
@@ -65,7 +119,6 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 17)),
                 const SizedBox(height: 20),
-                // ── Subject ──────────────────────────────────────────────
                 const Text('Subject',
                     style: TextStyle(
                         color: AppTheme.textBody,
@@ -108,7 +161,6 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                // ── Session Type ─────────────────────────────────────────
                 const Text('Session Type',
                     style: TextStyle(
                         color: AppTheme.textBody,
@@ -173,7 +225,6 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 14),
-                // ── Meeting Link (Online only) ────────────────────────────
                 if (selectedSessionType == 'online') ...[
                   const Text('Meeting Link (Optional)',
                       style: TextStyle(
@@ -212,7 +263,6 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   ),
                   const SizedBox(height: 14),
                 ],
-                // ── Date and Time ──────────────────────────────────────────
                 const Text('Date',
                     style: TextStyle(
                         color: AppTheme.textBody,
@@ -477,17 +527,118 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
     );
   }
 
+  // ── Subject filter bottom sheet ───────────────────────────────────────────
+  void _showSubjectSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: AppTheme.borderLight,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Filter by Subject',
+                      style: TextStyle(
+                          color: AppTheme.textDark,
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  if (_selectedSubject != null)
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _selectedSubject = null);
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Clear',
+                          style: TextStyle(
+                              color: AppTheme.primary,
+                              fontFamily: 'Poppins',
+                              fontSize: 13)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _allSubjects.map((subject) {
+                  final selected = _selectedSubject == subject;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedSubject = selected ? null : subject;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? AppTheme.primary
+                            : const Color(0xFFF5F5F8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: selected
+                                ? AppTheme.primary
+                                : AppTheme.borderLight),
+                      ),
+                      child: Text(subject,
+                          style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : AppTheme.textBody,
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final matches = state.matchedUsers;
 
     final newMatches = matches.take(2).toList();
-    final displayedMatches = _selectedTab == 1
+
+    // Base list based on tab
+    final baseList = _selectedTab == 1
         ? newMatches
         : _selectedTab == 2
             ? matches.where((u) => _favorites.contains(u.id)).toList()
             : matches;
+
+    // Apply search + subject filter on top
+    final displayedMatches = _applyFilters(baseList);
 
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
@@ -517,15 +668,45 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                       ),
                     ),
                   ),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F0F4),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.tune_rounded,
-                        color: AppTheme.textDark, size: 18),
+                  // Subject filter button — badge when active
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      GestureDetector(
+                        onTap: _showSubjectSheet,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _selectedSubject != null
+                                ? AppTheme.primary.withValues(alpha: 0.12)
+                                : const Color(0xFFF0F0F4),
+                            borderRadius: BorderRadius.circular(10),
+                            border: _selectedSubject != null
+                                ? Border.all(
+                                    color: AppTheme.primary.withValues(alpha: 0.4))
+                                : null,
+                          ),
+                          child: Icon(Icons.tune_rounded,
+                              color: _selectedSubject != null
+                                  ? AppTheme.primary
+                                  : AppTheme.textDark,
+                              size: 18),
+                        ),
+                      ),
+                      if (_selectedSubject != null)
+                        Positioned(
+                          top: -3,
+                          right: -3,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                                color: AppTheme.primary,
+                                shape: BoxShape.circle),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -541,24 +722,83 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.borderLight),
+                  border: Border.all(
+                      color: _searchQuery.isNotEmpty
+                          ? AppTheme.primary.withValues(alpha: 0.5)
+                          : AppTheme.borderLight),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    SizedBox(width: 14),
-                    Icon(Icons.search, color: AppTheme.textMuted, size: 18),
-                    SizedBox(width: 8),
-                    Text('Search your matches...',
-                        style: TextStyle(
-                            color: AppTheme.textMuted,
+                    const SizedBox(width: 14),
+                    Icon(Icons.search,
+                        color: _searchQuery.isNotEmpty
+                            ? AppTheme.primary
+                            : AppTheme.textMuted,
+                        size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        style: const TextStyle(
+                            color: AppTheme.textDark,
                             fontFamily: 'Poppins',
-                            fontSize: 13)),
+                            fontSize: 13),
+                        decoration: const InputDecoration.collapsed(
+                          hintText: 'Search by name...',
+                          hintStyle: TextStyle(
+                              color: AppTheme.textMuted,
+                              fontFamily: 'Poppins',
+                              fontSize: 13),
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _searchQuery = v.trim()),
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 10),
+                          child: Icon(Icons.close,
+                              size: 16, color: AppTheme.textMuted),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+
+            // ── Active filter chips row ─────────────────────────────────
+            if (_hasActiveFilters)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                child: Row(
+                  children: [
+                    if (_selectedSubject != null)
+                      _ActiveFilterChip(
+                        label: _selectedSubject!,
+                        icon: Icons.book_outlined,
+                        onRemove: () =>
+                            setState(() => _selectedSubject = null),
+                      ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _clearFilters,
+                      child: const Text('Clear all',
+                          style: TextStyle(
+                              color: AppTheme.primary,
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ],
+                ),
+              ),
 
             // ── Filter tabs ────────────────────────────────────────────
             Padding(
@@ -666,8 +906,28 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                           const SizedBox(height: 12),
                         ],
 
-                        if (displayedMatches.isEmpty && _selectedTab == 2)
+                        // Results count when filtering
+                        if (_hasActiveFilters) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              '${displayedMatches.length} result${displayedMatches.length == 1 ? '' : 's'} found',
+                              style: const TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12),
+                            ),
+                          ),
+                        ],
+
+                        // Empty favorites
+                        if (displayedMatches.isEmpty && _selectedTab == 2 && !_hasActiveFilters)
                           _FavoritesEmpty()
+                        // No filter results
+                        else if (displayedMatches.isEmpty && _hasActiveFilters)
+                          _NoFilterResults(
+                            onClear: _clearFilters,
+                          )
                         else
                           ...displayedMatches.map((u) {
                             final appState = context.read<AppState>();
@@ -687,6 +947,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                                       ? () => _showBookingDialog(u)
                                       : null,
                               matchedLabel: 'Matched recently',
+                              searchQuery: _searchQuery,
                             );
                           }),
                         const SizedBox(height: 24),
@@ -695,6 +956,49 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Active filter chip (shown below search) ───────────────────────────────────
+class _ActiveFilterChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onRemove;
+
+  const _ActiveFilterChip({
+    required this.label,
+    required this.icon,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppTheme.primary),
+          const SizedBox(width: 5),
+          Text(label,
+              style: const TextStyle(
+                  color: AppTheme.primary,
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(width: 5),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close, size: 12, color: AppTheme.primary),
+          ),
+        ],
       ),
     );
   }
@@ -751,8 +1055,8 @@ class _FilterChip extends StatelessWidget {
                 ),
                 child: Text(
                   badge!,
-                  style: TextStyle(
-                    color: selected ? Colors.white : Colors.white,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -773,6 +1077,7 @@ class _MatchCard extends StatelessWidget {
   final VoidCallback onFavoriteToggle;
   final VoidCallback? onBook;
   final String matchedLabel;
+  final String searchQuery;
 
   const _MatchCard({
     required this.user,
@@ -780,6 +1085,7 @@ class _MatchCard extends StatelessWidget {
     required this.onFavoriteToggle,
     this.onBook,
     required this.matchedLabel,
+    this.searchQuery = '',
   });
 
   @override
@@ -839,12 +1145,15 @@ class _MatchCard extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(user.fullName,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: AppTheme.textDark,
-                                    fontFamily: 'Poppins')),
+                            child: _HighlightText(
+                              text: user.fullName,
+                              query: searchQuery,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                  color: AppTheme.textDark,
+                                  fontFamily: 'Poppins'),
+                            ),
                           ),
                           Container(
                             padding: const EdgeInsets.all(2),
@@ -1037,6 +1346,51 @@ class _MatchCard extends StatelessWidget {
   }
 }
 
+// ── Highlighted text widget ───────────────────────────────────────────────────
+class _HighlightText extends StatelessWidget {
+  final String text;
+  final String query;
+  final TextStyle style;
+
+  const _HighlightText({
+    required this.text,
+    required this.query,
+    required this.style,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (query.isEmpty) {
+      return Text(text, style: style);
+    }
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final index = lowerText.indexOf(lowerQuery);
+
+    if (index == -1) {
+      return Text(text, style: style);
+    }
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(text: text.substring(0, index), style: style),
+          TextSpan(
+            text: text.substring(index, index + query.length),
+            style: style.copyWith(
+              backgroundColor: AppTheme.primary.withValues(alpha: 0.18),
+              color: AppTheme.primary,
+            ),
+          ),
+          TextSpan(text: text.substring(index + query.length), style: style),
+        ],
+      ),
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
 // ── Empty states ──────────────────────────────────────────────────────────────
 class _EmptyState extends StatelessWidget {
   @override
@@ -1105,6 +1459,68 @@ class _FavoritesEmpty extends StatelessWidget {
                   color: AppTheme.textMuted,
                   fontFamily: 'Poppins',
                   fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoFilterResults extends StatelessWidget {
+  final VoidCallback onClear;
+  const _NoFilterResults({required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.search_off_rounded,
+                color: AppTheme.primary, size: 28),
+          ),
+          const SizedBox(height: 14),
+          const Text('No matches found',
+              style: TextStyle(
+                  color: AppTheme.textDark,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Poppins',
+                  fontSize: 15)),
+          const SizedBox(height: 6),
+          const Text('Try adjusting your search or\nsubject filter.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppTheme.textMuted,
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  height: 1.5)),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: onClear,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+                border:
+                    Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+              ),
+              child: const Text('Clear filters',
+                  style: TextStyle(
+                      color: AppTheme.primary,
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ),
         ],
       ),
     );

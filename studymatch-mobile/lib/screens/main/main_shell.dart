@@ -28,12 +28,12 @@ class _MainShellState extends State<MainShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   StudentNav _current = StudentNav.dashboard;
 
+  // ── 4 tabs — Profile removed ─────────────────────────────────────────────
   static const List<StudentNav> _bottomNavItems = [
     StudentNav.dashboard,
     StudentNav.findTutors,
     StudentNav.studySessions,
     StudentNav.messages,
-    StudentNav.profile,
   ];
 
   int get _bottomIndex {
@@ -76,9 +76,6 @@ class _MainShellState extends State<MainShell> {
         ),
       StudentNav.complaints    => throw UnimplementedError(),
       StudentNav.feedback      => throw UnimplementedError(),
-      // These are no longer in the sidebar but kept in the enum for compatibility
-     
-      
     };
   }
 
@@ -117,7 +114,9 @@ class _MainShellState extends State<MainShell> {
             unselectedItemColor: AppTheme.textMuted,
             type: BottomNavigationBarType.fixed,
             selectedLabelStyle: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600),
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600),
             unselectedLabelStyle:
                 const TextStyle(fontFamily: 'Poppins', fontSize: 11),
             items: [
@@ -140,11 +139,6 @@ class _MainShellState extends State<MainShell> {
                 icon: _MessageIcon(count: unread, active: false),
                 activeIcon: _MessageIcon(count: unread, active: true),
                 label: 'Messages',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline_rounded),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
               ),
             ],
           ),

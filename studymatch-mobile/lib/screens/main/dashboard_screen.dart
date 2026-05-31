@@ -6,6 +6,7 @@ import '../../widgets/app_shell_header.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../navigation/student_nav.dart';
 import '../../widgets/shell_scope.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,15 +16,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  void _showNotificationsSheet(BuildContext context, AppState state) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _NotificationsSheet(state: state),
-    );
-  }
-
   String _greeting() {
     final h = DateTime.now().hour;
     if (h < 12) return 'Good morning';
@@ -45,7 +37,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final state = context.watch<AppState>();
     final user = state.currentUser;
     final firstName = user?.fullName.split(' ').first ?? 'Student';
-
     final activeMatches = state.matchedUsers.length;
     final unreadNotifs = state.unreadNotificationCount;
 
@@ -62,6 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     AppShellHeader(
                       actions: [
+                        // ── Notification bell ──────────────────────────
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -95,7 +87,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                           ],
                         ),
-                        UserAvatar(user: user, radius: 18),
+                        // ── Avatar → Profile (tutor & student) ────────
+                        GestureDetector(
+                          onTap: () =>
+                              ShellScope.of(context).navigate(StudentNav.profile),
+                          child: UserAvatar(user: user, radius: 18),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -137,7 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    // ── Study Streak (full width now, Subjects removed) ──
+                    // ── Study Streak ───────────────────────────────────
                     _SectionCard(
                       title: 'Study Streak',
                       compact: true,
@@ -149,24 +146,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Icon(Icons.local_fire_department,
                                   color: AppTheme.warning, size: 26),
                               const SizedBox(width: 8),
-                              const Text(
-                                '0',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTheme.textDark,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
+                              const Text('0',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textDark,
+                                    fontFamily: 'Poppins',
+                                  )),
                               const SizedBox(width: 6),
-                              const Text(
-                                'days in a row',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.textMuted,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
+                              const Text('days in a row',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textMuted,
+                                    fontFamily: 'Poppins',
+                                  )),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -194,8 +187,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   .map((c) => ListTile(
                                         contentPadding: EdgeInsets.zero,
                                         leading: CircleAvatar(
-                                          backgroundColor: AppTheme.primary
-                                              .withOpacity(0.15),
+                                          backgroundColor:
+                                              AppTheme.primary.withOpacity(0.15),
                                           child: Text(
                                             c.participant.initials,
                                             style: const TextStyle(
@@ -258,26 +251,22 @@ class _HeroBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Find your perfect ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              fontFamily: 'Poppins',
-              height: 1.25,
-            ),
-          ),
-          const Text(
-            'study partner',
-            style: TextStyle(
-              color: AppTheme.primaryLight,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              fontFamily: 'Poppins',
-              height: 1.25,
-            ),
-          ),
+          const Text('Find your perfect ',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'Poppins',
+                height: 1.25,
+              )),
+          const Text('study partner',
+              style: TextStyle(
+                color: AppTheme.primaryLight,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'Poppins',
+                height: 1.25,
+              )),
           const SizedBox(height: 8),
           Text(
             'Connect, learn and achieve your goals together.',
@@ -301,15 +290,13 @@ class _HeroBanner extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Find Matches',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
+                    Text('Find Matches',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontFamily: 'Poppins',
+                        )),
                     SizedBox(width: 6),
                     Icon(Icons.arrow_forward_rounded,
                         color: Colors.white, size: 16),
@@ -452,38 +439,32 @@ class _StatCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      item.value,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                        color: AppTheme.textDark,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
+                    Text(item.value,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                          color: AppTheme.textDark,
+                          fontFamily: 'Poppins',
+                        )),
                     const SizedBox(height: 2),
-                    Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textBody,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    Text(
-                      item.sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppTheme.textMuted,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
+                    Text(item.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textBody,
+                          fontFamily: 'Poppins',
+                        )),
+                    Text(item.sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMuted,
+                          fontFamily: 'Poppins',
+                        )),
                   ],
                 ),
               ),
@@ -522,15 +503,13 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textDark,
-              fontFamily: 'Poppins',
-            ),
-          ),
+          Text(title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textDark,
+                fontFamily: 'Poppins',
+              )),
           SizedBox(height: compact ? 10 : 14),
           child,
         ],
@@ -569,26 +548,22 @@ class _EmptyInline extends StatelessWidget {
           children: [
             Icon(icon, size: compact ? 28 : 36, color: AppTheme.primary),
             SizedBox(height: compact ? 8 : 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: compact ? 12 : 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textDark,
-                fontFamily: 'Poppins',
-              ),
-            ),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: compact ? 12 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                  fontFamily: 'Poppins',
+                )),
             const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: compact ? 11 : 12,
-                color: AppTheme.textMuted,
-                fontFamily: 'Poppins',
-              ),
-            ),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: compact ? 11 : 12,
+                  color: AppTheme.textMuted,
+                  fontFamily: 'Poppins',
+                )),
           ],
         ),
       ),
@@ -618,227 +593,12 @@ class _StreakDot extends StatelessWidget {
               size: 14, color: Color(0xFFD1D5DB)),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-              fontSize: 9, color: AppTheme.textMuted, fontFamily: 'Poppins'),
-        ),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 9,
+                color: AppTheme.textMuted,
+                fontFamily: 'Poppins')),
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Notifications Bottom Sheet
-// ─────────────────────────────────────────────────────────────────────────────
-class _NotificationsSheet extends StatelessWidget {
-  final AppState state;
-  const _NotificationsSheet({required this.state});
-
-  IconData _iconFor(String type) {
-    switch (type) {
-      case 'match_request':
-        return Icons.handshake_outlined;
-      case 'session':
-        return Icons.calendar_today_outlined;
-      case 'announcement':
-        return Icons.campaign_outlined;
-      default:
-        return Icons.notifications_outlined;
-    }
-  }
-
-  Color _colorFor(String type) {
-    switch (type) {
-      case 'match_request':
-        return const Color(0xFF10B981);
-      case 'session':
-        return const Color(0xFFF59E0B);
-      case 'announcement':
-        return const Color(0xFF7C3AED);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
-
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.month}/${dt.day}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final notifs = state.notifications;
-    final unreadNotifs = state.unreadNotificationCount;
-
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5E7EB),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  const Text('Notifications',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E1B4B),
-                          fontFamily: 'Poppins')),
-                  if (unreadNotifs > 0) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: Text('$unreadNotifs',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                  const Spacer(),
-                  if (unreadNotifs > 0)
-                    TextButton(
-                      onPressed: () {
-                        state.markAllNotificationsRead();
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Mark all read',
-                          style: TextStyle(
-                              color: Color(0xFF7C3AED),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: notifs.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.notifications_none_rounded,
-                              size: 48, color: Color(0xFFD1D5DB)),
-                          SizedBox(height: 12),
-                          Text('No notifications yet',
-                              style: TextStyle(
-                                  color: Color(0xFF9CA3AF),
-                                  fontSize: 14,
-                                  fontFamily: 'Poppins')),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      controller: controller,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: notifs.length,
-                      separatorBuilder: (_, __) =>
-                          const Divider(height: 1, indent: 72),
-                      itemBuilder: (_, i) {
-                        final n = notifs[i];
-                        final col = _colorFor(n.type);
-                        return InkWell(
-                          onTap: () => state.markNotificationRead(n.id),
-                          child: Container(
-                            color: n.isRead
-                                ? Colors.white
-                                : const Color(0xFFFAFAFF),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: col.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(_iconFor(n.type),
-                                      color: col, size: 20),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(n.title,
-                                          style: TextStyle(
-                                              fontSize: 13.5,
-                                              fontWeight: n.isRead
-                                                  ? FontWeight.w500
-                                                  : FontWeight.w700,
-                                              color: const Color(0xFF1E1B4B),
-                                              fontFamily: 'Poppins')),
-                                      const SizedBox(height: 2),
-                                      Text(n.message,
-                                          style: const TextStyle(
-                                              fontSize: 12.5,
-                                              color: Color(0xFF6B7280),
-                                              fontFamily: 'Poppins'),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(_timeAgo(n.createdAt),
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF9CA3AF))),
-                                    if (!n.isRead) ...[
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        width: 7,
-                                        height: 7,
-                                        decoration: const BoxDecoration(
-                                            color: Color(0xFF7C3AED),
-                                            shape: BoxShape.circle),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
