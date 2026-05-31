@@ -39,20 +39,18 @@ class _TutorPendingScreenState extends State<TutorPendingScreen>
 
   Future<void> _checkStatus() async {
     setState(() => _checking = true);
-    // Replace with actual AppState call: context.read<AppState>().getTutorStatus()
-    await Future.delayed(const Duration(seconds: 1));
+    // Re-fetch the profile from the API. If the admin has approved this tutor
+    // the backend will return profile_completed=1, which sets onboardingComplete
+    // to true in AppState. AppRouter then automatically navigates away from
+    // this screen to the authenticated flow.
+    await context.read<AppState>().refreshUserProfile();
     if (!mounted) return;
-    // Mock: read from AppState
-    final appState = context.read<AppState>();
-    // final status = await appState.getTutorApprovalStatus();
-    // setState(() { _status = status; _checking = false; });
     setState(() => _checking = false);
   }
 
   Future<void> _signOut() async {
+    // signOut() sets authState → unauthenticated; AppRouter handles navigation.
     await context.read<AppState>().signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
 
   @override

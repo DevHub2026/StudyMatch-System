@@ -52,7 +52,8 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
+    final state    = context.watch<AppState>();
+    final isTutor  = state.currentUser?.role == 'tutor';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -78,28 +79,29 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                                 fontFamily: 'Poppins'),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => _showUploadDialog(context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                  colors: [AppTheme.primary, AppTheme.accent]),
-                              borderRadius: BorderRadius.circular(20),
+                        if (isTutor)
+                          GestureDetector(
+                            onTap: () => _showUploadDialog(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                    colors: [AppTheme.primary, AppTheme.accent]),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(children: [
+                                Icon(Icons.add, color: Colors.white, size: 16),
+                                SizedBox(width: 4),
+                                Text('Upload',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Poppins',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600)),
+                              ]),
                             ),
-                            child: const Row(children: [
-                              Icon(Icons.add, color: Colors.white, size: 16),
-                              SizedBox(width: 4),
-                              Text('Upload',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600)),
-                            ]),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),

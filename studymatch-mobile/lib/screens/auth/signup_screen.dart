@@ -161,7 +161,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
     if (err != null) { _snack(err, error: true); return; }
-    Navigator.of(context).pushReplacement(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => OtpVerificationScreen(
         email: _emailCtrl.text.trim(),
         name: _nameCtrl.text.trim(),
