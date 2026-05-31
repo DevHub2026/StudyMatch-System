@@ -565,6 +565,88 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _myId => context.read<AppState>().currentUser?.id ?? '';
 
+  // ── Jitsi Meet call ───────────────────────────────────────────────────────
+  // Room name mirrors the web: studymatch-{smaller_id}-{larger_id}.
+  // Always deterministic so both users join the same room.
+  String _buildMeetUrl(String mode) {
+    final a = int.tryParse(_myId) ?? 0;
+    final b = int.tryParse(widget.participant.id) ?? 0;
+    final min = a < b ? a : b;
+    final max = a > b ? a : b;
+    final room = Uri.encodeComponent('studymatch-$min-$max');
+    final base = 'https://meet.jit.si/$room';
+    return mode == 'audio' ? '$base#config.startWithVideoMuted=true' : base;
+  }
+
+  Future<void> _startCall(String mode) async {
+    final label = mode == 'audio' ? 'audio' : 'video';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              mode == 'audio' ? Icons.call_rounded : Icons.video_call_rounded,
+              color: AppTheme.primary,
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${mode == 'audio' ? 'Audio' : 'Video'} Call',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Start a $label call with ${widget.participant.fullName}?\n\nJitsi Meet will open in your browser.',
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            color: AppTheme.textBody,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel',
+                style: TextStyle(fontFamily: 'Poppins', color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Start Call',
+              style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final url = _buildMeetUrl(mode);
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) _showError('Could not launch Jitsi Meet');
+    }
+  }
+
   Future<void> _loadMessages({bool silent = false}) async {
     if (_pausePolling) return;
     if (!silent) setState(() => _loading = true);
@@ -953,6 +1035,18 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.call_rounded,
+                color: AppTheme.primary, size: 20),
+            tooltip: 'Audio call',
+            onPressed: () => _startCall('audio'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.video_call_rounded,
+                color: AppTheme.primary, size: 22),
+            tooltip: 'Video call',
+            onPressed: () => _startCall('video'),
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline,
                 color: AppTheme.textBody, size: 20),

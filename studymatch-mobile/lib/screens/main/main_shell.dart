@@ -16,6 +16,8 @@ import 'my_matches_screen.dart';
 import 'placeholder_screen.dart';
 import 'settings_screen.dart';
 import 'find_students_screen.dart';
+import 'complaints_screen.dart';
+import 'schedule_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -62,10 +64,7 @@ class _MainShellState extends State<MainShell> {
       StudentNav.studySessions => const SessionsScreen(),
       StudentNav.messages      => const MessagesScreen(),
       StudentNav.notifications => const NotificationsScreen(),
-      StudentNav.schedule      => const PlaceholderScreen(
-          title: 'My Schedule',
-          icon: Icons.calendar_today_rounded,
-        ),
+      StudentNav.schedule      => const ScheduleScreen(),
       StudentNav.resources     => const ResourcesScreen(),
       StudentNav.profile       => const ProfileScreen(),
       StudentNav.settings      => const SettingsScreen(),
@@ -74,8 +73,12 @@ class _MainShellState extends State<MainShell> {
           message: 'Get support and browse help articles.',
           icon: Icons.help_rounded,
         ),
-      StudentNav.complaints    => throw UnimplementedError(),
-      StudentNav.feedback      => throw UnimplementedError(),
+      StudentNav.complaints    => const ComplaintsScreen(),
+      StudentNav.feedback      => const PlaceholderScreen(
+          title: 'Feedback',
+          message: 'Share your thoughts to help us improve StudyMatch.',
+          icon: Icons.chat_bubble_outline_rounded,
+        ),
     };
   }
 

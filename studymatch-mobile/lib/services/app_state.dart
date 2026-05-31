@@ -7,7 +7,7 @@ import 'api_service.dart';
 import 'message_service.dart';
 import 'package:flutter/foundation.dart';
 
-enum AuthState { unauthenticated, onboarding, authenticated }
+enum AuthState { unauthenticated, onboarding, tutorPending, authenticated }
 
 class AppState extends ChangeNotifier {
   UserModel? _currentUser;
@@ -29,15 +29,37 @@ class AppState extends ChangeNotifier {
   final List<Conversation> _conversations = [];
   List<NotificationItem> _notifications = [];
   ThemeMode _themeMode = ThemeMode.system;
+  bool _landingSeen = false;
+  int _streakDays = 0;
+  List<Map<String, dynamic>> _weekDays = [];
 
   UserModel? get currentUser => _currentUser;
   ThemeMode get themeMode => _themeMode;
+  bool get landingSeen => _landingSeen;
+  int get streakDays => _streakDays;
+  List<Map<String, dynamic>> get weekDays => List.unmodifiable(_weekDays);
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode.name);
+  }
+
+  Future<void> _loadLandingSeen() async {
+    if (_currentUser == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    _landingSeen =
+        prefs.getBool('sm_landing_seen_${_currentUser!.id}') ?? false;
+  }
+
+  Future<void> markLandingSeen() async {
+    _landingSeen = true;
+    notifyListeners();
+    if (_currentUser != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('sm_landing_seen_${_currentUser!.id}', true);
+    }
   }
 
   bool get isLoggedIn => _currentUser != null;
@@ -60,7 +82,13 @@ class AppState extends ChangeNotifier {
 
   AuthState get authState {
     if (_currentUser == null) return AuthState.unauthenticated;
-    if (!_currentUser!.onboardingComplete) return AuthState.onboarding;
+    if (!_currentUser!.onboardingComplete) {
+      // Tutors must be approved by an admin before completing profile setup.
+      // Students go through the standard onboarding flow.
+      return _currentUser!.role == 'tutor'
+          ? AuthState.tutorPending
+          : AuthState.onboarding;
+    }
     return AuthState.authenticated;
   }
 
@@ -135,7 +163,9 @@ class AppState extends ChangeNotifier {
           }
           _currentUser = candidate;
           ApiService.setToken(_currentUser!.token);
-          if (!candidate.onboardingComplete) {
+          // For students only: infer onboarding completion from profile data.
+          // Tutors require explicit admin approval — never auto-complete them.
+          if (!candidate.onboardingComplete && candidate.role != 'tutor') {
             try {
               final profileResult = await ApiService.getProfile();
               final profileData =
@@ -152,6 +182,7 @@ class AppState extends ChangeNotifier {
               }
             } catch (_) {}
           }
+          await _loadLandingSeen();
           notifyListeners();
           if (_currentUser!.onboardingComplete) {
             await _loadPassedIds();
@@ -312,6 +343,17 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {}
+  }
+
+  /// Refreshes all data shown on the notifications screen: API notifications,
+  /// pending match requests, conversations (for unread badge), and sessions.
+  Future<void> refreshNotifications() async {
+    await Future.wait([
+      fetchNotifications(),
+      loadPendingMatches(),
+      loadConversations(),
+      loadSessions(),
+    ]);
   }
 
   Future<void> markNotificationRead(int id) async {
@@ -580,25 +622,26 @@ class AppState extends ChangeNotifier {
           if (profileData != null) {
             final merged = Map<String, dynamic>.from(userJson)
               ..addAll(profileData);
-            if (!user.onboardingComplete) {
+            if (user.onboardingComplete) {
+              merged['onboardingComplete'] = true;
+            } else if (user.role != 'tutor') {
+              // Students: infer completion from profile data presence.
+              // Tutors: only mark complete via explicit admin approval.
               final hasData = _profileHasEnoughData(merged);
               if (hasData) merged['onboardingComplete'] = true;
-            } else {
-              merged['onboardingComplete'] = true;
             }
             _currentUser = UserModel.fromJson(merged);
           }
         } catch (_) {}
+        await _saveSession(_currentUser!);
+        await _loadLandingSeen();
         if (_currentUser!.onboardingComplete) {
-          await _saveSession(_currentUser!);
           await _loadPassedIds();
           await _loadMatchedUsersFromDb();
           await loadPendingMatches();
           await loadSessions();
           await loadMatchUsers();
           await loadResources();
-        } else {
-          await _saveSession(_currentUser!);
         }
         notifyListeners();
         return null;
@@ -622,6 +665,9 @@ class AppState extends ChangeNotifier {
   Future<void> signOut() async {
     _currentUser = null;
     _onboardingStep = 0;
+    _landingSeen = false;
+    _streakDays = 0;
+    _weekDays = [];
     _matchUsers = [];
     _matchedUsers = [];
     _pendingMatchUsers = [];
@@ -631,6 +677,31 @@ class AppState extends ChangeNotifier {
     _conversations.clear();
     await _clearSession();
     notifyListeners();
+  }
+
+  /// Re-fetches the user profile from the API and updates local state.
+  /// Used by TutorPendingScreen to detect admin approval.
+  Future<void> refreshUserProfile() async {
+    if (_currentUser == null) return;
+    try {
+      final profileResult = await ApiService.getProfile();
+      final profileData = profileResult['data'] as Map<String, dynamic>?;
+      if (profileData != null) {
+        final merged = _currentUser!.toJson()..addAll(profileData);
+        _currentUser = UserModel.fromJson(merged);
+        await _saveSession(_currentUser!);
+        if (_currentUser!.onboardingComplete) {
+          await _loadPassedIds();
+          await _loadMatchedUsersFromDb();
+          await loadPendingMatches();
+          await loadSessions();
+          await loadMatchUsers();
+          await loadResources();
+          await fetchNotifications();
+        }
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   Future<String?> deleteAccount(String password) async {
@@ -646,6 +717,80 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       return 'Network error: $e';
     }
+  }
+
+  // ── Study streak ──────────────────────────────────────────────────────────
+
+  /// Loads the study streak from the API (student accounts).
+  /// Falls back to client-side computation from session data (tutors or when
+  /// the API is unavailable). Mirrors the backend computeStudyStreak logic.
+  Future<void> loadStudyStreak() async {
+    if (_currentUser == null) return;
+    try {
+      final data = await ApiService.getStudyOverview();
+      final streak = data['streak'] as Map<String, dynamic>?;
+      if (streak != null) {
+        _streakDays = (streak['current_days'] as num?)?.toInt() ?? 0;
+        _weekDays = (streak['week_days'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .toList() ??
+            [];
+        notifyListeners();
+        return;
+      }
+    } catch (_) {}
+    // Fallback: derive streak from the locally cached sessions.
+    _computeAndSetStreakFromSessions();
+    notifyListeners();
+  }
+
+  /// Computes streak data locally from `_sessions`, matching the algorithm
+  /// used by the PHP backend (consecutive completed-session days, Mon–Sun week).
+  void _computeAndSetStreakFromSessions() {
+    String toDateStr(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    // Collect unique dates that have at least one completed session.
+    final completedDates = _sessions
+        .where((s) => s.isCompleted)
+        .map((s) => toDateStr(s.scheduledAt))
+        .toSet();
+
+    // Walk backward from today counting consecutive study days.
+    final today = DateTime.now();
+    var cursor = DateTime(today.year, today.month, today.day);
+    int streak = 0;
+
+    if (completedDates.contains(toDateStr(cursor))) {
+      while (completedDates.contains(toDateStr(cursor))) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+    } else {
+      // Allow a grace period: streak still counts if yesterday was the last day.
+      cursor = cursor.subtract(const Duration(days: 1));
+      while (completedDates.contains(toDateStr(cursor))) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+    }
+    _streakDays = streak;
+
+    // Build Mon–Sun week view for the current ISO week.
+    final weekday = today.weekday; // Mon=1 … Sun=7
+    final weekStart =
+        DateTime(today.year, today.month, today.day - (weekday - 1));
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final days = <Map<String, dynamic>>[];
+    for (var i = 0; i < 7; i++) {
+      final d = weekStart.add(Duration(days: i));
+      days.add({
+        'label': labels[i],
+        'date': toDateStr(d),
+        'active': completedDates.contains(toDateStr(d)),
+      });
+    }
+    _weekDays = days;
   }
 
   // ── Onboarding ────────────────────────────────────────────────────────────
@@ -981,6 +1126,7 @@ class AppState extends ChangeNotifier {
           participant: participant,
           messages: [lastMessage],
           lastActivity: lastTime,
+          serverUnreadCount: c['unreadCount'] as int? ?? 0,
         ));
       } catch (_) {}
     }
