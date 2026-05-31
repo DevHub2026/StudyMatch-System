@@ -21,6 +21,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import ReportsPage from "./pages/ReportsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import RolesPage from "./pages/RolesPage";
+import ResourcesPage from "./pages/ResourcesPage";
 
 /**
  * Protect routes properly (React Router v6 pattern)
@@ -56,8 +57,9 @@ export default function App() {
             <Route path="system-config" element={<SystemConfigPage />} />
             <Route path="matches" element={<MatchMonitoringPage />} />
             <Route path="tutors" element={<TutorsPage />} />
-            <Route path="subjects" element={<SubjectsPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="subjects"   element={<SubjectsPage />}   />
+            <Route path="resources"  element={<ResourcesPage />}  />
+            <Route path="profile"    element={<ProfilePage />}    />
           </Route>
         </Route>
       </Routes>

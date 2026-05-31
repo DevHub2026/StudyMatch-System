@@ -16,6 +16,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\StudentController;
 use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\AdminUserController;
 
@@ -61,6 +62,60 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/subjects', [ProfileController::class, 'addSubject']);
     Route::delete('/profile/subjects/{id}', [ProfileController::class, 'removeSubject']);
 
+    // Public profile view for any user by ID
+    Route::get('/users/{userId}/profile', function (\Illuminate\Http\Request $request, $userId) {
+        $user = \App\Models\User::with([
+            'student.weakSubjects.subject',
+            'tutor.strongSubjects.subject',
+            'tutor.availability',
+        ])->whereNotIn('role', ['admin', 'super_admin'])->find($userId);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        $data = [
+            'id'     => $user->id,
+            'name'   => $user->name,
+            'email'  => $user->email,
+            'role'   => $user->role,
+            'avatar' => $user->avatar,
+            'phone'  => $user->phone,
+            'bio'    => $user->bio,
+        ];
+
+        if ($user->tutor) {
+            $data['tutor'] = [
+                'id'                  => $user->tutor->id,
+                'position'            => $user->tutor->position,
+                'specialization'      => $user->tutor->specialization,
+                'bio'                 => $user->tutor->bio,
+                'average_rating'      => $user->tutor->average_rating,
+                'total_sessions'      => $user->tutor->total_sessions,
+                'verification_status' => $user->tutor->verification_status,
+                'tutor_subjects'      => $user->tutor->strongSubjects->map(fn ($ts) => [
+                    'subject' => ['id' => $ts->subject?->id, 'name' => $ts->subject?->name],
+                    'expertise_level' => $ts->expertise_level,
+                ]),
+            ];
+        }
+
+        if ($user->student) {
+            $data['student'] = [
+                'id'           => $user->student->id,
+                'program'      => $user->student->program,
+                'year_level'   => $user->student->year_level,
+                'bio'          => $user->student->bio,
+                'student_weak_subjects' => $user->student->weakSubjects->map(fn ($ws) => [
+                    'subject' => ['id' => $ws->subject?->id, 'name' => $ws->subject?->name],
+                    'difficulty_level' => $ws->difficulty_level,
+                ]),
+            ];
+        }
+
+        return response()->json(['user' => $data]);
+    });
+
     // User search (for complaint reporting, @mentions, etc.)
     Route::get('/users/search', function (\Illuminate\Http\Request $request) {
         $q    = trim($request->input('q', ''));
@@ -84,7 +139,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Students — for tutor discovery feed
-    Route::get('/students', [TutorController::class, 'index']);
+    Route::get('/students', [StudentController::class, 'index']);
+    Route::get('/students/discover', [StudentController::class, 'index']);
 
     // Tutors — canonical paths
     Route::get('/tutors', [TutorController::class, 'index']);

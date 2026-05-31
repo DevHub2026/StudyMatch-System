@@ -145,8 +145,9 @@ function ListView({ sessions }) {
 export default function MySchedulePage() {
   const today = new Date()
 
-  const [calView,    setCalView]    = useState('calendar')
-  const [weekOffset, setWeekOffset] = useState(0)
+  const [calView,     setCalView]     = useState('calendar')
+  const [calSubView,  setCalSubView]  = useState('week') // 'week' | 'month'
+  const [weekOffset,  setWeekOffset]  = useState(0)
   const [miniMonth,  setMiniMonth]  = useState({
     year:  today.getFullYear(),
     month: today.getMonth(),
@@ -274,89 +275,126 @@ export default function MySchedulePage() {
               <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, overflow: 'hidden' }}>
                 {/* Toolbar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #F0F0F4' }}>
-                  <button style={{ padding: '7px 16px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => setWeekOffset(0)}>
+                  <button style={{ padding: '7px 16px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                    onClick={() => { setWeekOffset(0); setMiniMonth({ year: today.getFullYear(), month: today.getMonth() }) }}>
                     Today
                   </button>
-                  <button className="nav-btn" onClick={() => setWeekOffset(w => w - 1)}>
-                    <ChevronLeft size={14} color="#6B7280" />
-                  </button>
-                  <button className="nav-btn" onClick={() => setWeekOffset(w => w + 1)}>
-                    <ChevronRight size={14} color="#6B7280" />
-                  </button>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>{weekLabel}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: '1px solid #E5E7EB', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-                    Week <ChevronDown14 />
-                  </div>
-                </div>
-
-                {/* Grid */}
-                <div style={{ display: 'flex', overflowX: 'auto' }}>
-                  {/* Time gutter */}
-                  <div style={{ width: 64, flexShrink: 0 }}>
-                    <div style={{ height: 56, borderBottom: '1px solid #F0F0F4' }} />
-                    <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, fontSize: 11, color: '#9CA3AF', borderBottom: '1px solid #F0F0F4' }}>
-                      All day
-                    </div>
-                    {HOURS.map(h => (
-                      <div key={h} style={{ height: 56, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 10, paddingTop: 4, fontSize: 11, color: '#9CA3AF', borderBottom: '1px solid #F8F9FB' }}>
-                        {h}
-                      </div>
+                  {calSubView === 'week' ? (
+                    <>
+                      <button className="nav-btn" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft size={14} color="#6B7280" /></button>
+                      <button className="nav-btn" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight size={14} color="#6B7280" /></button>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>{weekLabel}</span>
+                    </>
+                  ) : (
+                    <>
+                      <button className="nav-btn" onClick={prevMonth}><ChevronLeft size={14} color="#6B7280" /></button>
+                      <button className="nav-btn" onClick={nextMonth}><ChevronRight size={14} color="#6B7280" /></button>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>{monthLabel}</span>
+                    </>
+                  )}
+                  {/* View switcher */}
+                  <div style={{ display: 'flex', border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden' }}>
+                    {['week', 'month'].map(v => (
+                      <button key={v} onClick={() => setCalSubView(v)} style={{
+                        padding: '6px 14px', fontSize: 12.5, fontWeight: 600,
+                        background: calSubView === v ? '#7C3AED' : 'white',
+                        color: calSubView === v ? 'white' : '#6B7280',
+                        border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        textTransform: 'capitalize', transition: 'all .12s',
+                      }}>
+                        {v.charAt(0).toUpperCase() + v.slice(1)}
+                      </button>
                     ))}
                   </div>
+                </div>
 
-                  {/* Day columns */}
-                  {weekDates.map((date, colIdx) => {
-                    const todayCol = isToday(date)
-                    const daySessions = sessions.filter(s => {
-                      if (!s.scheduled_at) return false
-                      return new Date(s.scheduled_at).toDateString() === date.toDateString()
-                    })
-                    return (
-                      <div key={colIdx} style={{ flex: 1, minWidth: 100, borderLeft: '1px solid #F0F0F4' }}>
-                        <div style={{ height: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, borderBottom: '1px solid #F0F0F4' }}>
-                          <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{WEEK_DAYS[date.getDay()]}</div>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: '50%',
-                            background: todayCol ? '#7C3AED' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 13, fontWeight: todayCol ? 700 : 600,
-                            color: todayCol ? 'white' : '#1E1B4B',
-                          }}>
-                            {date.getDate()}
+                {/* ── Week Grid ── */}
+                {calSubView === 'week' && (
+                  <div style={{ display: 'flex', overflowX: 'auto' }}>
+                    {/* Time gutter */}
+                    <div style={{ width: 64, flexShrink: 0 }}>
+                      <div style={{ height: 56, borderBottom: '1px solid #F0F0F4' }} />
+                      <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10, fontSize: 11, color: '#9CA3AF', borderBottom: '1px solid #F0F0F4' }}>
+                        All day
+                      </div>
+                      {HOURS.map(h => (
+                        <div key={h} style={{ height: 56, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 10, paddingTop: 4, fontSize: 11, color: '#9CA3AF', borderBottom: '1px solid #F8F9FB' }}>
+                          {h}
+                        </div>
+                      ))}
+                    </div>
+                    {weekDates.map((date, colIdx) => {
+                      const todayCol    = isToday(date)
+                      const daySessions = sessions.filter(s => s.scheduled_at && new Date(s.scheduled_at).toDateString() === date.toDateString())
+                      return (
+                        <div key={colIdx} style={{ flex: 1, minWidth: 100, borderLeft: '1px solid #F0F0F4' }}>
+                          <div style={{ height: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, borderBottom: '1px solid #F0F0F4' }}>
+                            <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{WEEK_DAYS[date.getDay()]}</div>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: todayCol ? '#7C3AED' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: todayCol ? 700 : 600, color: todayCol ? 'white' : '#1E1B4B' }}>
+                              {date.getDate()}
+                            </div>
+                          </div>
+                          <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
+                          <div style={{ position: 'relative' }}>
+                            {HOURS.map(h => <div key={h} style={{ height: 56, borderBottom: '1px solid #F8F9FB' }} />)}
+                            {daySessions.map(s => {
+                              const d   = new Date(s.scheduled_at)
+                              const off = d.getHours() - HOUR_START
+                              if (off < 0 || off >= HOURS.length) return null
+                              const top    = off * 56 + (d.getMinutes() / 60) * 56
+                              const height = Math.max(((s.duration_minutes || 60) / 60) * 56, 22)
+                              const label  = s.subject?.name || s.notes || 'Session'
+                              const SC     = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
+                              return (
+                                <div key={s.id} title={label} style={{ position: 'absolute', top, left: 3, right: 3, height, background: SC.text, borderRadius: 6, padding: '3px 6px', fontSize: 10.5, fontWeight: 700, color: 'white', overflow: 'hidden', zIndex: 1, cursor: 'default' }}>
+                                  {label}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
-                        <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
-                        <div style={{ position: 'relative' }}>
-                          {HOURS.map(h => (
-                            <div key={h} style={{ height: 56, borderBottom: '1px solid #F8F9FB' }} />
-                          ))}
-                          {daySessions.map(s => {
-                            const d    = new Date(s.scheduled_at)
-                            const hour = d.getHours()
-                            const min  = d.getMinutes()
-                            const off  = hour - HOUR_START
-                            if (off < 0 || off >= HOURS.length) return null
-                            const top    = off * 56 + (min / 60) * 56
-                            const height = Math.max(((s.duration_minutes || 60) / 60) * 56, 22)
-                            const label  = s.subject?.name || s.notes || 'Session'
-                            const SC     = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
-                            return (
-                              <div key={s.id} title={label} style={{
-                                position: 'absolute', top, left: 3, right: 3, height,
-                                background: SC.text, borderRadius: 6,
-                                padding: '3px 6px', fontSize: 10.5, fontWeight: 700,
-                                color: 'white', overflow: 'hidden', zIndex: 1,
-                                cursor: 'default',
-                              }}>
-                                {label}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* ── Month Grid ── */}
+                {calSubView === 'month' && (
+                  <div style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+                      {WEEK_DAYS.map(d => (
+                        <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '4px 0' }}>{d}</div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+                      {calCells.map((cell, i) => {
+                        const cellDate = new Date(miniMonth.year, cell.cur ? miniMonth.month : (i < 7 ? miniMonth.month - 1 : miniMonth.month + 1), cell.day)
+                        const cellSessions = sessions.filter(s => s.scheduled_at && new Date(s.scheduled_at).toDateString() === cellDate.toDateString())
+                        const isTd = cell.cur && isToday(cellDate)
+                        return (
+                          <div key={i} style={{ minHeight: 64, padding: '4px', borderRadius: 8, background: isTd ? '#F3F0FF' : 'transparent', border: isTd ? '1.5px solid #DDD6FE' : '1px solid transparent' }}>
+                            <div style={{ fontSize: 12, fontWeight: isTd ? 700 : 500, color: cell.cur ? (isTd ? '#7C3AED' : '#1E1B4B') : '#D1D5DB', marginBottom: 4, textAlign: 'center' }}>
+                              {cell.day}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              {cellSessions.slice(0, 2).map(s => {
+                                const SC = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
+                                return (
+                                  <div key={s.id} title={s.subject?.name || 'Session'} style={{ fontSize: 9.5, fontWeight: 700, color: 'white', background: SC.text, borderRadius: 3, padding: '1px 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {s.subject?.name || s.notes || 'Session'}
+                                  </div>
+                                )
+                              })}
+                              {cellSessions.length > 2 && (
+                                <div style={{ fontSize: 9, color: '#7C3AED', fontWeight: 600, textAlign: 'center' }}>+{cellSessions.length - 2} more</div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Upcoming sessions */}

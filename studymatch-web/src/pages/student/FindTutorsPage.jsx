@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { getPotentialPartners } from '../../api/partners'
 import { getMatchRequests, sendMatchRequest } from '../../api/matchRequests'
 import { getSubjects } from '../../api/subjects'
 import {
   Search, SlidersHorizontal, Star,
-  Clock, BookOpen, ChevronDown, UserPlus,
-  Loader2, RefreshCw, X,
+  Clock, BookOpen, UserPlus,
+  Loader2, RefreshCw, X, MoreVertical, Flag,
 } from 'lucide-react'
+import QuickReportModal from '../../components/shared/QuickReportModal'
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -40,7 +42,7 @@ function Stars({ rating = 0 }) {
 
 /* ─── tutor card ───────────────────────────────────────────────── */
 
-function TutorCard({ tutor, index, onRequest, requested, requesting }) {
+function TutorCard({ tutor, index, onRequest, requested, requesting, onReport }) {
   const color    = getColor(index)
   const name     = tutor.fullName || tutor.user?.name || tutor.name || 'Unknown'
   const dept     = tutor.specialization || tutor.position || tutor.department || tutor.user?.department || ''
@@ -69,7 +71,10 @@ function TutorCard({ tutor, index, onRequest, requested, requesting }) {
       <Avatar name={name} color={color} size={56} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 3 }}>{name}</div>
+        <Link to={`/student/users/${tutorId}/profile`} style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 3, textDecoration: 'none', display: 'block' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#7C3AED'}
+          onMouseLeave={e => e.currentTarget.style.color = '#1E1B4B'}
+        >{name}</Link>
         {dept && <div style={{ fontSize: 12.5, color: '#9CA3AF', marginBottom: 6 }}>{dept}</div>}
 
         {rating > 0 && (
@@ -113,22 +118,40 @@ function TutorCard({ tutor, index, onRequest, requested, requesting }) {
             <Clock size={12} color="#7C3AED" /> {availability}
           </div>
         )}
-        <button
-          onClick={() => onRequest(tutorId)}
-          disabled={requested || requesting}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px',
-            background: requested ? '#F3F0FF' : '#7C3AED',
-            color: requested ? '#7C3AED' : 'white',
-            border: requested ? '1.5px solid #DDD6FE' : 'none',
-            borderRadius: 9, fontSize: 13, fontWeight: 700,
-            cursor: (requested || requesting) ? 'default' : 'pointer',
-            fontFamily: 'inherit', transition: 'all .15s', opacity: requesting ? 0.7 : 1,
-          }}
-        >
-          {requesting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={14} />}
-          {requested ? 'Requested' : requesting ? 'Sending…' : 'Send Request'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => onRequest(tutorId)}
+            disabled={requested || requesting}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px',
+              background: requested ? '#F3F0FF' : '#7C3AED',
+              color: requested ? '#7C3AED' : 'white',
+              border: requested ? '1.5px solid #DDD6FE' : 'none',
+              borderRadius: 9, fontSize: 13, fontWeight: 700,
+              cursor: (requested || requesting) ? 'default' : 'pointer',
+              fontFamily: 'inherit', transition: 'all .15s', opacity: requesting ? 0.7 : 1,
+            }}
+          >
+            {requesting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={14} />}
+            {requested ? 'Requested' : requesting ? 'Sending…' : 'Send Request'}
+          </button>
+          {onReport && (
+            <button
+              onClick={() => onReport(tutorId, name)}
+              title="Report user"
+              style={{
+                width: 34, height: 34, borderRadius: 9, border: '1px solid #E5E7EB',
+                background: 'white', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
+              onMouseLeave={e => e.currentTarget.style.background = 'white'}
+            >
+              <MoreVertical size={15} color="#9CA3AF" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -140,12 +163,12 @@ export default function FindTutorsPage() {
   const [tutors,     setTutors]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState('')
-  const [search,     setSearch]     = useState('')
-  const [subject,    setSubject]    = useState('')
-  const [style,      setStyle]      = useState('')
-  const [subjects,   setSubjects]   = useState([])  // from admin /subjects
+  const [search,           setSearch]           = useState('')
+  const [selectedSubjects, setSelectedSubjects] = useState([])
+  const [subjects,         setSubjects]         = useState([])
   const [requested,  setRequested]  = useState({})
   const [requesting, setRequesting] = useState({})
+  const [reportTarget, setReportTarget] = useState(null) // { userId, name }
 
   // Load admin-defined subjects once
   useEffect(() => {
@@ -185,12 +208,18 @@ export default function FindTutorsPage() {
       .catch(() => {})
   }, [])
 
+  const toggleSubject = (name) => {
+    setSelectedSubjects(prev =>
+      prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+    )
+  }
+
   const handleFilter = () => {
-    fetchTutors({ subject, studyStyle: style })
+    fetchTutors({ subject: selectedSubjects.join(',') })
   }
 
   const handleClear = () => {
-    setSubject(''); setStyle('')
+    setSelectedSubjects([])
     fetchTutors()
   }
 
@@ -207,19 +236,24 @@ export default function FindTutorsPage() {
     }
   }
 
-  // Client-side search filter (on top of API results)
   const filtered = tutors.filter(t => {
-    if (!search) return true
-    const q    = search.toLowerCase()
-    const name = (t.fullName || t.user?.name || t.name || '').toLowerCase()
-    const spec = (t.specialization || t.position || t.department || '').toLowerCase()
-    const subs = (t.strong_subjects || [])
-      .map(s => (s.subject?.name || s.name || '').toLowerCase())
-      .filter(Boolean)
-    return name.includes(q) || spec.includes(q) || subs.some(s => s.includes(q))
+    if (search) {
+      const q    = search.toLowerCase()
+      const name = (t.fullName || t.user?.name || t.name || '').toLowerCase()
+      const spec = (t.specialization || t.position || t.department || '').toLowerCase()
+      const subs = (t.strong_subjects || [])
+        .map(s => (s.subject?.name || s.name || '').toLowerCase())
+        .filter(Boolean)
+      if (!name.includes(q) && !spec.includes(q) && !subs.some(s => s.includes(q))) return false
+    }
+    if (selectedSubjects.length > 0) {
+      const tutorSubs = (t.strong_subjects || [])
+        .map(s => s.subject?.name || s.name || '')
+        .filter(Boolean)
+      if (!selectedSubjects.some(sel => tutorSubs.some(ts => ts.toLowerCase() === sel.toLowerCase()))) return false
+    }
+    return true
   })
-
-  const STYLES = ['Visual', 'Auditory', 'Reading/Writing', 'Kinesthetic', 'Group', 'Solo']
 
   return (
     <>
@@ -268,22 +302,27 @@ export default function FindTutorsPage() {
             )}
           </div>
 
-          {/* Active subject chip */}
-          {subject && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Active subject chips */}
+          {selectedSubjects.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 13, color: '#6B7280' }}>Filtering by:</span>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '4px 12px', borderRadius: 20,
-                background: '#F3F0FF', border: '1px solid #DDD6FE', color: '#7C3AED',
-                fontSize: 13, fontWeight: 600,
-              }}>
-                {subject}
-                <button onClick={handleClear}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED', display: 'flex', padding: 0 }}>
-                  <X size={12} />
-                </button>
-              </span>
+              {selectedSubjects.map(sub => (
+                <span key={sub} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '4px 12px', borderRadius: 20,
+                  background: '#F3F0FF', border: '1px solid #DDD6FE', color: '#7C3AED',
+                  fontSize: 13, fontWeight: 600,
+                }}>
+                  {sub}
+                  <button onClick={() => toggleSubject(sub)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7C3AED', display: 'flex', padding: 0 }}>
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+              <button onClick={handleClear} style={{ fontSize: 12, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Clear all
+              </button>
             </div>
           )}
 
@@ -312,14 +351,14 @@ export default function FindTutorsPage() {
             <div style={{ background: '#F8F9FB', border: '1px dashed #DDD6FE', borderRadius: 14, padding: '48px 20px', textAlign: 'center' }}>
               <BookOpen size={32} color="#DDD6FE" style={{ margin: '0 auto 12px', display: 'block' }} />
               <div style={{ fontWeight: 700, fontSize: 15, color: '#374151', marginBottom: 6 }}>
-                {subject ? `No tutors found for "${subject}"` : 'No tutors found'}
+                {selectedSubjects.length > 0 ? `No tutors found for selected subjects` : 'No tutors found'}
               </div>
               <div style={{ fontSize: 13, color: '#9CA3AF' }}>
-                {subject ? 'Try a different subject or clear the filter.' : 'Try adjusting your filters or search terms.'}
+                {selectedSubjects.length > 0 ? 'Try different subjects or clear the filters.' : 'Try adjusting your filters or search terms.'}
               </div>
-              {subject && (
+              {selectedSubjects.length > 0 && (
                 <button onClick={handleClear} style={{ marginTop: 12, padding: '8px 18px', background: '#7C3AED', color: 'white', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Clear Filter
+                  Clear Filters
                 </button>
               )}
             </div>
@@ -334,6 +373,7 @@ export default function FindTutorsPage() {
                   onRequest={handleRequest}
                   requested={!!requested[String(tutor.id || tutor.user?.id || tutor.user_id || '')]}
                   requesting={!!requesting[String(tutor.id || tutor.user?.id || tutor.user_id || '')]}
+                  onReport={(userId, name) => setReportTarget({ userId, name })}
                 />
               ))}
             </div>
@@ -348,33 +388,26 @@ export default function FindTutorsPage() {
               <span style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Filters</span>
             </div>
 
-            {/* Subject filter — fetched from admin subjects */}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>
-                Subject
-              </label>
-              <div style={{ position: 'relative' }}>
-                <select className="ft-select" value={subject} onChange={e => setSubject(e.target.value)}>
-                  <option value="">All Subjects</option>
-                  {subjects.map(s => (
-                    <option key={s.id} value={s.name}>{s.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={13} color="#9CA3AF" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-              </div>
-            </div>
-
-            {/* Study Style */}
+            {/* Subject filter — multi-select checkboxes */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>
-                Study Style
+              <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 8 }}>
+                Subjects {selectedSubjects.length > 0 && <span style={{ color: '#7C3AED' }}>({selectedSubjects.length})</span>}
               </label>
-              <div style={{ position: 'relative' }}>
-                <select className="ft-select" value={style} onChange={e => setStyle(e.target.value)}>
-                  <option value="">All Styles</option>
-                  {STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <ChevronDown size={13} color="#9CA3AF" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                {subjects.map(s => {
+                  const checked = selectedSubjects.includes(s.name)
+                  return (
+                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: checked ? '#7C3AED' : '#374151', fontWeight: checked ? 600 : 400 }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSubject(s.name)}
+                        style={{ accentColor: '#7C3AED', width: 14, height: 14, cursor: 'pointer' }}
+                      />
+                      {s.name}
+                    </label>
+                  )
+                })}
               </div>
             </div>
 
@@ -389,7 +422,7 @@ export default function FindTutorsPage() {
               Apply Filters
             </button>
 
-            {(subject || style) && (
+            {selectedSubjects.length > 0 && (
               <button onClick={handleClear} style={{
                 width: '100%', padding: '9px', marginTop: 8,
                 background: 'white', color: '#6B7280',
@@ -408,18 +441,21 @@ export default function FindTutorsPage() {
                 Quick Subject Pick
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {subjects.map(s => (
-                  <button key={s.id} onClick={() => { setSubject(s.name); fetchTutors({ subject: s.name }) }}
-                    style={{
-                      padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
-                      border: subject === s.name ? '1.5px solid #7C3AED' : '1.5px solid #E5E7EB',
-                      background: subject === s.name ? '#F3F0FF' : '#F9FAFB',
-                      color: subject === s.name ? '#7C3AED' : '#374151',
-                    }}>
-                    {s.name}
-                  </button>
-                ))}
+                {subjects.map(s => {
+                  const active = selectedSubjects.includes(s.name)
+                  return (
+                    <button key={s.id} onClick={() => toggleSubject(s.name)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s',
+                        border: active ? '1.5px solid #7C3AED' : '1.5px solid #E5E7EB',
+                        background: active ? '#F3F0FF' : '#F9FAFB',
+                        color: active ? '#7C3AED' : '#374151',
+                      }}>
+                      {s.name}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -440,6 +476,14 @@ export default function FindTutorsPage() {
           </div>
         </div>
       </div>
+
+      {reportTarget && (
+        <QuickReportModal
+          reportedUserId={reportTarget.userId}
+          reportedName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Lock, Users, BookOpen, Calendar, MessageSquare,
@@ -168,10 +168,16 @@ function SelectDropdown({ value, options, onChange }) {
 /* ─── main page ─────────────────────────────────────────────── */
 
 export default function PrivacyPage() {
-  const [visibility, setVisibility] = useState('Everyone')
-  const [toggles, setToggles] = useState(
-    Object.fromEntries(PRIVACY_TOGGLES.map(t => [t.id, t.defaultOn]))
-  )
+  const [visibility, setVisibility] = useState(() => localStorage.getItem('prv_visibility') || 'Everyone')
+  const [toggles, setToggles] = useState(() => {
+    try {
+      const stored = localStorage.getItem('prv_toggles')
+      return stored ? JSON.parse(stored) : Object.fromEntries(PRIVACY_TOGGLES.map(t => [t.id, t.defaultOn]))
+    } catch { return Object.fromEntries(PRIVACY_TOGGLES.map(t => [t.id, t.defaultOn])) }
+  })
+
+  useEffect(() => { localStorage.setItem('prv_visibility', visibility) }, [visibility])
+  useEffect(() => { localStorage.setItem('prv_toggles',    JSON.stringify(toggles)) }, [toggles])
 
   const toggle = id => setToggles(p => ({ ...p, [id]: !p[id] }))
 

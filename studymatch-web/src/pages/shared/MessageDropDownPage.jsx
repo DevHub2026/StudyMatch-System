@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getConversations } from '../../api/chat'
+import { getUser } from '../../store/authStore'
 import { MessageSquare } from 'lucide-react'
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -39,12 +40,40 @@ function Avatar({ name = '', color = '#7C3AED', size = 36 }) {
 
 export default function MessageDropdown() {
   const navigate  = useNavigate()
+  const user      = getUser()
+  const role      = user?.role || 'student'
+  const msgPath   = role === 'tutor' ? '/tutor/messages' : '/student/messages'
+
   const [open,    setOpen]    = useState(false)
   const [convs,   setConvs]   = useState([])
   const [loading, setLoading] = useState(false)
   const ref = useRef(null)
 
   const totalUnread = convs.reduce((s, c) => s + (c.unread_count || 0), 0)
+
+  const fetchConvs = useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true)
+    try {
+      const res  = await getConversations()
+      const data = res?.data || res || []
+      setConvs(Array.isArray(data) ? data.slice(0, 6) : [])
+    } catch {}
+    finally { if (showLoader) setLoading(false) }
+  }, [])
+
+  // Load on mount so the badge shows immediately
+  useEffect(() => { fetchConvs() }, [fetchConvs])
+
+  // Background poll every 45s to keep badge fresh
+  useEffect(() => {
+    const id = setInterval(() => fetchConvs(), 45000)
+    return () => clearInterval(id)
+  }, [fetchConvs])
+
+  // Reload with spinner when dropdown opens
+  useEffect(() => {
+    if (open) fetchConvs(true)
+  }, [open, fetchConvs])
 
   useEffect(() => {
     const handler = (e) => {
@@ -53,20 +82,6 @@ export default function MessageDropdown() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const load = async () => {
-      setLoading(true)
-      try {
-        const res  = await getConversations()
-        const data = res?.data || res || []
-        setConvs(Array.isArray(data) ? data.slice(0, 6) : [])
-      } catch {}
-      finally { setLoading(false) }
-    }
-    load()
-  }, [open])
 
   return (
     <>
@@ -139,7 +154,7 @@ export default function MessageDropdown() {
                 const color  = getColor(id)
                 return (
                   <div key={id} className="md-item"
-                    onClick={() => { setOpen(false); navigate('/student/messages') }}>
+                    onClick={() => { setOpen(false); navigate(msgPath) }}>
                     <Avatar name={name} color={color} size={36} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
@@ -160,7 +175,7 @@ export default function MessageDropdown() {
 
             {/* Footer */}
             <div style={{ borderTop: '1px solid #F0F0F4', padding: '10px 16px' }}>
-              <button onClick={() => { setOpen(false); navigate('/student/messages') }} style={{
+              <button onClick={() => { setOpen(false); navigate(msgPath) }} style={{
                 background: 'none', border: 'none', color: '#7C3AED',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 fontFamily: 'inherit',

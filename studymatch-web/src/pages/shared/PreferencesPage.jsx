@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users, Video, Clock, Heart, MessageSquare,
   Bell, ChevronDown, CheckCircle, HelpCircle,
-  ChevronRight, Headphones, Zap, Volume2,
+  ChevronRight,
 } from 'lucide-react'
 
 /* ─── options ───────────────────────────────────────────────── */
@@ -14,10 +14,6 @@ const MATCH_BASED_OPTIONS = ['Subject Expertise', 'Availability', 'Teaching Styl
 const SESSION_TYPE_OPTIONS= ['Online or In-Person', 'Online only', 'In-Person only']
 const AVAILABILITY_OPTIONS= ['Evenings & Weekends', 'Weekdays', 'Mornings', 'Anytime']
 const COMM_OPTIONS        = ['In-App Messaging', 'Email', 'Both']
-const STUDY_STYLE_OPTIONS = ['Visual Learner', 'Reading/Writing', 'Auditory', 'Kinesthetic']
-const PACE_OPTIONS        = ['Moderate', 'Slow', 'Fast', 'Flexible']
-const ENV_OPTIONS         = ['Quiet', 'Background Music', 'Café', 'Library']
-const GROUP_SIZE_OPTIONS  = ['1:1 or Small Group', '1:1 only', 'Small Group (3–5)', 'Large Group']
 
 /* ─── helpers ───────────────────────────────────────────────── */
 
@@ -123,28 +119,36 @@ function PrefCol({ icon: Icon, label, desc, children }) {
 
 /* ─── main page ─────────────────────────────────────────────── */
 
+const ls = (key, def) => { try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : def } catch { return def } }
+
 export default function PreferencesPage() {
   // Study Preferences
-  const [subjects, setSubjects]     = useState(SUBJECT_OPTIONS[0])
-  const [level, setLevel]           = useState('College')
-  const [goals, setGoals]           = useState(GOAL_OPTIONS[0])
+  const [subjects, setSubjects]     = useState(() => ls('prf_subjects',   SUBJECT_OPTIONS[0]))
+  const [level, setLevel]           = useState(() => ls('prf_level',      'College'))
+  const [goals, setGoals]           = useState(() => ls('prf_goals',      GOAL_OPTIONS[0]))
 
   // Matching Preferences
-  const [matchBased, setMatchBased] = useState('Subject Expertise')
-  const [sessionType, setSessionType] = useState('Online or In-Person')
-  const [availability, setAvailability] = useState('Evenings & Weekends')
-  const [groupSessions, setGroupSessions] = useState(true)
+  const [matchBased, setMatchBased] = useState(() => ls('prf_matchBased',   'Subject Expertise'))
+  const [sessionType, setSessionType] = useState(() => ls('prf_sessionType','Online or In-Person'))
+  const [availability, setAvailability] = useState(() => ls('prf_avail',   'Evenings & Weekends'))
+  const [groupSessions, setGroupSessions] = useState(() => ls('prf_groupSessions', true))
 
   // Communication Preferences
-  const [comm, setComm]             = useState('In-App Messaging')
-  const [sessionReminders, setSessionReminders] = useState(true)
-  const [msgNotifs, setMsgNotifs]   = useState(true)
+  const [comm, setComm]             = useState(() => ls('prf_comm',             'In-App Messaging'))
+  const [sessionReminders, setSessionReminders] = useState(() => ls('prf_sessionReminders', true))
+  const [msgNotifs, setMsgNotifs]   = useState(() => ls('prf_msgNotifs',  true))
 
-  // Study Style
-  const [studyStyle, setStudyStyle] = useState('Visual Learner')
-  const [pace, setPace]             = useState('Moderate')
-  const [env, setEnv]               = useState('Quiet')
-  const [groupSize, setGroupSize]   = useState('1:1 or Small Group')
+
+  useEffect(() => { localStorage.setItem('prf_subjects',          JSON.stringify(subjects))         }, [subjects])
+  useEffect(() => { localStorage.setItem('prf_level',             JSON.stringify(level))            }, [level])
+  useEffect(() => { localStorage.setItem('prf_goals',             JSON.stringify(goals))            }, [goals])
+  useEffect(() => { localStorage.setItem('prf_matchBased',        JSON.stringify(matchBased))       }, [matchBased])
+  useEffect(() => { localStorage.setItem('prf_sessionType',       JSON.stringify(sessionType))      }, [sessionType])
+  useEffect(() => { localStorage.setItem('prf_avail',             JSON.stringify(availability))     }, [availability])
+  useEffect(() => { localStorage.setItem('prf_groupSessions',     JSON.stringify(groupSessions))    }, [groupSessions])
+  useEffect(() => { localStorage.setItem('prf_comm',              JSON.stringify(comm))             }, [comm])
+  useEffect(() => { localStorage.setItem('prf_sessionReminders',  JSON.stringify(sessionReminders)) }, [sessionReminders])
+  useEffect(() => { localStorage.setItem('prf_msgNotifs',         JSON.stringify(msgNotifs))        }, [msgNotifs])
 
   const MATCH_SUMMARY = [
     { label: 'Subject Expertise', value: matchBased === 'Subject Expertise' ? 'High Importance' : 'Normal' },
@@ -275,27 +279,6 @@ export default function PreferencesPage() {
                 <div style={{ paddingTop: 6 }}>
                   <Toggle on={msgNotifs} onClick={() => setMsgNotifs(p => !p)} />
                 </div>
-              </PrefCol>
-            </div>
-          </SectionBlock>
-
-          {/* ── Study Style & Environment ── */}
-          <SectionBlock
-            title="Study Style & Environment"
-            desc="Help others know how you like to study."
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-              <PrefCol icon={Zap} label="Study Style" desc="">
-                <Dropdown value={studyStyle} options={STUDY_STYLE_OPTIONS} onChange={setStudyStyle} fullWidth />
-              </PrefCol>
-              <PrefCol icon={Clock} label="Pace" desc="">
-                <Dropdown value={pace} options={PACE_OPTIONS} onChange={setPace} fullWidth />
-              </PrefCol>
-              <PrefCol icon={Volume2} label="Environment" desc="">
-                <Dropdown value={env} options={ENV_OPTIONS} onChange={setEnv} fullWidth />
-              </PrefCol>
-              <PrefCol icon={Users} label="Group Size" desc="">
-                <Dropdown value={groupSize} options={GROUP_SIZE_OPTIONS} onChange={setGroupSize} fullWidth />
               </PrefCol>
             </div>
           </SectionBlock>

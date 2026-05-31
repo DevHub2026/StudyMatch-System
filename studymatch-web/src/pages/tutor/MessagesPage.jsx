@@ -19,6 +19,22 @@ const getInitials = (name = '') => name.split(' ').map(w => w[0]).join('').slice
 
 const ANNOUNCEMENTS_ID = '__announcements__'
 
+function SessionTimer({ scheduledAt }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const start = new Date(scheduledAt).getTime()
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [scheduledAt])
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
+  const pad = n => String(n).padStart(2, '0')
+  return <>{h > 0 ? `${pad(h)}:` : ''}{pad(m)}:{pad(s)}</>
+}
+
 const MESSAGE_TEMPLATES = [
   "Hi! Ready to start our session? 👋",
   "I'll be a few minutes late, please wait.",
@@ -75,7 +91,7 @@ export default function TutorMessagesPage() {
   const [messages,     setMessages]     = useState([])
   const [input,        setInput]        = useState('')
   const [search,       setSearch]       = useState('')
-  const [activeTab,    setTab]          = useState('all')
+  const [activeTab,    setTab]          = useState('all') // kept for potential future use
   const [loadingConvs, setLoadingConvs] = useState(true)
   const [loadingMsgs,  setLoadingMsgs]  = useState(false)
   const [sending,      setSending]      = useState(false)
@@ -296,11 +312,8 @@ export default function TutorMessagesPage() {
     window.open(buildMeetUrl(me?.id, activeId, mode), '_blank', 'noopener,noreferrer')
   }
 
-  const filtered = convs.filter(c => {
-    if (activeTab === 'unread') return (c.unread_count || 0) > 0
-    if (activeTab === 'groups') return c.is_group
-    return true
-  }).filter(c => !search || (c.partner_name || c.name || '').toLowerCase().includes(search.toLowerCase()))
+  const filtered = convs
+    .filter(c => !search || (c.partner_name || c.name || '').toLowerCase().includes(search.toLowerCase()))
 
   return (
     <>
@@ -327,6 +340,7 @@ export default function TutorMessagesPage() {
         .tpl-btn { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; border: none; background: none; cursor: pointer; font-size: 13px; color: #374151; font-family: 'DM Sans', sans-serif; transition: background .12s; }
         .tpl-btn:hover { background: #F3F0FF; color: #7C3AED; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
       `}</style>
 
       <div className="tm-wrap" style={{ color: '#1E1B4B' }}>
@@ -346,9 +360,9 @@ export default function TutorMessagesPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 16, padding: '0 14px', borderBottom: '1px solid #F0F0F4' }}>
-              {[{ key: 'all', label: 'All' }, { key: 'unread', label: 'Unread', badge: totalUnread }, { key: 'groups', label: 'Groups' }].map(t => (
+              {[{ key: 'all', label: 'All' }].map(t => (
                 <button key={t.key} className={`t-tab${activeTab === t.key ? ' active' : ''}`} onClick={() => setTab(t.key)}>
-                  {t.label}{t.badge > 0 && <span style={{ marginLeft: 4, background: '#7C3AED', color: 'white', borderRadius: 10, padding: '0 5px', fontSize: 10, fontWeight: 800 }}>{t.badge}</span>}
+                  {t.label}
                 </button>
               ))}
             </div>
@@ -661,14 +675,28 @@ export default function TutorMessagesPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {partnerSessions.slice(0, 3).map(s => {
                     const st = STATUS_COLORS[s.status] || STATUS_COLORS.pending
-                    const isActive = s.status === 'scheduled' || s.status === 'pending'
+                    const isActive  = s.status === 'scheduled' || s.status === 'pending'
+                    const sessionAt = s.scheduled_at || s.scheduledAt
+                    const isLive    = isActive && sessionAt && new Date(sessionAt) <= new Date()
                     return (
-                      <div key={s.id} style={{ background: '#F8F9FB', borderRadius: 10, padding: '10px 12px', border: `1px solid ${isActive ? '#DDD6FE' : '#F0F0F4'}` }}>
+                      <div key={s.id} style={{ background: isLive ? '#F0FDF4' : '#F8F9FB', borderRadius: 10, padding: '10px 12px', border: `1px solid ${isLive ? '#86EFAC' : isActive ? '#DDD6FE' : '#F0F0F4'}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, borderRadius: 20, padding: '2px 8px' }}>{st.label}</span>
+                          {isLive ? (
+                            <span style={{ fontSize: 11, fontWeight: 700, background: '#DCFCE7', color: '#16A34A', borderRadius: 20, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                              Live
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 700, background: st.bg, color: st.color, borderRadius: 20, padding: '2px 8px' }}>{st.label}</span>
+                          )}
+                          {isLive && (
+                            <span style={{ fontSize: 14, fontWeight: 800, color: '#16A34A', fontVariantNumeric: 'tabular-nums', letterSpacing: 1 }}>
+                              <SessionTimer scheduledAt={sessionAt} />
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 12.5, color: '#374151', fontWeight: 600, marginBottom: 4 }}>
-                          {formatSessionDate(s.scheduled_at || s.scheduledAt)}
+                          {isLive ? 'Session in progress' : formatSessionDate(sessionAt)}
                         </div>
                         {s.subject?.name && <div style={{ fontSize: 12, color: '#9CA3AF' }}>{s.subject.name}</div>}
                         {isActive && (
@@ -691,13 +719,6 @@ export default function TutorMessagesPage() {
             {/* Quick Actions */}
             <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, padding: '18px 18px' }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 10 }}>Quick Actions</div>
-
-              {/* Start a New Conversation */}
-              <div className="q-row" onClick={() => { setActiveId(ANNOUNCEMENTS_ID); setSearch(''); setTimeout(() => searchRef.current?.focus(), 100) }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F3F0FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MessageSquare size={15} color="#7C3AED" /></div>
-                <span className="q-lbl" style={{ flex: 1, fontWeight: 600, fontSize: 13.5, color: '#1E1B4B' }}>Start a New Conversation</span>
-                <ChevronRight size={14} color="#D1D5DB" />
-              </div>
 
               {/* Share a Resource */}
               <div className="q-row" onClick={() => openFilePicker('*/*')} style={{ opacity: (!activeConv || isAnnouncementsActive) ? 0.5 : 1, cursor: (!activeConv || isAnnouncementsActive) ? 'default' : 'pointer' }}>

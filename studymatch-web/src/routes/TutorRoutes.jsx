@@ -3,17 +3,19 @@ import TutorLayout from '../layouts/TutorLayout'
 import { getUser } from '../store/authStore'
 
 // Tutor pages
-import DashboardPage      from '../pages/tutor/DashboardPage'
-import FindStudentsPage   from '../pages/tutor/FindStudentsPage'
-import StudySessionsPage  from '../pages/tutor/StudySessionsPage'
+import DashboardPage          from '../pages/tutor/DashboardPage'
+import FindStudentsPage       from '../pages/tutor/FindStudentsPage'
+import DiscoverStudentsPage   from '../pages/tutor/DiscoverStudentsPage'
+import StudySessionsPage      from '../pages/tutor/StudySessionsPage'
 import MessagesPage       from '../pages/tutor/MessagesPage'
 import ResourcesPage      from '../pages/tutor/ResourcesPage'
 import SchedulePage       from '../pages/tutor/SchedulePage'
 import ProfilePage        from '../pages/tutor/ProfilePage'
 
 // Shared pages
-import PartnersPage       from '../pages/shared/PartnersPage'
-import SettingsPage       from '../pages/shared/SettingsPage'
+import PartnersPage           from '../pages/shared/PartnersPage'
+import SettingsPage           from '../pages/shared/SettingsPage'
+import UserProfileViewPage    from '../pages/shared/UserProfileViewPage'
 import NotificationsPage  from '../pages/shared/NotificationsPage'
 import PrivacyPage        from '../pages/shared/PrivacyPage'
 import PreferencesPage    from '../pages/shared/PreferencesPage'
@@ -55,7 +57,8 @@ export const tutorRouteConfig = [
 
       // Core pages
       { path: 'dashboard',      element: <DashboardPage />     },
-      { path: 'find-students',  element: <FindStudentsPage />  },
+      { path: 'find-students',      element: <FindStudentsPage />      },
+      { path: 'discover-students',  element: <DiscoverStudentsPage />  },
       { path: 'matches',        element: <PartnersPage />      },
       { path: 'study-sessions', element: <StudySessionsPage /> },
       { path: 'messages',       element: <MessagesPage />      },
@@ -76,6 +79,8 @@ export const tutorRouteConfig = [
       { path: 'help',           element: <HelpCenterPage />     },
       { path: 'feedback',       element: <FeedbackPage />       },
       { path: 'complaints',     element: <ComplaintsPage />     },
+
+      { path: 'users/:userId/profile', element: <UserProfileViewPage /> },
 
       // Catch-all → dashboard
       { path: '*', element: <Navigate to="dashboard" replace /> },

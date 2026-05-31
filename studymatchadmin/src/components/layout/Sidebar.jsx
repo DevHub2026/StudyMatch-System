@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, GraduationCap, CalendarClock, GitMerge,
   Flag, HelpCircle, Megaphone, MessageCircle, BarChart2,
   FileText, ScrollText, Shield, Bell, Settings, LogOut,
-  PanelLeftClose, PanelLeftOpen, BookOpen,
+  PanelLeftClose, PanelLeftOpen, BookOpen, Library,
 } from 'lucide-react'
 import { logout } from '../../api/auth'
 import { clearAuth, getUser } from '../../api/authStore'
@@ -14,6 +14,7 @@ const NAV = [
   { path: '/users',         label: 'Users',             icon: Users           },
   { path: '/tutors',        label: 'Tutor Verification',icon: GraduationCap   },
   { path: '/subjects',      label: 'Subjects',          icon: BookOpen        },
+  { path: '/resources',     label: 'Resources',         icon: Library         },
   { path: '/sessions',      label: 'Sessions',          icon: CalendarClock   },
   { path: '/matches',       label: 'Matches',           icon: GitMerge        },
   { path: '/complaints',    label: 'Complaints',        icon: Flag            },

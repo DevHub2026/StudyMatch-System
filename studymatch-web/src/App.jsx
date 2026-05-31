@@ -30,14 +30,18 @@ import StudentSettings   from './pages/student/SettingsPage'
 import StudentSessions   from './pages/student/StudySessionsPage'
 
 // ── Tutor pages ──
-import TutorDashboard    from './pages/tutor/DashboardPage'
-import FindStudentsPage  from './pages/tutor/FindStudentsPage'
-import TutorMessages     from './pages/tutor/MessagesPage'
-import TutorProfile      from './pages/tutor/ProfilePage'
-import TutorResources    from './pages/tutor/ResourcesPage'
-import TutorSchedule     from './pages/tutor/SchedulePage'
-import TutorSettings     from './pages/tutor/SettingsPage'
-import TutorSessions     from './pages/tutor/StudySessionsPage'
+import TutorDashboard        from './pages/tutor/DashboardPage'
+import FindStudentsPage      from './pages/tutor/FindStudentsPage'
+import DiscoverStudentsPage  from './pages/tutor/DiscoverStudentsPage'
+import TutorMessages         from './pages/tutor/MessagesPage'
+import TutorProfile          from './pages/tutor/ProfilePage'
+import TutorResources        from './pages/tutor/ResourcesPage'
+import TutorSchedule         from './pages/tutor/SchedulePage'
+import TutorSettings         from './pages/tutor/SettingsPage'
+import TutorSessions         from './pages/tutor/StudySessionsPage'
+
+// ── Shared extra pages ──
+import UserProfileViewPage   from './pages/shared/UserProfileViewPage'
 
 // ── Shared pages (exact filenames) ──
 import AnnouncementsPage     from './pages/shared/AnnouncementsPage'
@@ -125,7 +129,8 @@ const router = createBrowserRouter([
       { path: 'announcements',  element: <AnnouncementsPage /> },
       { path: 'help',           element: <HelpCenterPage />    },
       { path: 'feedback',       element: <FeedbackPage />      },
-      { path: 'complaints',     element: <ComplaintsPage />    },
+      { path: 'complaints',              element: <ComplaintsPage />        },
+      { path: 'users/:userId/profile',   element: <UserProfileViewPage />   },
       {
         path: 'settings',
         element: <StudentSettings />,
@@ -136,7 +141,7 @@ const router = createBrowserRouter([
           { path: 'appearance',    element: <AppearancePage />    },
         ],
       },
-      { path: '*', element: <Navigate to="dashboard" replace /> },
+      { path: '*', element: <Navigate to="/student/dashboard" replace /> },
     ],
   },
 
@@ -147,8 +152,9 @@ const router = createBrowserRouter([
     children: [
       { index: true,            element: <Navigate to="dashboard" replace /> },
       { path: 'dashboard',      element: <TutorDashboard />    },
-      { path: 'find-students',  element: <FindStudentsPage />  },
-      { path: 'study-sessions', element: <TutorSessions />     },
+      { path: 'find-students',      element: <FindStudentsPage />     },
+      { path: 'discover-students',  element: <DiscoverStudentsPage /> },
+      { path: 'study-sessions',     element: <TutorSessions />        },
       { path: 'messages',       element: <TutorMessages />     },
       { path: 'resources',      element: <TutorResources />    },
       { path: 'schedule',       element: <TutorSchedule />     },
@@ -157,7 +163,8 @@ const router = createBrowserRouter([
       { path: 'announcements',  element: <AnnouncementsPage /> },
       { path: 'help',           element: <HelpCenterPage />    },
       { path: 'feedback',       element: <FeedbackPage />      },
-      { path: 'complaints',     element: <ComplaintsPage />    },
+      { path: 'complaints',              element: <ComplaintsPage />        },
+      { path: 'users/:userId/profile',   element: <UserProfileViewPage />   },
       {
         path: 'settings',
         element: <TutorSettings />,
@@ -168,7 +175,7 @@ const router = createBrowserRouter([
           { path: 'appearance',    element: <AppearancePage />    },
         ],
       },
-      { path: '*', element: <Navigate to="dashboard" replace /> },
+      { path: '*', element: <Navigate to="/tutor/dashboard" replace /> },
     ],
   },
 

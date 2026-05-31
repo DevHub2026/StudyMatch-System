@@ -18,10 +18,9 @@ class LibraryController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'student' && $user->student) {
+        if ($user->role === 'student') {
             $query = Resource::query();
-            $request->merge(['scope' => 'all']);
-            $this->applyScope($query, $request, $user);
+            $this->applyScope($query, $request, $user); // uses shared scope for students
             $ids = $query->pluck('id');
 
             return response()->json([
@@ -309,11 +308,9 @@ class LibraryController extends Controller
             return;
         }
 
-        if ($user->role === 'student' && $user->student) {
-            $query->where(function ($q) use ($user) {
-                $q->where('uploader_id', $user->id)
-                    ->orWhereHas('shares', fn ($sq) => $sq->where('shared_with_user_id', $user->id));
-            });
+        if ($user->role === 'student') {
+            // Students only see resources their tutors explicitly shared with them
+            $query->whereHas('shares', fn ($sq) => $sq->where('shared_with_user_id', $user->id));
             return;
         }
 
