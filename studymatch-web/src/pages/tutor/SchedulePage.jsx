@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Plus,
-  Filter, Calendar, Clock, Users, CheckCircle,
+  ChevronLeft, ChevronRight, Plus,
+  Calendar, Clock, Users, CheckCircle,
   RefreshCw, Settings, ArrowRight, Loader2,
 } from 'lucide-react'
 import { getSessions } from '../../api/sessions'
@@ -119,89 +119,164 @@ export default function TutorMySchedulePage() {
 
           {/* Calendar card */}
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 16, overflow: 'hidden' }}>
+            {/* Nav header — only show week nav on Week View */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #F0F0F4' }}>
-              <button className="nav-btn" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft size={14} color="#6B7280" /></button>
-              <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>{weekLabel}</span>
-              <button className="nav-btn" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight size={14} color="#6B7280" /></button>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: '1px solid #E5E7EB', borderRadius: 8, background: 'white', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Filter size={13} color="#7C3AED" /> Filter
-              </button>
+              {activeView === 'Week View' && (
+                <>
+                  <button className="nav-btn" onClick={() => setWeekOffset(w => w - 1)}><ChevronLeft size={14} color="#6B7280" /></button>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>{weekLabel}</span>
+                  <button className="nav-btn" onClick={() => setWeekOffset(w => w + 1)}><ChevronRight size={14} color="#6B7280" /></button>
+                </>
+              )}
+              {activeView === 'Month View' && (
+                <>
+                  <button className="nav-btn" onClick={prevMonth}><ChevronLeft size={14} color="#6B7280" /></button>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>
+                    {new Date(miniMonth.year, miniMonth.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button className="nav-btn" onClick={nextMonth}><ChevronRight size={14} color="#6B7280" /></button>
+                </>
+              )}
+              {activeView === 'Agenda View' && (
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B', flex: 1 }}>Upcoming Sessions</span>
+              )}
             </div>
 
-            {/* Week strip */}
-            <div style={{ display: 'flex', padding: '0 12px', borderBottom: '1px solid #F0F0F4' }}>
-              {weekDates.map((date, i) => (
-                <div key={i} className="day-col">
-                  <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600 }}>{WEEK_DAYS[date.getDay()]}</span>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: isToday(date) ? '#7C3AED' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: isToday(date) ? 700 : 600, color: isToday(date) ? 'white' : '#1E1B4B' }}>
-                    {date.getDate()}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Hour grid */}
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
                 <Loader2 size={24} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
-            ) : (
-              <div style={{ display: 'flex', overflowX: 'auto' }}>
-                {/* Time gutter */}
-                <div style={{ width: 60, flexShrink: 0 }}>
-                  <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
-                  {HOURS.map(h => (
-                    <div key={h} style={{ height: 56, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 8, paddingTop: 4, fontSize: 10.5, color: '#9CA3AF', borderBottom: '1px solid #F8F9FB' }}>
-                      {h}
+            ) : activeView === 'Week View' ? (
+              <>
+                {/* Week strip */}
+                <div style={{ display: 'flex', padding: '0 12px', borderBottom: '1px solid #F0F0F4' }}>
+                  {weekDates.map((date, i) => (
+                    <div key={i} className="day-col">
+                      <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600 }}>{WEEK_DAYS[date.getDay()]}</span>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: isToday(date) ? '#7C3AED' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: isToday(date) ? 700 : 600, color: isToday(date) ? 'white' : '#1E1B4B' }}>
+                        {date.getDate()}
+                      </div>
                     </div>
                   ))}
                 </div>
-
-                {/* Day columns */}
-                {weekDates.map((date, colIdx) => {
-                  const daySessions = sessions.filter(s => {
-                    if (!s.scheduled_at) return false
-                    return new Date(s.scheduled_at).toDateString() === date.toDateString()
-                  })
-                  return (
-                    <div key={colIdx} style={{ flex: 1, minWidth: 90, borderLeft: '1px solid #F0F0F4' }}>
-                      <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
-                      <div style={{ position: 'relative' }}>
-                        {HOURS.map(h => (
-                          <div key={h} style={{ height: 56, borderBottom: '1px solid #F8F9FB' }} />
-                        ))}
-                        {daySessions.map(s => {
-                          const d    = new Date(s.scheduled_at)
-                          const off  = d.getHours() - HOUR_START
-                          if (off < 0 || off >= HOURS.length) return null
-                          const top    = off * 56 + (d.getMinutes() / 60) * 56
-                          const height = Math.max(((s.duration_minutes || 60) / 60) * 56, 22)
-                          const label  = s.subject?.name || s.notes || 'Session'
-                          const color  = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
+                {/* Hour grid */}
+                <div style={{ display: 'flex', overflowX: 'auto' }}>
+                  <div style={{ width: 60, flexShrink: 0 }}>
+                    <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
+                    {HOURS.map(h => (
+                      <div key={h} style={{ height: 56, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 8, paddingTop: 4, fontSize: 10.5, color: '#9CA3AF', borderBottom: '1px solid #F8F9FB' }}>{h}</div>
+                    ))}
+                  </div>
+                  {weekDates.map((date, colIdx) => {
+                    const daySessions = sessions.filter(s => s.scheduled_at && new Date(s.scheduled_at).toDateString() === date.toDateString())
+                    return (
+                      <div key={colIdx} style={{ flex: 1, minWidth: 90, borderLeft: '1px solid #F0F0F4' }}>
+                        <div style={{ height: 32, borderBottom: '1px solid #F0F0F4' }} />
+                        <div style={{ position: 'relative' }}>
+                          {HOURS.map(h => <div key={h} style={{ height: 56, borderBottom: '1px solid #F8F9FB' }} />)}
+                          {daySessions.map(s => {
+                            const d = new Date(s.scheduled_at)
+                            const off = d.getHours() - HOUR_START
+                            if (off < 0 || off >= HOURS.length) return null
+                            const top    = off * 56 + (d.getMinutes() / 60) * 56
+                            const height = Math.max(((s.duration_minutes || 60) / 60) * 56, 22)
+                            const label  = s.subject?.name || s.notes || 'Session'
+                            const color  = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
+                            return (
+                              <div key={s.id} title={label} style={{ position: 'absolute', top, left: 3, right: 3, height, background: color, borderRadius: 6, zIndex: 1, padding: '3px 6px', fontSize: 10.5, fontWeight: 700, color: 'white', overflow: 'hidden', cursor: 'default' }}>
+                                {label}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            ) : activeView === 'Month View' ? (
+              /* ── Month View ── */
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: 8 }}>
+                  {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '4px 0' }}>{d}</div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+                  {buildCalendar(miniMonth.year, miniMonth.month).map((c, i) => {
+                    const cellDate = new Date(miniMonth.year, miniMonth.month, c.day)
+                    const cellSessions = c.cur ? sessions.filter(s => s.scheduled_at && new Date(s.scheduled_at).toDateString() === cellDate.toDateString()) : []
+                    const isTodayCell  = c.cur && c.day === today.getDate() && miniMonth.month === today.getMonth() && miniMonth.year === today.getFullYear()
+                    return (
+                      <div key={i} style={{ minHeight: 64, border: '1px solid #F0F0F4', borderRadius: 8, padding: '4px 6px', background: isTodayCell ? '#F3F0FF' : c.cur ? 'white' : '#FAFAFA', opacity: c.cur ? 1 : 0.4 }}>
+                        <div style={{ fontSize: 12, fontWeight: isTodayCell ? 800 : 500, color: isTodayCell ? '#7C3AED' : '#374151', marginBottom: 4 }}>{c.day}</div>
+                        {cellSessions.slice(0, 3).map(s => {
+                          const color = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
                           return (
-                            <div key={s.id} title={label} style={{
-                              position: 'absolute', top, left: 3, right: 3, height,
-                              background: color, borderRadius: 6, zIndex: 1,
-                              padding: '3px 6px', fontSize: 10.5, fontWeight: 700,
-                              color: 'white', overflow: 'hidden', cursor: 'default',
-                            }}>
-                              {label}
+                            <div key={s.id} title={s.subject?.name || 'Session'} style={{ fontSize: 10, fontWeight: 600, color: 'white', background: color, borderRadius: 4, padding: '2px 4px', marginBottom: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              {new Date(s.scheduled_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} {s.subject?.name || 'Session'}
                             </div>
                           )
                         })}
+                        {cellSessions.length > 3 && <div style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600 }}>+{cellSessions.length - 3} more</div>}
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* ── Agenda View ── */
+              <div style={{ padding: '8px 0' }}>
+                {(() => {
+                  const upcoming = sessions
+                    .filter(s => s.scheduled_at && s.status !== 'cancelled')
+                    .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
+                  if (upcoming.length === 0) {
+                    return (
+                      <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+                        <Calendar size={28} color="#DDD6FE" style={{ display: 'block', margin: '0 auto 10px' }} />
+                        No upcoming sessions scheduled.
+                      </div>
+                    )
+                  }
+                  let lastDateLabel = ''
+                  return upcoming.map(s => {
+                    const d = new Date(s.scheduled_at)
+                    const dateLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                    const showLabel = dateLabel !== lastDateLabel
+                    lastDateLabel = dateLabel
+                    const color = STATUS_COLORS[s.status] || STATUS_COLORS.scheduled
+                    return (
+                      <div key={s.id}>
+                        {showLabel && (
+                          <div style={{ padding: '10px 20px 6px', fontSize: 12, fontWeight: 700, color: '#9CA3AF', background: '#F8F9FB', borderBottom: '1px solid #F0F0F4', borderTop: '1px solid #F0F0F4' }}>
+                            {dateLabel}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: '1px solid #F8F9FB' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#FAFAFA'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div style={{ width: 4, height: 44, borderRadius: 4, background: color, flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: '#1E1B4B' }}>
+                              {s.subject?.name || 'Study Session'}
+                            </div>
+                            <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>
+                              {s.student?.user?.name || 'Student'} · {d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} · {s.duration_minutes || 60} min
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: color + '22', color, textTransform: 'capitalize' }}>
+                            {s.status}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             )}
-
-            <div style={{ borderTop: '1px solid #F0F0F4', padding: '14px 20px' }}>
-              <button style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 10, color: '#374151', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Calendar size={15} color="#7C3AED" /> View Full Calendar
-              </button>
-            </div>
           </div>
         </div>
 

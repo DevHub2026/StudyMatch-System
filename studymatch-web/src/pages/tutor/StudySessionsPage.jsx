@@ -22,20 +22,42 @@ import {
 
 function NewSessionModal({ onClose, onScheduled }) {
   const [matchedStudents, setMatchedStudents] = useState([])
-  const [subjects, setSubjects]   = useState([])
-  const [saving,   setSaving]     = useState(false)
-  const [error,    setError]      = useState('')
+  const [subjects,  setSubjects]  = useState([])
+  const [saving,    setSaving]    = useState(false)
+  const [error,     setError]     = useState('')
+  const [startNow,  setStartNow]  = useState(false)
   const [form, setForm] = useState({
     student_user_id: '', scheduled_at: '', duration_minutes: 60,
     subject_id: '', session_type: 'online', notes: '',
   })
 
   useEffect(() => {
-    Promise.allSettled([getMatchRequests(), getSubjects()]).then(([mRes, sRes]) => {
+    Promise.allSettled([getMatchRequests(), getSubjects(), getSessions()]).then(([mRes, sRes, sessRes]) => {
+      const studentMap = new Map()
+
       if (mRes.status === 'fulfilled') {
         const list = mRes.value?.data || mRes.value || []
-        setMatchedStudents((Array.isArray(list) ? list : []).filter(u => u.role === 'student' || !u.role))
+        ;(Array.isArray(list) ? list : [])
+          .filter(u => u.role === 'student' || !u.role)
+          .forEach(u => { if (u.id) studentMap.set(String(u.id), { id: u.id, fullName: u.fullName || u.name }) })
       }
+
+      // Also include students from completed sessions (previous students)
+      if (sessRes.status === 'fulfilled') {
+        const sessList = sessRes.value?.data || sessRes.value || []
+        ;(Array.isArray(sessList) ? sessList : [])
+          .filter(s => s.status === 'completed' || s.status === 'scheduled' || s.status === 'cancelled')
+          .forEach(s => {
+            const uid  = s.student?.user?.id || s.student_user_id
+            const name = s.student?.user?.name
+            if (uid && name && !studentMap.has(String(uid))) {
+              studentMap.set(String(uid), { id: uid, fullName: name })
+            }
+          })
+      }
+
+      setMatchedStudents(Array.from(studentMap.values()))
+
       if (sRes.status === 'fulfilled') {
         const list = sRes.value?.data || sRes.value || []
         setSubjects(Array.isArray(list) ? list : [])
@@ -45,14 +67,14 @@ function NewSessionModal({ onClose, onScheduled }) {
 
   const handleSubmit = async () => {
     if (!form.student_user_id) { setError('Please select a student.'); return }
-    if (!form.scheduled_at)    { setError('Please set a date and time.'); return }
-    if (new Date(form.scheduled_at) <= new Date()) { setError('Scheduled time must be in the future.'); return }
+    const scheduledAt = startNow ? new Date().toISOString() : form.scheduled_at
+    if (!scheduledAt) { setError('Please set a date and time.'); return }
     setSaving(true); setError('')
     try {
       await requestSessionWithStudent({
         student_user_id:  form.student_user_id,
         subject_id:       form.subject_id || undefined,
-        scheduled_at:     form.scheduled_at,
+        scheduled_at:     scheduledAt,
         duration_minutes: form.duration_minutes,
         session_type:     form.session_type,
         notes:            form.notes || undefined,
@@ -79,6 +101,17 @@ function NewSessionModal({ onClose, onScheduled }) {
 
         {error && <div style={{ padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, fontSize: 13, color: '#EF4444', marginBottom: 14 }}>{error}</div>}
 
+        {/* Start Now toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: startNow ? '#F0FDF4' : '#F8F9FB', border: `1.5px solid ${startNow ? '#BBF7D0' : '#E5E7EB'}`, borderRadius: 10, marginBottom: 14, cursor: 'pointer' }} onClick={() => setStartNow(p => !p)}>
+          <div style={{ width: 36, height: 20, borderRadius: 10, background: startNow ? '#10B981' : '#D1D5DB', position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+            <div style={{ position: 'absolute', top: 2, left: startNow ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: startNow ? '#10B981' : '#374151' }}>Start Now</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF' }}>Begin the session immediately with a live timer</div>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Student <span style={{ color: '#EF4444' }}>*</span></label>
@@ -89,8 +122,12 @@ function NewSessionModal({ onClose, onScheduled }) {
             {matchedStudents.length === 0 && <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>No matched students yet. Accept a request first.</div>}
           </div>
           <div>
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Date & Time <span style={{ color: '#EF4444' }}>*</span></label>
-            <input type="datetime-local" style={inp} value={form.scheduled_at} onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))} min={new Date(Date.now() + 60000).toISOString().slice(0, 16)} />
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: startNow ? '#D1D5DB' : '#6B7280', display: 'block', marginBottom: 6 }}>Date & Time {!startNow && <span style={{ color: '#EF4444' }}>*</span>}</label>
+            {startNow ? (
+              <div style={{ ...inp, background: '#F3F4F6', color: '#9CA3AF', display: 'flex', alignItems: 'center' }}>Starting now — timer will begin immediately</div>
+            ) : (
+              <input type="datetime-local" style={inp} value={form.scheduled_at} onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))} />
+            )}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ flex: 1 }}>
@@ -122,9 +159,9 @@ function NewSessionModal({ onClose, onScheduled }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '11px', border: '1.5px solid #E5E7EB', borderRadius: 10, background: 'white', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 10, background: '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+          <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 10, background: startNow ? '#10B981' : '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
             {saving ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CalendarPlus size={15} />}
-            {saving ? 'Scheduling…' : 'Schedule Session'}
+            {saving ? (startNow ? 'Starting…' : 'Scheduling…') : (startNow ? 'Start Session Now' : 'Schedule Session')}
           </button>
         </div>
       </div>

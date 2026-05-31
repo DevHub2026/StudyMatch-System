@@ -84,7 +84,7 @@ class SessionController extends Controller
             'student_id'       => 'sometimes|exists:students,id',
             'student_user_id'  => 'sometimes|exists:users,id',
             'subject_id'       => 'nullable|exists:subjects,id',
-            'scheduled_at'     => 'required|date|after:now',
+            'scheduled_at'     => 'required|date',
             'duration_minutes' => 'sometimes|integer|min:30|max:480',
             'session_type'     => 'sometimes|in:online,in_person',
             'notes'            => 'nullable|string|max:1000',

@@ -57,7 +57,7 @@ export default function SettingsPage() {
   const [delError,      setDelError]      = useState('')
   const [delPassword,   setDelPassword]   = useState('')
   const [showDelPw,     setShowDelPw]     = useState(false)
-  const [notifToggles, setNotifToggles] = useState({ email: true, push: true, sms: false, marketing: false })
+  const [notifToggles, setNotifToggles] = useState({ email: true, marketing: false })
   const [theme, setTheme] = useState('light')
 
   const handlePasswordUpdate = async () => {
@@ -257,8 +257,6 @@ export default function SettingsPage() {
               <div style={{ padding: '16px 22px', borderBottom: '1px solid #F8F9FB', fontWeight: 700, fontSize: 15, color: '#1E1B4B' }}>Notification Channels</div>
               {[
                 { key: 'email',     label: 'Email Notifications',   desc: 'Receive notifications via email'             },
-                { key: 'push',      label: 'Push Notifications',    desc: 'Receive push notifications on your device'   },
-                { key: 'sms',       label: 'SMS Notifications',     desc: 'Receive text message notifications'          },
                 { key: 'marketing', label: 'Marketing Emails',      desc: 'Receive tips, updates and promotional content'},
               ].map(({ key, label, desc }) => (
                 <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 22px', borderBottom: '1px solid #F8F9FB' }}>

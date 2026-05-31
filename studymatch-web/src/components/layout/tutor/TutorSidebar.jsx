@@ -7,21 +7,22 @@ import {
   LayoutDashboard, Users, CalendarDays, MessageCircle,
   Library, UserCircle, Settings, HelpCircle,
   ChevronDown, ChevronRight,
-  PanelLeftClose, PanelLeftOpen, Shield, Star, Flag,
+  PanelLeftClose, PanelLeftOpen, Shield, Star, Flag, UserSearch,
 } from 'lucide-react'
 
 /* ─── nav config ─────────────────────────────────────────────── */
 
 const NAV_LINKS = [
-  { icon: LayoutDashboard, label: 'Dashboard',     to: '/tutor/dashboard'      },
-  { icon: Users,           label: 'Find Students', to: '/tutor/find-students'  },
-  { icon: CalendarDays,    label: 'Study Sessions',to: '/tutor/study-sessions' },
-  { icon: MessageCircle,   label: 'Messages',      to: '/tutor/messages', badge: true },
-  { icon: Library,         label: 'Resources',     to: '/tutor/resources'      },
-  { icon: CalendarDays,    label: 'My Schedule',   to: '/tutor/schedule'       },
-  { icon: UserCircle,      label: 'My Profile',    to: '/tutor/profile'        },
-  { icon: Star,            label: 'Feedback',      to: '/tutor/feedback'       },
-  { icon: Flag,            label: 'Complaints',    to: '/tutor/complaints'     },
+  { icon: LayoutDashboard, label: 'Dashboard',        to: '/tutor/dashboard'           },
+  { icon: UserSearch,      label: 'Find Students',    to: '/tutor/discover-students'   },
+  { icon: Users,           label: 'Student Requests', to: '/tutor/find-students'       },
+  { icon: CalendarDays,    label: 'Study Sessions',   to: '/tutor/study-sessions'      },
+  { icon: MessageCircle,   label: 'Messages',         to: '/tutor/messages', badge: true },
+  { icon: Library,         label: 'Resources',        to: '/tutor/resources'           },
+  { icon: CalendarDays,    label: 'My Schedule',      to: '/tutor/schedule'            },
+  { icon: UserCircle,      label: 'My Profile',       to: '/tutor/profile'             },
+  { icon: Star,            label: 'Feedback',         to: '/tutor/feedback'            },
+  { icon: Flag,            label: 'Complaints',       to: '/tutor/complaints'          },
 ]
 
 const SETTINGS_LINKS = [

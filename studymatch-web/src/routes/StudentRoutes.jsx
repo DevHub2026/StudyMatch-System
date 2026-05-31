@@ -13,8 +13,9 @@ import SchedulePage       from '../pages/student/SchedulePage'
 import ProfilePage        from '../pages/student/ProfilePage'
 
 // Shared pages
-import PartnersPage       from '../pages/shared/PartnersPage'
-import SettingsPage       from '../pages/shared/SettingsPage'
+import PartnersPage           from '../pages/shared/PartnersPage'
+import SettingsPage           from '../pages/shared/SettingsPage'
+import UserProfileViewPage    from '../pages/shared/UserProfileViewPage'
 import NotificationsPage  from '../pages/shared/NotificationsPage'
 import PrivacyPage        from '../pages/shared/PrivacyPage'
 import PreferencesPage    from '../pages/shared/PreferencesPage'
@@ -90,6 +91,8 @@ export const studentRouteConfig = [
       { path: 'help',           element: <HelpCenterPage />     },
       { path: 'feedback',       element: <FeedbackPage />       },
       { path: 'complaints',     element: <ComplaintsPage />     },
+
+      { path: 'users/:userId/profile', element: <UserProfileViewPage /> },
 
       // Catch-all → dashboard
       { path: '*', element: <Navigate to="dashboard" replace /> },

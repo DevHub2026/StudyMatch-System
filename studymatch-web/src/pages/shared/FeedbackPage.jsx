@@ -56,32 +56,58 @@ export default function FeedbackPage() {
     finally { setLoading(false) }
   }
 
-  // Load tutors from accepted match requests
+  // Load tutors from accepted match requests AND past/completed sessions
   const fetchTutors = async () => {
     setLoadingExtra(true)
     try {
-      const res  = await getMatchRequests()
-      const list = res?.data || res || []
-      const arr  = Array.isArray(list) ? list : []
-      // API returns already-accepted formatted user objects with fullName/id
-      const tutorList = arr
+      const [matchRes, sessRes] = await Promise.allSettled([
+        getMatchRequests(),
+        getSessions(),
+      ])
+
+      const tutorMap = new Map()
+      const now = new Date()
+
+      // getMatchRequests() returns full axios response; .data = {success, data: [...users]}
+      const matchArr = matchRes.status === 'fulfilled'
+        ? (matchRes.value?.data?.data ?? matchRes.value?.data ?? [])
+        : []
+      ;(Array.isArray(matchArr) ? matchArr : [])
         .filter(r => r.role === 'tutor')
-        .map(r => ({ id: r.id, name: r.fullName ?? r.name }))
-        .filter(t => t.id && t.name)
-        .filter((t, i, a) => a.findIndex(x => x.id === t.id) === i) // dedupe
-      setTutors(tutorList)
+        .forEach(r => {
+          if (r.id && (r.fullName ?? r.name)) tutorMap.set(String(r.id), { id: r.id, name: r.fullName ?? r.name })
+        })
+
+      // getSessions() returns response.data = {success, data: [...sessions]}
+      const sessArr = sessRes.status === 'fulfilled'
+        ? (sessRes.value?.data ?? sessRes.value ?? [])
+        : []
+      ;(Array.isArray(sessArr) ? sessArr : [])
+        .filter(s => s.status === 'completed' || (s.scheduled_at && new Date(s.scheduled_at) < now))
+        .forEach(s => {
+          const tutorUserId = s.tutor?.user?.id || s.tutorUserId
+          const tutorName   = s.tutor?.user?.name || s.tutorName
+          if (tutorUserId && tutorName && !tutorMap.has(String(tutorUserId))) {
+            tutorMap.set(String(tutorUserId), { id: tutorUserId, name: tutorName })
+          }
+        })
+
+      setTutors(Array.from(tutorMap.values()))
     } catch {}
     finally { setLoadingExtra(false) }
   }
 
-  // Load completed/upcoming sessions
+  // Load past + completed sessions for "Session Feedback"
   const fetchSessions = async () => {
     setLoadingExtra(true)
     try {
       const res  = await getSessions()
-      const list = res?.data || res?.sessions || res || []
-      const arr  = Array.isArray(list) ? list : []
-      setSessions(arr.slice(0, 30)) // cap at 30 most recent
+      // getSessions returns response.data = {success, data: [...]}
+      const list = res?.data ?? res?.sessions ?? res ?? []
+      const now  = new Date()
+      const arr  = (Array.isArray(list) ? list : [])
+        .filter(s => s.status === 'completed' || (s.scheduled_at && new Date(s.scheduled_at) < now))
+      setSessions(arr.slice(0, 30))
     } catch {}
     finally { setLoadingExtra(false) }
   }

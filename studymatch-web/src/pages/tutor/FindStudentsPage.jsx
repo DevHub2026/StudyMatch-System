@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   getIncomingRequests,
   acceptMatchRequest,
@@ -12,13 +12,13 @@ import {
   ChevronDown, Clock, SlidersHorizontal,
   Users, Check, X,
   GraduationCap, Loader2, RefreshCw, MessageSquare, BookOpen,
-  CalendarPlus,
+  CalendarPlus, MoreVertical,
 } from 'lucide-react'
+import QuickReportModal from '../../components/shared/QuickReportModal'
 
 /* ─── constants ──────────────────────────────────────────────── */
 
-const SUBJECTS_OPTIONS = ['All Subjects', 'Calculus', 'Physics', 'Statistics', 'Linear Algebra', 'Biology', 'Chemistry', 'Data Structures', 'Algorithms']
-const STATUS_OPTIONS   = ['All Requests', 'Pending', 'Accepted', 'Declined']
+const STATUS_OPTIONS = ['All Requests', 'Pending', 'Accepted', 'Declined']
 const COLORS           = ['#EC4899','#7C3AED','#10B981','#6366F1','#F59E0B','#EF4444']
 
 const getColor    = (i) => COLORS[i % COLORS.length]
@@ -116,9 +116,10 @@ function Dropdown({ label, value, options, onChange }) {
 /* ─── schedule session modal ─────────────────────────────────── */
 
 function ScheduleSessionModal({ studentName, studentUserId, onClose, onScheduled }) {
-  const [subjects, setSubjects] = useState([])
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState('')
+  const [subjects,  setSubjects]  = useState([])
+  const [saving,    setSaving]    = useState(false)
+  const [error,     setError]     = useState('')
+  const [startNow,  setStartNow]  = useState(false)
   const [form, setForm] = useState({
     scheduled_at: '', duration_minutes: 60, subject_id: '', session_type: 'online', notes: '',
   })
@@ -131,14 +132,14 @@ function ScheduleSessionModal({ studentName, studentUserId, onClose, onScheduled
   }, [])
 
   const handleSubmit = async () => {
-    if (!form.scheduled_at) { setError('Please set a date and time.'); return }
-    if (new Date(form.scheduled_at) <= new Date()) { setError('Scheduled time must be in the future.'); return }
+    const scheduledAt = startNow ? new Date().toISOString() : form.scheduled_at
+    if (!scheduledAt) { setError('Please set a date and time.'); return }
     setSaving(true); setError('')
     try {
       await requestSessionWithStudent({
         student_user_id:  studentUserId,
         subject_id:       form.subject_id || undefined,
-        scheduled_at:     form.scheduled_at,
+        scheduled_at:     scheduledAt,
         duration_minutes: form.duration_minutes,
         session_type:     form.session_type,
         notes:            form.notes || undefined,
@@ -165,10 +166,25 @@ function ScheduleSessionModal({ studentName, studentUserId, onClose, onScheduled
 
         {error && <div style={{ padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, fontSize: 13, color: '#EF4444', marginBottom: 14 }}>{error}</div>}
 
+        {/* Start Now toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: startNow ? '#F0FDF4' : '#F8F9FB', border: `1.5px solid ${startNow ? '#BBF7D0' : '#E5E7EB'}`, borderRadius: 10, marginBottom: 14, cursor: 'pointer' }} onClick={() => setStartNow(p => !p)}>
+          <div style={{ width: 36, height: 20, borderRadius: 10, background: startNow ? '#10B981' : '#D1D5DB', position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+            <div style={{ position: 'absolute', top: 2, left: startNow ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: startNow ? '#10B981' : '#374151' }}>Start Now</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF' }}>Begin the session immediately with a live timer</div>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 6 }}>Date & Time <span style={{ color: '#EF4444' }}>*</span></label>
-            <input type="datetime-local" style={inp} value={form.scheduled_at} onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))} min={new Date(Date.now() + 60000).toISOString().slice(0, 16)} />
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: startNow ? '#D1D5DB' : '#6B7280', display: 'block', marginBottom: 6 }}>Date & Time {!startNow && <span style={{ color: '#EF4444' }}>*</span>}</label>
+            {startNow ? (
+              <div style={{ ...inp, background: '#F3F4F6', color: '#9CA3AF', display: 'flex', alignItems: 'center' }}>Starting now — timer will begin immediately</div>
+            ) : (
+              <input type="datetime-local" style={inp} value={form.scheduled_at} onChange={e => setForm(p => ({ ...p, scheduled_at: e.target.value }))} />
+            )}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <div style={{ flex: 1 }}>
@@ -200,9 +216,9 @@ function ScheduleSessionModal({ studentName, studentUserId, onClose, onScheduled
 
         <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '11px', border: '1.5px solid #E5E7EB', borderRadius: 10, background: 'white', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 10, background: '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+          <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 10, background: startNow ? '#10B981' : '#7C3AED', color: 'white', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
             {saving ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CalendarPlus size={15} />}
-            {saving ? 'Scheduling…' : 'Schedule Session'}
+            {saving ? (startNow ? 'Starting…' : 'Scheduling…') : (startNow ? 'Start Session Now' : 'Schedule Session')}
           </button>
         </div>
       </div>
@@ -212,7 +228,7 @@ function ScheduleSessionModal({ studentName, studentUserId, onClose, onScheduled
 
 /* ─── request card ───────────────────────────────────────────── */
 
-function RequestCard({ request, index, onAccept, onDecline, accepting, declining, onSchedule }) {
+function RequestCard({ request, index, onAccept, onDecline, accepting, declining, onSchedule, onReport }) {
   const student = request.student || {}
   const name    = student.user?.name || student.user?.email || 'Student'
   const color   = getColor(index)
@@ -237,7 +253,10 @@ function RequestCard({ request, index, onAccept, onDecline, accepting, declining
 
       {/* Name + subject */}
       <div style={{ width: 200, flexShrink: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 4 }}>{name}</div>
+        <Link to={`/tutor/users/${student.user?.id || ''}/profile`} style={{ fontWeight: 700, fontSize: 15, color: '#1E1B4B', marginBottom: 4, textDecoration: 'none', display: 'block' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#7C3AED'}
+          onMouseLeave={e => e.currentTarget.style.color = '#1E1B4B'}
+        >{name}</Link>
         {subjects.length > 0 && (
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginBottom: 5 }}>
@@ -275,7 +294,23 @@ function RequestCard({ request, index, onAccept, onDecline, accepting, declining
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'flex-start' }}>
+        {onReport && (
+          <button
+            onClick={() => onReport(student.user?.id || '', name)}
+            title="Report user"
+            style={{
+              width: 34, height: 34, borderRadius: 9, border: '1px solid #E5E7EB',
+              background: 'white', cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              transition: 'background .12s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
+            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+          >
+            <MoreVertical size={15} color="#9CA3AF" />
+          </button>
+        )}
         {isPending ? (
           <>
             <button
@@ -341,15 +376,17 @@ function RequestCard({ request, index, onAccept, onDecline, accepting, declining
 
 export default function FindStudentsPage() {
   const navigate = useNavigate()
-  const [statusFilter, setStatusFilter] = useState('All Requests')
+  const [statusFilter,  setStatusFilter]  = useState('All Requests')
   const [subjectFilter, setSubjectFilter] = useState('All Subjects')
-  const [requests,  setRequests]  = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState('')
-  const [accepting, setAccepting] = useState(null)
-  const [declining, setDeclining] = useState(null)
-  const [stats,     setStats]     = useState({ total: 0, pending: 0, accepted: 0 })
+  const [subjects,      setSubjects]      = useState([])
+  const [requests,      setRequests]      = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState('')
+  const [accepting,     setAccepting]     = useState(null)
+  const [declining,     setDeclining]     = useState(null)
+  const [stats,         setStats]         = useState({ total: 0, pending: 0, accepted: 0 })
   const [scheduleTarget, setScheduleTarget] = useState(null)
+  const [reportTarget,   setReportTarget]   = useState(null) // { userId, name }
 
   const fetchRequests = async () => {
     setLoading(true); setError('')
@@ -367,7 +404,13 @@ export default function FindStudentsPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchRequests() }, [])
+  useEffect(() => {
+    fetchRequests()
+    getSubjects().then(res => {
+      const list = res?.data || res || []
+      setSubjects(Array.isArray(list) ? list : [])
+    }).catch(() => {})
+  }, [])
 
   const handleAccept = async (id) => {
     setAccepting(id)
@@ -431,8 +474,10 @@ export default function FindStudentsPage() {
           {/* Filters */}
           <div style={{ background: 'white', border: '1px solid #F0F0F4', borderRadius: 14, padding: '16px 20px' }}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <Dropdown label="Status"   value={statusFilter}  options={STATUS_OPTIONS}   onChange={setStatusFilter}  />
-              <Dropdown label="Subject"  value={subjectFilter} options={SUBJECTS_OPTIONS} onChange={setSubjectFilter} />
+              <Dropdown label="Status"  value={statusFilter}  options={STATUS_OPTIONS} onChange={setStatusFilter} />
+              <Dropdown label="Subject" value={subjectFilter}
+                options={['All Subjects', ...subjects.map(s => s.name)]}
+                onChange={setSubjectFilter} />
               <button
                 onClick={() => { setStatusFilter('All Requests'); setSubjectFilter('All Subjects') }}
                 style={{
@@ -506,6 +551,7 @@ export default function FindStudentsPage() {
                     accepting={accepting}
                     declining={declining}
                     onSchedule={setScheduleTarget}
+                    onReport={(userId, name) => setReportTarget({ userId, name })}
                   />
                 ))
               )}
@@ -532,6 +578,14 @@ export default function FindStudentsPage() {
 
         </div>
       </div>
+
+      {reportTarget && (
+        <QuickReportModal
+          reportedUserId={reportTarget.userId}
+          reportedName={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </>
   )
 }

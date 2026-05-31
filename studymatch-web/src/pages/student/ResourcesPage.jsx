@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  getResources, uploadResource, getLibraryStats, toggleFavorite, getResourcePreview,
+  getResources, getLibraryStats, toggleFavorite, getResourcePreview,
 } from '../../api/library'
 import { getSubjects } from '../../api/subjects'
 import {
@@ -9,7 +9,7 @@ import {
   sortParamFromLabel, typeParamFromLabel, triggerResourceDownload, toastStyle,
 } from '../../utils/libraryUtils'
 import {
-  Search, Upload, Download, FileText, BookOpen, Loader2, RefreshCw,
+  Search, Download, FileText, BookOpen, Loader2, RefreshCw,
   Eye, Bookmark, X,
 } from 'lucide-react'
 
@@ -120,7 +120,6 @@ export default function StudentResourcesPage() {
   const [subjFilter, setSubjFilter] = useState('All Subjects')
   const [sortBy, setSortBy] = useState('Newest First')
   const [activeTab, setActiveTab] = useState('all')
-  const [uploading, setUploading] = useState(false)
   const [toast, setToast] = useState({ message: '', type: 'success' })
   const [previewOpen, setPreviewOpen] = useState(null)
 
@@ -137,7 +136,8 @@ export default function StudentResourcesPage() {
     try {
       const subjectId = subjects.find(s => s.name === subjFilter)?.id
       const params = {
-        scope: activeTab === 'favorites' ? 'favorites' : activeTab === 'shared' ? 'shared' : 'all',
+        // Students always see shared-with-them; the 'all' tab IS the shared scope for students
+        scope: activeTab === 'favorites' ? 'favorites' : 'shared',
         sort: sortParamFromLabel(sortBy),
         search: search.trim() || undefined,
         type: typeParamFromLabel(typeFilter) || undefined,
@@ -176,25 +176,6 @@ export default function StudentResourcesPage() {
       loadAll()
     } catch {
       showToast('Download failed. Please try again.', 'error')
-    }
-  }
-
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('title', file.name)
-    try {
-      await uploadResource(fd)
-      showToast('File uploaded successfully!')
-      loadAll()
-    } catch (err) {
-      showToast(err?.response?.data?.message || 'Upload failed.', 'error')
-    } finally {
-      setUploading(false)
-      e.target.value = ''
     }
   }
 
@@ -271,24 +252,14 @@ export default function StudentResourcesPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>Resources</h1>
-            <p style={{ fontSize: 13, color: '#9CA3AF' }}>Access and download study materials from your tutors.</p>
+            <p style={{ fontSize: 13, color: '#9CA3AF' }}>Access and download study materials shared by your tutors.</p>
           </div>
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
-            background: '#7C3AED', color: 'white', borderRadius: 10, fontSize: 13.5, fontWeight: 700,
-            cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1,
-          }}>
-            {uploading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={15} />}
-            {uploading ? 'Uploading...' : 'Upload Resource'}
-            <input type="file" style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
-          </label>
         </div>
 
         <div className="rp-tabs">
           {[
-            { key: 'all', label: 'All Resources' },
-            { key: 'shared', label: 'Shared with Me' },
-            { key: 'favorites', label: 'Favorites' },
+            { key: 'all',       label: 'From My Tutors' },
+            { key: 'favorites', label: 'Favorites'       },
           ].map(({ key, label }) => (
             <button key={key} type="button" className={`rp-tab${activeTab === key ? ' active' : ''}`}
               onClick={() => setActiveTab(key)}>{label}</button>
@@ -350,11 +321,9 @@ export default function StudentResourcesPage() {
             <BookOpen size={36} color="#DDD6FE" style={{ margin: '0 auto 14px' }} />
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>No resources found</div>
             <div style={{ fontSize: 13, color: '#9CA3AF', maxWidth: 360, margin: '0 auto' }}>
-              {activeTab === 'shared'
-                ? 'Your tutors have not shared any materials yet. Connect with a tutor to receive resources.'
-                : activeTab === 'favorites'
-                  ? 'Bookmark resources to find them quickly here.'
-                  : 'No study materials are available yet. Check back after your tutor shares files.'}
+              {activeTab === 'favorites'
+                ? 'Bookmark resources to find them quickly here.'
+                : 'Your tutors have not shared any materials yet. Once a tutor shares a file with you, it will appear here.'}
             </div>
           </div>
         )}

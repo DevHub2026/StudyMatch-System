@@ -6,8 +6,6 @@ import { getPendingRequests } from '../../api/matchRequests'
 import * as notificationsApi from '../../api/notifications'
 import { getSessions } from '../../api/sessions'
 import { getConversations } from '../../api/chat'
-import { getStudyOverview } from '../../api/subjects'
-import { SubjectsOverviewPanel, InactiveAlerts } from '../../components/student/StudyOverviewWidgets'
 import { isUpcomingTabSession, formatSessionDate, effectiveStatus, STATUS_STYLES } from '../../utils/sessionUtils'
 import logo from '../../assets/logo.png'
 
@@ -216,12 +214,8 @@ function RecentMessagesList({ conversations, compact = false, limit = 5 }) {
 
 function StudentDashboard({
   user, stats, upcomingSessions = [], recentMessages = [],
-  studyOverview = null,
 }) {
-  const streak = studyOverview?.streak || { current_days: 0, week_days: [] }
-  const weekDays = streak.week_days?.length
-    ? streak.week_days
-    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(label => ({ label, active: false }))
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(label => ({ label, active: false }))
   const initials = user?.name
     ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : 'S'
@@ -427,11 +421,10 @@ function StudentDashboard({
                 </div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 16, textAlign: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginTop: 16, textAlign: 'center' }}>
               {[
                 { label: 'Sessions',     value: stats.upcomingSessions },
                 { label: 'Study Buddies', value: stats.activeMatches   },
-                { label: 'Groups',        value: 0                     },
               ].map(({ label, value }) => (
                 <div key={label} style={{ background: '#F8F9FB', borderRadius: 10, padding: '10px 6px' }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: '#1E1B4B' }}>{value}</div>
@@ -446,7 +439,7 @@ function StudentDashboard({
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Study Streak</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <Flame size={26} color="#F59E0B" fill="#F59E0B" />
-              <span style={{ fontSize: 34, fontWeight: 800, color: '#1E1B4B' }}>{streak.current_days ?? 0}</span>
+              <span style={{ fontSize: 34, fontWeight: 800, color: '#1E1B4B' }}>0</span>
               <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 500 }}>days in a row</span>
             </div>
             <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 14 }}>Keep it up! Consistency is key.</div>
@@ -464,16 +457,6 @@ function StudentDashboard({
                 </div>
               ))}
             </div>
-          </Card>
-
-          {/* Subjects overview */}
-          <Card>
-            <SectionHeader title="Subjects Overview" linkTo="/student/my-subjects" linkLabel="View Progress →" />
-            <InactiveAlerts alerts={studyOverview?.inactive_alerts || []} compact />
-            <SubjectsOverviewPanel
-              subjects={studyOverview?.subjects || []}
-              analytics={studyOverview?.analytics}
-            />
           </Card>
 
           {/* Recent Messages */}
@@ -498,7 +481,6 @@ export default function DashboardPage() {
   })
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [recentMessages, setRecentMessages] = useState([])
-  const [studyOverview, setStudyOverview] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const fetchDashboard = async () => {
@@ -537,20 +519,12 @@ export default function DashboardPage() {
         setRecentMessages([])
       }
 
-      try {
-        const overview = await getStudyOverview()
-        setStudyOverview(overview)
-      } catch {
-        setStudyOverview(null)
-      }
-
       setLoading(false)
   }
 
   useEffect(() => {
     fetchDashboard()
     const interval = setInterval(() => {
-      getStudyOverview().then(setStudyOverview).catch(() => {})
       getSessions()
         .then(sessionsRes => {
           const sessionsList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
@@ -558,6 +532,16 @@ export default function DashboardPage() {
           const upcoming = sessionsList.filter(s => isUpcomingTabSession(s, now))
           setUpcomingSessions(upcoming)
           setStats(prev => ({ ...prev, upcomingSessions: upcoming.length }))
+        })
+        .catch(() => {})
+      getConversations()
+        .then(convRes => setRecentMessages(normalizeConversations(convRes)))
+        .catch(() => {})
+      notificationsApi.getNotifications()
+        .then(notifData => {
+          const list = notifData?.data || []
+          const unread = Array.isArray(list) ? list.filter(n => !n.is_read).length : 0
+          setStats(prev => ({ ...prev, unreadNotifications: unread }))
         })
         .catch(() => {})
     }, 45000)
@@ -583,7 +567,6 @@ export default function DashboardPage() {
       stats={stats}
       upcomingSessions={upcomingSessions}
       recentMessages={recentMessages}
-      studyOverview={studyOverview}
     />
   )
 }

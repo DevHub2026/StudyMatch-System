@@ -242,19 +242,32 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('all')
-  const [prefs, setPrefs] = useState({
-    announcements: true, session_updates: true,
-    messages: true, matches: true, reminders: true, system: false,
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      const stored = localStorage.getItem('nf_prefs')
+      return stored ? JSON.parse(stored) : {
+        announcements: true, session_updates: true,
+        messages: true, matches: true, reminders: true, system: false,
+      }
+    } catch { return { announcements: true, session_updates: true, messages: true, matches: true, reminders: true, system: false } }
   })
 
-  // quiet hours & digest (new UI additions, no API yet)
-  const [quietOn, setQuietOn]     = useState(true)
-  const [startTime, setStartTime] = useState('10:00 PM')
-  const [endTime, setEndTime]     = useState('7:00 AM')
-  const [timezone, setTimezone]   = useState('(GMT+8:00) Manila')
-  const [digestOn, setDigestOn]   = useState(true)
-  const [frequency, setFrequency] = useState('Daily')
+  // quiet hours & digest — persisted to localStorage
+  const [quietOn, setQuietOn]     = useState(() => JSON.parse(localStorage.getItem('nf_quietOn')   ?? 'true'))
+  const [startTime, setStartTime] = useState(() => localStorage.getItem('nf_startTime') || '10:00 PM')
+  const [endTime, setEndTime]     = useState(() => localStorage.getItem('nf_endTime')   || '7:00 AM')
+  const [timezone, setTimezone]   = useState(() => localStorage.getItem('nf_timezone')  || '(GMT+8:00) Manila')
+  const [digestOn, setDigestOn]   = useState(() => JSON.parse(localStorage.getItem('nf_digestOn')  ?? 'true'))
+  const [frequency, setFrequency] = useState(() => localStorage.getItem('nf_frequency') || 'Daily')
   const [prefsSaved, setPrefsSaved] = useState(false)
+
+  useEffect(() => { localStorage.setItem('nf_quietOn',   JSON.stringify(quietOn))   }, [quietOn])
+  useEffect(() => { localStorage.setItem('nf_startTime', startTime)                 }, [startTime])
+  useEffect(() => { localStorage.setItem('nf_endTime',   endTime)                   }, [endTime])
+  useEffect(() => { localStorage.setItem('nf_timezone',  timezone)                  }, [timezone])
+  useEffect(() => { localStorage.setItem('nf_digestOn',  JSON.stringify(digestOn))  }, [digestOn])
+  useEffect(() => { localStorage.setItem('nf_frequency', frequency)                 }, [frequency])
+  useEffect(() => { localStorage.setItem('nf_prefs',     JSON.stringify(prefs))     }, [prefs])
 
   useEffect(() => {
     const load = async () => {
@@ -480,7 +493,7 @@ export default function NotificationsPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
             }}>
               <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.5 }}>
-                You won't receive non-urgent push notifications during this time.
+                You won't receive non-urgent notifications during this time.
               </div>
               <Toggle on={quietOn} onClick={() => setQuietOn(p => !p)} size="sm" />
             </div>
